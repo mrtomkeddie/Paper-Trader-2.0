@@ -7,7 +7,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#000000" />
-    <title>QuantBot Mobile</title>
+    <title>Paper Trader 2.0</title>
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/10455/10455485.png" />
     <link rel="manifest" href="/manifest.json" />
     
     <!-- POLYFILL: Define process.env to prevent blank screen crash on Vercel/Browser -->
@@ -46,7 +47,7 @@
               },
               fadeInUp: {
                 '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
+                '100%': { opacity: '1' },
               }
             }
           }
@@ -78,7 +79,9 @@
     "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
     "uuid": "https://aistudiocdn.com/uuid@^13.0.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "vite": "https://aistudiocdn.com/vite@^7.2.2"
   }
 }
 </script>
