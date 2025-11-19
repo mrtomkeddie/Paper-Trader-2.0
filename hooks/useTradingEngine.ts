@@ -558,7 +558,7 @@ function createInitialAsset(symbol: AssetSymbol): AssetData {
       macd: { macdLine: 0, signalLine: 0, histogram: 0 },
       bollinger: { upper: 0, middle: 0, lower: 0 },
       slope: 0,
-      botActive: false,
+      botActive: true, // Bots active by default
       strategy: defaultStrategy,
       isThinking: false,
       isLive: false,
