@@ -18,6 +18,7 @@ export const useTradingEngine = () => {
   // --- ACCOUNT STATE ---
   const [account, setAccount] = useState<AccountState>({ balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0 });
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [isConnected, setIsConnected] = useState(false); // New connection state
 
   // Assets State
   const initialAssets: Record<AssetSymbol, AssetData> = {
@@ -40,11 +41,13 @@ export const useTradingEngine = () => {
                   setAssets(state.assets);
                   setAccount(state.account);
                   setTrades(state.trades);
+                  setIsConnected(true); // Connection successful
               }
+          } else {
+              setIsConnected(false); // Server reachable but returned error
           }
       } catch (e) {
-          // Silent fail or maybe show a connection error indicator in a real app
-          // console.error("Polling failed", e); 
+          setIsConnected(false); // Network error (server down or wrong URL)
       }
       
     }, TICK_RATE_MS);
@@ -75,7 +78,7 @@ export const useTradingEngine = () => {
       return true;
   }, []);
 
-  return { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda };
+  return { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected };
 };
 
 function createInitialAsset(symbol: AssetSymbol): AssetData {

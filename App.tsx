@@ -4,11 +4,11 @@ import { useTradingEngine } from './hooks/useTradingEngine';
 import AssetCard from './components/AssetCard';
 import TradeHistory from './components/TradeHistory';
 import SettingsModal from './components/SettingsModal';
-import { Wallet, BarChart2, Clock, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Server } from 'lucide-react';
+import { Wallet, BarChart2, Clock, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Server, Wifi, WifiOff } from 'lucide-react';
 import { AssetSymbol } from './types';
 
 const App: React.FC = () => {
-  const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda } = useTradingEngine();
+  const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
   const [view, setView] = useState<'dashboard' | 'history'>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -35,7 +35,7 @@ const App: React.FC = () => {
         <header className="mb-8">
           <div className="flex justify-between items-start mb-2">
              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-ios-green animate-pulse" />
+                <div className={`w-2 h-2 rounded-full animate-pulse ${isConnected ? 'bg-ios-green' : 'bg-ios-red'}`} />
                 <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">Remote Dashboard</span>
              </div>
              <div className="flex gap-3">
@@ -63,14 +63,14 @@ const App: React.FC = () => {
 
         {view === 'dashboard' ? (
           <div className="space-y-6 animate-fade-in">
-             {/* Available Margin Mini-Stat */}
-             <div className="flex items-center justify-between bg-ios-card px-4 py-3 rounded-2xl border border-white/5">
-                <div className="flex items-center gap-2 text-ios-gray text-sm font-medium">
-                    <Server size={16} />
-                    <span>Bot Connection</span>
+             {/* Connection Status Bar */}
+             <div className={`flex items-center justify-between px-4 py-3 rounded-2xl border transition-colors duration-500 ${isConnected ? 'bg-ios-card border-white/5' : 'bg-ios-red/10 border-ios-red/30'}`}>
+                <div className="flex items-center gap-2 text-sm font-medium">
+                    {isConnected ? <Wifi size={16} className="text-ios-green" /> : <WifiOff size={16} className="text-ios-red" />}
+                    <span className={isConnected ? 'text-ios-gray' : 'text-ios-red'}>Bot Status</span>
                 </div>
-                <span className="text-ios-green font-bold text-xs uppercase tracking-wider">
-                    ONLINE
+                <span className={`font-bold text-xs uppercase tracking-wider ${isConnected ? 'text-ios-green' : 'text-ios-red'}`}>
+                    {isConnected ? 'ONLINE' : 'OFFLINE'}
                 </span>
              </div>
             
