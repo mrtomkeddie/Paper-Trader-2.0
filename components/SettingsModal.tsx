@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { BrokerMode, OandaConfig } from '../types';
-import { X, CheckCircle, AlertCircle, Loader2, Cloud, Terminal } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Loader2, Cloud, Terminal, Bell } from 'lucide-react';
 import { DEFAULT_REMOTE_URL } from '../constants';
 
 interface Props {
@@ -20,6 +20,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
   });
   
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error'>('idle');
 
   if (!isOpen) return null;
 
@@ -39,6 +40,30 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
     } catch (e) {
          setStatus('error');
     }
+  };
+
+  const enablePush = async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushStatus('error'); return; }
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setPushStatus('error'); return; }
+      const vapid = (import.meta as any)?.env?.VITE_VAPID_PUBLIC_KEY;
+      if (!vapid) { setPushStatus('error'); return; }
+      const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+      };
+      const existing = await reg.pushManager.getSubscription();
+      const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
+      const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
+      const res = await fetch(`${base}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+      if (res.ok) setPushStatus('enabled'); else setPushStatus('error');
+    } catch { setPushStatus('error'); }
   };
 
   return (
@@ -86,6 +111,18 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
                 {status === 'idle' && <Cloud size={18} />}
                 {status === 'idle' ? 'Reconnect to Cloud' : status === 'testing' ? 'Connecting...' : status === 'success' ? 'Connected!' : 'Try Again'}
             </button>
+
+            {/* Push Notifications */}
+            <div className="mt-2">
+              <label className="text-[10px] text-ios-gray ml-1">Notifications</label>
+              <button 
+                onClick={enablePush}
+                className={`w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 ${pushStatus==='enabled' ? 'bg-ios-green text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+              >
+                <Bell size={16} /> {pushStatus==='enabled' ? 'Enabled' : 'Enable Push'}
+              </button>
+              <p className="text-[10px] text-ios-gray mt-1">On iPhone, open from Home Screen after installing to allow push.</p>
+            </div>
 
             {/* Advanced Toggle */}
             <div className="pt-2 border-t border-white/5">
