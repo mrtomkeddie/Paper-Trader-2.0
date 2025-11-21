@@ -4,6 +4,7 @@ import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
 import { WebSocket } from 'ws';
 import http from 'http';
+import https from 'https';
 import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -24,6 +25,10 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 3001;
 const API_KEY = process.env.API_KEY;
+const OANDA_TOKEN = process.env.OANDA_API_KEY;
+const OANDA_ACCOUNT_ID = process.env.OANDA_ACCOUNT_ID;
+const OANDA_ENV = process.env.OANDA_ENV || 'practice';
+const USE_OANDA = !!(OANDA_TOKEN && OANDA_ACCOUNT_ID);
 
 // --- GOOGLE GENAI SETUP ---
 let aiClient = null;
@@ -230,66 +235,96 @@ async function consultGemini(symbol, asset) {
 
 // --- LIVE DATA CONNECTION (BINANCE) ---
 let ws;
-function connectWebSocket() {
-    console.log('[SYSTEM] Connecting to Live Data Stream...');
+function connectBinance() {
     ws = new WebSocket('wss://stream.binance.com:9443/ws/paxgusdt@kline_1m/btcusdt@kline_1m');
-
-    ws.on('open', () => {
-        console.log('[SYSTEM] Connected to Binance stream.');
-    });
-
+    ws.on('open', () => {});
     ws.on('message', (data) => {
         try {
             const event = JSON.parse(data);
             const isGold = event.s === 'PAXGUSDT';
             const isNas = event.s === 'BTCUSDT';
             const symbol = isGold ? 'XAU/USD' : isNas ? 'NAS100' : null;
-            
             if (symbol && event.k) {
-                // Scale BTC to look like NAS100 for simulation purposes
                 const price = isNas ? parseFloat(event.k.c) / 5 : parseFloat(event.k.c);
-                
-                // Update Asset
                 const asset = assets[symbol];
                 asset.currentPrice = price;
                 asset.isLive = true;
                 asset.history.push({ time: new Date().toLocaleTimeString(), value: price });
                 if (asset.history.length > 300) asset.history.shift();
-
-                // Recalc Indicators
                 asset.ema = calculateEMA(price, asset.ema, 20);
                 asset.ema200 = calculateEMA(price, asset.ema200, 200);
                 asset.slope = calculateSlope(asset.history.map(h => h.value), 10);
                 asset.rsi = calculateRSI(asset.history.map(h => h.value));
                 asset.trend = price > asset.ema200 ? 'UP' : 'DOWN';
-
-                // Calculate Bollinger Bands (Simplified for speed)
-                // In prod, use full history calc
-                const sma = asset.ema; // Approx
-                const stdDev = asset.currentPrice * 0.002; // Approx
+                const sma = asset.ema;
+                const stdDev = asset.currentPrice * 0.002;
                 asset.bollinger = { upper: sma + stdDev*2, middle: sma, lower: sma - stdDev*2 };
-
                 updateCandles(symbol, price);
-                processTicks(symbol); // Run bot logic on tick
+                processTicks(symbol);
             }
-        } catch (e) {
-            console.error("Data Parse Error", e);
-        }
+        } catch {}
     });
-
-    ws.on('close', () => {
-        console.log('[SYSTEM] WebSocket Disconnected. Reconnecting in 5s...');
-        setTimeout(connectWebSocket, 5000);
-    });
-
-    ws.on('error', (err) => {
-        console.error('[SYSTEM] WebSocket Error:', err.message);
-        ws.close();
-    });
+    ws.on('close', () => { setTimeout(connectLiveFeed, 5000); });
+    ws.on('error', () => { try { ws.close(); } catch {} });
 }
 
-// Initialize Connection
-connectWebSocket();
+function connectOanda() {
+    const host = OANDA_ENV === 'live' ? 'stream-fxtrade.oanda.com' : 'stream-fxpractice.oanda.com';
+    const instruments = ['XAU_USD','NAS100_USD'].join(',');
+    const options = {
+        hostname: host,
+        path: `/v3/accounts/${OANDA_ACCOUNT_ID}/pricing/stream?instruments=${encodeURIComponent(instruments)}`,
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${OANDA_TOKEN}` }
+    };
+    const req = https.request(options, (res) => {
+        let buffer = '';
+        res.on('data', (chunk) => {
+            buffer += chunk.toString();
+            const parts = buffer.split('\n');
+            buffer = parts.pop() || '';
+            for (const line of parts) {
+                if (!line.trim()) continue;
+                try {
+                    const evt = JSON.parse(line);
+                    if (evt.type === 'PRICE') {
+                        const inst = evt.instrument;
+                        const bid = parseFloat(evt.bids?.[0]?.price || evt.closeoutBid || '0');
+                        const ask = parseFloat(evt.asks?.[0]?.price || evt.closeoutAsk || '0');
+                        const mid = ask && bid ? (ask + bid) / 2 : (parseFloat(evt.price || '0'));
+                        const symbol = inst === 'XAU_USD' ? 'XAU/USD' : inst === 'NAS100_USD' ? 'NAS100' : null;
+                        if (!symbol || !mid) continue;
+                        const price = mid;
+                        const asset = assets[symbol];
+                        asset.currentPrice = price;
+                        asset.isLive = true;
+                        asset.history.push({ time: new Date().toLocaleTimeString(), value: price });
+                        if (asset.history.length > 300) asset.history.shift();
+                        asset.ema = calculateEMA(price, asset.ema, 20);
+                        asset.ema200 = calculateEMA(price, asset.ema200, 200);
+                        asset.slope = calculateSlope(asset.history.map(h => h.value), 10);
+                        asset.rsi = calculateRSI(asset.history.map(h => h.value));
+                        asset.trend = price > asset.ema200 ? 'UP' : 'DOWN';
+                        const sma = asset.ema;
+                        const stdDev = asset.currentPrice * 0.002;
+                        asset.bollinger = { upper: sma + stdDev*2, middle: sma, lower: sma - stdDev*2 };
+                        updateCandles(symbol, price);
+                        processTicks(symbol);
+                    }
+                } catch {}
+            }
+        });
+        res.on('end', () => { setTimeout(connectLiveFeed, 5000); });
+    });
+    req.on('error', () => { setTimeout(connectLiveFeed, 5000); });
+    req.end();
+}
+
+function connectLiveFeed() {
+    if (USE_OANDA) connectOanda(); else connectBinance();
+}
+
+connectLiveFeed();
 
 
 // --- CANDLE ENGINE ---
