@@ -184,9 +184,7 @@ function createAsset(symbol, defaultStrategies) {
     };
 }
 
-// Load persisted state (if any) before connecting streams
 loadState();
-saveState();
 console.log(USE_OANDA ? '[SYSTEM] Using OANDA pricing stream' : '[SYSTEM] Using Binance pricing stream (fallback)');
 cloudLoadState();
 
