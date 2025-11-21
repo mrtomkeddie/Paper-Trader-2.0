@@ -37,8 +37,10 @@ export const useTradingEngine = () => {
       try {
           // Auto-fix dirty URLs from iPhone copy-paste
           const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-          
-          const res = await fetch(`${cleanUrl}/state`);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const res = await fetch(`${cleanUrl}/state?ts=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
+          clearTimeout(timeout);
           if (res.ok) {
               const state = await res.json();
               // We only update if we got valid data back

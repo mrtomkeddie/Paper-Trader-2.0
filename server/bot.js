@@ -586,6 +586,12 @@ function processTicks(symbol) {
 // --- API ---
 app.get('/state', (req, res) => {
   try {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('Surrogate-Control', 'no-store');
+  } catch {}
+  try {
     for (const t of trades) {
       if (t.status === 'OPEN' && market[t.symbol]) {
         const { bid, ask } = market[t.symbol];
