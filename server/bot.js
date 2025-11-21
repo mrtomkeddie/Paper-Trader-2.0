@@ -613,6 +613,20 @@ app.get('/export/csv', (req, res) => {
   res.send(csv);
 });
 
+app.get('/cloud/status', async (req, res) => {
+  try {
+    if (!db) return res.json({ initialized: false });
+    const snap = await db.doc('pt2/state').get();
+    if (!snap.exists) return res.json({ initialized: true, exists: false });
+    const data = snap.data() || {};
+    const tradeCount = Array.isArray(data.trades) ? data.trades.length : 0;
+    const updatedAt = data.updatedAt || null;
+    res.json({ initialized: true, exists: true, tradeCount, accountBalance: data.account?.balance, updatedAt });
+  } catch (e) {
+    res.status(500).json({ initialized: !!db, error: e?.message || 'error' });
+  }
+});
+
 app.get('/health', (req, res) => res.send('OK')); // Cloud Health Check
 
 app.post('/toggle/:symbol', (req, res) => {
