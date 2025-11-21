@@ -6,12 +6,39 @@ import TradeHistory from './components/TradeHistory';
 import SettingsModal from './components/SettingsModal';
 import { Wallet, BarChart2, Clock, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Server, Wifi, WifiOff } from 'lucide-react';
 import { AssetSymbol } from './types';
+import { DEFAULT_REMOTE_URL } from './constants';
 
 const App: React.FC = () => {
   const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
   const [view, setView] = useState<'dashboard' | 'history'>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(''); // used for display in offline banner
+
+  React.useEffect(() => {
+    const urlBase64ToUint8Array = (base64String: string) => {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+      return outputArray;
+    };
+    const run = async () => {
+      try {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') return;
+        const vapid = (import.meta as any)?.env?.VITE_VAPID_PUBLIC_KEY;
+        if (!vapid) return;
+        const existing = await reg.pushManager.getSubscription();
+        const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
+        const base = typeof window !== 'undefined' ? (localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL) : DEFAULT_REMOTE_URL;
+        await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+      } catch {}
+    };
+    run();
+  }, []);
 
   const isPositiveDay = account.dayPnL >= 0;
 

@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
+import admin from 'firebase-admin';
 
 // Load .env file from root
 dotenv.config();
@@ -99,6 +100,8 @@ let account = {
 
 let trades = [];
 
+let pushSubscriptions = [];
+
 // --- PERSISTENCE ---
 const DATA_DIR = path.join(process.cwd(), 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
@@ -111,6 +114,7 @@ function loadState() {
             if (parsed && parsed.account && Array.isArray(parsed.trades)) {
                 account = parsed.account;
                 trades = parsed.trades;
+                pushSubscriptions = Array.isArray(parsed.pushSubscriptions) ? parsed.pushSubscriptions : [];
                 console.log(`[SYSTEM] Loaded persisted state: ${trades.length} trades, balance £${account.balance.toFixed(2)}`);
             }
         }
@@ -122,11 +126,12 @@ function loadState() {
 function saveState() {
     try {
         fs.mkdirSync(DATA_DIR, { recursive: true });
-        const payload = JSON.stringify({ account, trades }, null, 2);
+        const payload = JSON.stringify({ account, trades, pushSubscriptions }, null, 2);
         fs.writeFileSync(STATE_FILE, payload, 'utf8');
     } catch (e) {
         console.warn('[SYSTEM] Failed to save state:', e.message);
     }
+    cloudSaveState();
 }
 
 // CANDLE STORAGE (Symbol -> M5 Candles [])
@@ -183,6 +188,7 @@ function createAsset(symbol, defaultStrategies) {
 loadState();
 saveState();
 console.log(USE_OANDA ? '[SYSTEM] Using OANDA pricing stream' : '[SYSTEM] Using Binance pricing stream (fallback)');
+cloudLoadState();
 
 // --- INDICATORS MATH ---
 const calculateEMA = (currentPrice, prevEMA, period) => {
@@ -372,6 +378,14 @@ function connectLiveFeed() {
 
 connectLiveFeed();
 
+function notifyAll(title, body) {
+    if (!webpushClient || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+    const payload = JSON.stringify({ title, body });
+    for (const sub of pushSubscriptions) {
+        try { webpushClient.sendNotification(sub, payload).catch(() => {}); } catch {}
+    }
+}
+
 
 // --- CANDLE ENGINE ---
 function updateCandles(symbol, price) {
@@ -427,6 +441,7 @@ function executeTrade(symbol, type, price, strategy, risk) {
     trades.unshift(trade);
     console.log(`[BOT] Executed ${type} on ${symbol} @ ${price} via ${strategy}`);
     sendSms(`OPEN ${symbol} ${type} @ ${fillPrice.toFixed(2)} (${strategy})`);
+    notifyAll('Trade Opened', `${symbol} ${type} @ ${fillPrice.toFixed(2)} (${strategy})`);
     saveState();
 }
 
@@ -451,6 +466,7 @@ function processTicks(symbol) {
                 const pnl = (price - trade.entryPrice) * trade.currentSize;
                 trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
                 sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+                notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
                 continue; // Next trade
             }
             // If Short and Sentiment is Bullish -> Close
@@ -460,6 +476,7 @@ function processTicks(symbol) {
                 const pnl = (trade.entryPrice - price) * trade.currentSize;
                 trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
                 sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+                notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
                 continue;
             }
         }
@@ -502,6 +519,7 @@ function processTicks(symbol) {
             const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
             trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
             sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
+            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
         }
     }
     for (const t of openTrades) {
@@ -623,7 +641,28 @@ app.post('/strategy/:symbol', (req, res) => {
 app.post('/reset', (req, res) => {
     account = { balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0 };
     trades = [];
+    pushSubscriptions = [];
     saveState();
+    res.sendStatus(200);
+});
+
+app.post('/push/subscribe', (req, res) => {
+    try {
+        const sub = req.body;
+        if (!sub || !sub.endpoint) return res.status(400).send('Invalid');
+        const exists = pushSubscriptions.find(s => s.endpoint === sub.endpoint);
+        if (!exists) {
+            pushSubscriptions.push(sub);
+            saveState();
+        }
+        res.sendStatus(201);
+    } catch {
+        res.sendStatus(500);
+    }
+});
+
+app.post('/push/test', (req, res) => {
+    notifyAll('Push Test', 'Notifications are configured');
     res.sendStatus(200);
 });
 
@@ -636,3 +675,50 @@ setInterval(() => {
         http.get(`http://localhost:${PORT}/health`);
     } catch (e) {}
 }, 14 * 60 * 1000); // Every 14 mins
+let webpushClient = null;
+(async () => {
+    try {
+        const mod = await import('web-push');
+        webpushClient = mod.default || mod;
+        const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
+        const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+        if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+            webpushClient.setVapidDetails('mailto:admin@example.com', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+            console.log('[SYSTEM] Web Push initialized');
+        } else {
+            console.warn('[SYSTEM] VAPID keys not set; push notifications disabled');
+        }
+    } catch (e) {
+        console.warn('[SYSTEM] web-push module not available; push notifications disabled');
+    }
+})();
+const FIREBASE_SA = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+let db = null;
+try {
+  if (FIREBASE_SA) {
+    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(FIREBASE_SA)) });
+    db = admin.firestore();
+    console.log('[SYSTEM] Firestore initialized');
+  }
+} catch {}
+
+async function cloudLoadState() {
+  try {
+    if (!db) return;
+    const snap = await db.doc('pt2/state').get();
+    if (snap.exists) {
+      const data = snap.data() || {};
+      account = data.account || account;
+      trades = Array.isArray(data.trades) ? data.trades : trades;
+      pushSubscriptions = Array.isArray(data.pushSubscriptions) ? data.pushSubscriptions : pushSubscriptions;
+      console.log(`[SYSTEM] Cloud state loaded: ${trades.length} trades`);
+    }
+  } catch {}
+}
+
+function cloudSaveState() {
+  try {
+    if (!db) return;
+    db.doc('pt2/state').set({ account, trades, pushSubscriptions, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
+  } catch {}
+}
