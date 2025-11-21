@@ -8,7 +8,10 @@ export const useTradingEngine = () => {
   const brokerMode = BrokerMode.REMOTE_SERVER;
 
   const [remoteUrl, setRemoteUrl] = useState(() => {
-      if (typeof window !== 'undefined') return localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL;
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('remoteUrl');
+        return saved || DEFAULT_REMOTE_URL;
+      }
       return DEFAULT_REMOTE_URL;
   });
 
@@ -57,10 +60,39 @@ export const useTradingEngine = () => {
     return () => clearInterval(interval);
   }, [remoteUrl]);
 
+  // --- Auto-discover best remote server on first load ---
+  useEffect(() => {
+    const chooseUrl = async () => {
+      try {
+        const saved = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') : null;
+        if (saved) return;
+        const candidates = [
+          'http://localhost:3001',
+          'http://localhost:3002',
+          DEFAULT_REMOTE_URL
+        ];
+        for (const base of candidates) {
+          try {
+            const res = await fetch(`${base.replace(/\/$/, '')}/state`, { method: 'GET' });
+            if (res.ok) {
+              const clean = base.replace(/\/$/, '');
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('remoteUrl', clean);
+              }
+              setRemoteUrl(clean);
+              return;
+            }
+          } catch {}
+        }
+      } catch {}
+    };
+    chooseUrl();
+  }, []);
+
   // --- Public Interface Wrappers for Remote Calls ---
   const toggleBot = useCallback(async (symbol: AssetSymbol) => {
-      const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-      try { await fetch(`${cleanUrl}/toggle/${encodeURIComponent(symbol)}`, { method: 'POST' }); } catch (e) {}
+    const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
+    try { await fetch(`${cleanUrl}/toggle/${encodeURIComponent(symbol)}`, { method: 'POST' }); } catch (e) {}
   }, [remoteUrl]);
 
   const toggleStrategy = useCallback(async (symbol: AssetSymbol, s: StrategyType) => {
