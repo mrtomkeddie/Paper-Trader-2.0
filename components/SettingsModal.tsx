@@ -124,6 +124,19 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
               <p className="text-[10px] text-ios-gray mt-1">On iPhone, open from Home Screen after installing to allow push.</p>
             </div>
 
+            {/* Analytics */}
+            <div className="mt-4">
+              <label className="text-[10px] text-ios-gray ml-1">Analytics</label>
+              <a
+                href={`${(remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, '')}/export/csv?status=closed`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 bg-white/10 text-white hover:bg-white/20"
+              >
+                Export Closed Trades CSV
+              </a>
+            </div>
+
             {/* Advanced Toggle */}
             <div className="pt-2 border-t border-white/5">
                 <button 

@@ -87,9 +87,13 @@ const TradeRow: React.FC<TradeRowProps> = ({ trade, onSelect }) => {
 const TradeHistory: React.FC<Props> = ({ trades }) => {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [symbolFilter, setSymbolFilter] = useState<'ALL' | AssetSymbol>('ALL');
-  const remoteUrl = typeof window !== 'undefined' ? (localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL) : DEFAULT_REMOTE_URL;
+  const [strategyFilter, setStrategyFilter] = useState<'ALL' | StrategyType>('ALL');
 
-  const filteredTrades = trades.filter(t => symbolFilter === 'ALL' ? true : t.symbol === symbolFilter);
+  const filteredTrades = trades.filter(t => {
+    const symbolOk = symbolFilter === 'ALL' ? true : t.symbol === symbolFilter;
+    const strategyOk = strategyFilter === 'ALL' ? true : t.strategy === strategyFilter;
+    return symbolOk && strategyOk;
+  });
   const activeTrades = filteredTrades.filter(t => t.status === 'OPEN');
   const closedTrades = filteredTrades.filter(t => t.status === 'CLOSED');
 
@@ -120,17 +124,22 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
             ))}
           </div>
         </div>
-        {/* Analytics */}
-        <div className="mb-3 px-2 flex justify-end">
-          <a
-            href={`${remoteUrl}/export/csv?status=closed`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1 text-[10px] font-bold rounded-[6px] bg-white/10 border border-white/10 hover:bg-white/20"
-          >
-            Export CSV
-          </a>
+        {/* Strategy Filter */}
+        <div className="mb-3 px-2 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Strategy</h3>
+          <div className="flex gap-2">
+            {(['ALL', StrategyType.AI_AGENT, StrategyType.NY_ORB, StrategyType.TREND_FOLLOW, StrategyType.LONDON_SWEEP] as const).map(opt => (
+              <button
+                key={opt}
+                onClick={() => setStrategyFilter(opt)}
+                className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${strategyFilter === opt ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
+              >
+                {opt === 'ALL' ? 'All' : opt === StrategyType.AI_AGENT ? 'Gemini' : opt === StrategyType.NY_ORB ? 'ORB' : opt === StrategyType.TREND_FOLLOW ? 'Trend' : 'Sweep'}
+              </button>
+            ))}
+          </div>
         </div>
+
         <PerformanceSummary trades={closedTrades} />
 
         {/* Active Trades Section */}
