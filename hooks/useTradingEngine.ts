@@ -55,6 +55,26 @@ export const useTradingEngine = () => {
           }
       } catch (e) {
           setIsConnected(false); // Network error (server down or wrong URL)
+          try {
+              const alt = DEFAULT_REMOTE_URL.trim().replace(/\/$/, "");
+              if (alt && alt !== remoteUrl) {
+                  const controller2 = new AbortController();
+                  const timeout2 = setTimeout(() => controller2.abort(), 4000);
+                  const res2 = await fetch(`${alt}/state?ts=${Date.now()}`, { cache: 'no-store', signal: controller2.signal });
+                  clearTimeout(timeout2);
+                  if (res2.ok) {
+                      const state2 = await res2.json();
+                      if (state2.assets && state2.account && state2.trades) {
+                          if (typeof window !== 'undefined') localStorage.setItem('remoteUrl', alt);
+                          setRemoteUrl(alt);
+                          setAssets(state2.assets);
+                          setAccount(state2.account);
+                          setTrades(state2.trades);
+                          setIsConnected(true);
+                      }
+                  }
+              }
+          } catch {}
       }
       
     }, TICK_RATE_MS);
@@ -67,15 +87,18 @@ export const useTradingEngine = () => {
     const chooseUrl = async () => {
       try {
         const saved = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') : null;
-        if (saved) return;
         const candidates = [
+          ...(saved ? [saved] : []),
           'http://localhost:3001',
           'http://localhost:3002',
           DEFAULT_REMOTE_URL
         ];
         for (const base of candidates) {
           try {
-            const res = await fetch(`${base.replace(/\/$/, '')}/state`, { method: 'GET' });
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 4000);
+            const res = await fetch(`${base.replace(/\/$/, '')}/state?ts=${Date.now()}`, { method: 'GET', cache: 'no-store', signal: controller.signal });
+            clearTimeout(timeout);
             if (res.ok) {
               const clean = base.replace(/\/$/, '');
               if (typeof window !== 'undefined') {
