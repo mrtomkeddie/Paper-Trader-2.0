@@ -743,3 +743,5 @@ function cloudSaveState() {
     db.doc('pt2/state').set({ account, trades, pushSubscriptions, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
   } catch {}
 }
+
+setInterval(() => { try { cloudSaveState(); } catch {} }, 5 * 60 * 1000);
