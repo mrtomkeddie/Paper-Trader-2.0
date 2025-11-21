@@ -627,6 +627,15 @@ app.get('/cloud/status', async (req, res) => {
   }
 });
 
+app.post('/cloud/sync', (req, res) => {
+  try {
+    saveState();
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'error' });
+  }
+});
+
 app.get('/health', (req, res) => res.send('OK')); // Cloud Health Check
 
 app.post('/toggle/:symbol', (req, res) => {
