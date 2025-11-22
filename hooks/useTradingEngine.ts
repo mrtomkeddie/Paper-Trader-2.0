@@ -34,26 +34,33 @@ export const useTradingEngine = () => {
   // --- MAIN ENGINE LOOP (POLLING ONLY) ---
   useEffect(() => {
     try {
-      const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-      const es = new EventSource(`${cleanUrl}/events?ts=${Date.now()}`);
-      esRef.current = es;
-      es.onmessage = (ev) => {
-        try {
-          const state = JSON.parse(ev.data);
-          if (state.assets && state.account && state.trades) {
-            setAssets(state.assets);
-            setAccount(state.account);
-            setTrades(state.trades);
-            setIsConnected(true);
-            lastUpdateRef.current = Date.now();
-          }
-        } catch {}
+      const connect = (base: string) => {
+        const clean = base.trim().replace(/\/$/, "");
+        const stream = new EventSource(`${clean}/events?ts=${Date.now()}`);
+        esRef.current = stream;
+        stream.onmessage = (ev) => {
+          try {
+            const state = JSON.parse(ev.data);
+            if (state.assets && state.account && state.trades) {
+              setAssets(state.assets);
+              setAccount(state.account);
+              setTrades(state.trades);
+              setIsConnected(true);
+              lastUpdateRef.current = Date.now();
+            }
+          } catch {}
+        };
+        stream.onerror = () => {
+          try { stream.close(); } catch {}
+          esRef.current = null;
+          setIsConnected(false);
+          setTimeout(() => {
+            try { connect(remoteUrl); } catch {}
+          }, 2000);
+        };
+        return stream;
       };
-      es.onerror = () => {
-        try { es.close(); } catch {}
-        esRef.current = null;
-        setIsConnected(false);
-      };
+      const es = connect(remoteUrl);
       const watchdog = setInterval(() => {
         const stale = Date.now() - (lastUpdateRef.current || 0) > 12000;
         if (stale) {
@@ -61,10 +68,12 @@ export const useTradingEngine = () => {
           esRef.current = null;
           setIsConnected(false);
           try {
+            connect(remoteUrl);
+          } catch {}
+          try {
             const alt = DEFAULT_REMOTE_URL.trim().replace(/\/$/, "");
             if (alt && alt !== remoteUrl) {
-              const es2 = new EventSource(`${alt}/events?ts=${Date.now()}`);
-              esRef.current = es2;
+              const es2 = connect(alt);
               es2.onmessage = (ev2) => {
                 try {
                   const s2 = JSON.parse(ev2.data);
@@ -79,7 +88,6 @@ export const useTradingEngine = () => {
                   }
                 } catch {}
               };
-              es2.onerror = () => { try { es2.close(); } catch {}; esRef.current = null; };
             }
           } catch {}
         }
@@ -87,6 +95,8 @@ export const useTradingEngine = () => {
       return () => { try { clearInterval(watchdog); } catch {}; try { es.close(); } catch {}; esRef.current = null; };
     } catch {}
   }, [remoteUrl]);
+
+  useEffect(() => {
     const interval = setInterval(async () => {
       
       // --- REMOTE SERVER POLL ---
