@@ -154,10 +154,10 @@ export const useTradingEngine = () => {
       try {
         const saved = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') : null;
         const candidates = [
+          DEFAULT_REMOTE_URL,
           ...(saved ? [saved] : []),
           'http://localhost:3001',
-          'http://localhost:3002',
-          DEFAULT_REMOTE_URL
+          'http://localhost:3002'
         ];
         for (const base of candidates) {
           try {
