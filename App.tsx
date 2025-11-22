@@ -1,16 +1,19 @@
 
 import React, { useState } from 'react';
 import { useTradingEngine } from './hooks/useTradingEngine';
+import { useCryptoEngine } from './hooks/useCryptoEngine';
 import AssetCard from './components/AssetCard';
+import CryptoAssetCard from './components/CryptoAssetCard';
 import TradeHistory from './components/TradeHistory';
 import SettingsModal from './components/SettingsModal';
 import { Wallet, BarChart2, Clock, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Server, Wifi, WifiOff } from 'lucide-react';
-import { AssetSymbol } from './types';
+import { AssetSymbol, Trade, StrategyType, TradeType } from './types';
 import { DEFAULT_REMOTE_URL } from './constants';
 
 const App: React.FC = () => {
   const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
-  const [view, setView] = useState<'dashboard' | 'history'>('dashboard');
+  const { assets: cAssets, account: cAccount, trades: cTrades, isConnected: cConnected, toggleBot: cToggleBot, setStrategy: cSetStrategy } = useCryptoEngine();
+  const [view, setView] = useState<'dashboard' | 'indicesHistory' | 'crypto' | 'cryptoHistory'>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(''); // used for display in offline banner
   const [isWeekendClosed, setIsWeekendClosed] = useState(false);
@@ -103,11 +106,43 @@ const App: React.FC = () => {
   // Fixed Assets: Gold and Nasdaq only
   const visibleAssets = [AssetSymbol.XAUUSD, AssetSymbol.NAS100];
 
+  const combinedTrades: Trade[] = React.useMemo(() => {
+    const mapCrypto = (ct: any): Trade => {
+      const isBuy = ct.type === 'BUY';
+      const price = cAssets?.[ct.symbol]?.currentPrice ?? ct.entryPrice;
+      const exit = isBuy ? price * 0.999 : price * 1.001;
+      const tpLevels = [
+        { id: 1, price: ct.tp1, percentage: 0.4, hit: !!ct.tp1Hit },
+        { id: 2, price: ct.tp2, percentage: 0.4, hit: !!ct.tp2Hit },
+        { id: 3, price: ct.tp3, percentage: 0.2, hit: !!ct.tp3Hit },
+      ];
+      return {
+        id: ct.id,
+        symbol: ct.symbol as any,
+        type: ct.type as any,
+        entryPrice: ct.entryPrice,
+        initialSize: ct.initialSize,
+        currentSize: ct.currentSize,
+        stopLoss: ct.stopLoss,
+        tpLevels,
+        openTime: ct.openTime,
+        closeTime: ct.closeTime,
+        closePrice: ct.closePrice,
+        pnl: ct.pnl,
+        floatingPnl: ct.status === 'OPEN' ? (isBuy ? exit - ct.entryPrice : ct.entryPrice - exit) * ct.currentSize : undefined,
+        status: ct.status as any,
+        strategy: StrategyType.AI_AGENT,
+      };
+    };
+    const cryptoMapped = cTrades.map(mapCrypto).sort((a, b) => b.openTime - a.openTime);
+    return cryptoMapped;
+  }, [cTrades, cAssets]);
+
   const currentRemoteUrl = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') || 'Default' : 'Default';
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-ios-blue/30">
-      {isWeekendClosed && (
+      {view === 'dashboard' && isWeekendClosed && (
         <div className="fixed left-4 right-4 z-50" style={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}>
           <div className="bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl shadow-black/50 max-w-lg mx-auto">
             <Clock size={18} className="text-ios-blue" />
@@ -134,8 +169,8 @@ const App: React.FC = () => {
         <header className="mb-8">
           <div className="flex justify-between items-start mb-2">
              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${isConnected ? 'bg-ios-green' : 'bg-ios-red'}`} />
-                <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">Remote Dashboard</span>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${((view === 'crypto' || view === 'cryptoHistory') ? cConnected : isConnected) ? 'bg-ios-green' : 'bg-ios-red'}`} />
+                <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : view === 'indicesHistory' ? 'Indices History' : view === 'crypto' ? 'Crypto Desk' : 'Crypto History'}</span>
              </div>
              <div className="flex gap-3">
                 <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
@@ -147,14 +182,14 @@ const App: React.FC = () => {
              </div>
           </div>
           <h1 className="text-5xl font-bold tracking-tight text-white tabular-nums mb-3">
-            £{account.equity.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            £{((view === 'crypto' || view === 'cryptoHistory') ? cAccount.equity : account.equity).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h1>
           
           {/* Daily PnL Badge */}
-          <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${isPositiveDay ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-red/15 text-ios-red'}`}>
-            {isPositiveDay ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+          <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL >= 0 : account.dayPnL >= 0) ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-red/15 text-ios-red'}`}>
+            {((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL >= 0 : account.dayPnL >= 0) ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
             <span>
-                £{Math.abs(account.dayPnL).toFixed(2)} ({((account.dayPnL / account.balance) * 100).toFixed(2)}%)
+                £{Math.abs((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL).toFixed(2)} ({((((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL) / ((view === 'crypto' || view === 'cryptoHistory') ? cAccount.balance : account.balance)) * 100).toFixed(2)}%)
             </span>
             <span className="ml-1 opacity-60 font-medium text-xs">Today</span>
           </div>
@@ -178,9 +213,24 @@ const App: React.FC = () => {
                 ))}
              </div>
           </div>
-        ) : (
+        ) : view === 'crypto' ? (
+          <div className="space-y-6 animate-fade-in">
+            <div>
+              <h2 className="text-xl font-bold text-white mb-4">Crypto Desk</h2>
+              <div className="space-y-6">
+                {['BTCUSDT','ETHUSDT','SOLUSDT'].map(sym => (
+                  cAssets[sym] ? <CryptoAssetCard key={sym} asset={cAssets[sym]} trades={cTrades.filter(t => t.symbol === sym)} toggleBot={cToggleBot} setStrategy={cSetStrategy} /> : null
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : view === 'indicesHistory' ? (
           <div className="animate-fade-in">
             <TradeHistory trades={trades} />
+          </div>
+        ) : (
+          <div className="animate-fade-in">
+            <TradeHistory trades={combinedTrades} />
           </div>
         )}
       </main>
@@ -197,10 +247,28 @@ const App: React.FC = () => {
         <div className="w-[1px] h-8 bg-white/10"></div>
 
         <button 
-          onClick={() => setView('history')}
-          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'history' ? 'text-ios-blue' : 'text-neutral-500'}`}
+          onClick={() => setView('indicesHistory')}
+          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'indicesHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
         >
-          <Clock size={24} strokeWidth={view === 'history' ? 2.5 : 2} />
+          <Clock size={24} strokeWidth={view === 'indicesHistory' ? 2.5 : 2} />
+        </button>
+
+        <div className="w-[1px] h-8 bg-white/10"></div>
+
+        <button 
+          onClick={() => setView('crypto')}
+          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'crypto' ? 'text-ios-blue' : 'text-neutral-500'}`}
+        >
+          <Server size={24} strokeWidth={view === 'crypto' ? 2.5 : 2} />
+        </button>
+
+        <div className="w-[1px] h-8 bg-white/10"></div>
+
+        <button 
+          onClick={() => setView('cryptoHistory')}
+          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'cryptoHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
+        >
+          <Clock size={24} strokeWidth={view === 'cryptoHistory' ? 2.5 : 2} />
         </button>
       </div>
       

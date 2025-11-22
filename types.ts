@@ -109,6 +109,7 @@ export interface AccountState {
   balance: number;
   equity: number;
   dayPnL: number;
+  totalPnL?: number;
 }
 
 export interface MarketContextType {

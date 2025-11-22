@@ -96,7 +96,8 @@ const RISK_PER_TRADE = 0.01;
 let account = {
     balance: INITIAL_BALANCE,
     equity: INITIAL_BALANCE,
-    dayPnL: 0
+    dayPnL: 0,
+    totalPnL: 0
 };
 
 let trades = [];
@@ -534,6 +535,7 @@ function processTicks(symbol) {
         t.floatingPnl = (isBuy ? exit - t.entryPrice : t.entryPrice - exit) * t.currentSize;
     }
     account.dayPnL += closedPnL;
+    account.totalPnL += closedPnL;
     account.equity = account.balance;
     if (closedPnL !== 0) saveState();
 
@@ -698,7 +700,7 @@ app.post('/strategy/:symbol', (req, res) => {
 });
 
 app.post('/reset', (req, res) => {
-    account = { balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0 };
+    account = { balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0, totalPnL: 0 };
     trades = [];
     pushSubscriptions = [];
     saveState();

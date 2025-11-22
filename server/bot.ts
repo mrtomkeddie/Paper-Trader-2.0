@@ -2,6 +2,12 @@ import { symbols, SymbolKey } from '../config/symbols';
 import { ExchangeClient, OHLCV } from './exchangeClient';
 import { isWeekendUTC, sma, rsi, updateVWAP, updateWeekendRange, VWAPState, RangeState, checkRangeBreakRetestLong, checkRangeBreakRetestShort, computeLotSize, RISK_PER_TRADE } from './strategies';
 import { v4 as uuidv4 } from 'uuid';
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
+
+dotenv.config();
 
 type StrategyId = 'VWAP_MEAN_REV' | 'BTC_RANGE_RETEST';
 type Side = 'BUY' | 'SELL';
@@ -39,14 +45,21 @@ interface SymbolState {
   range: RangeState;
   last15m?: OHLCV;
   last1h?: OHLCV;
+  botActive: boolean;
+  activeStrategies: string[];
 }
 
-const account = { balance: 10000, equity: 10000 };
+const account = { balance: 10000, equity: 10000, dayPnL: 0, totalPnL: 0 };
 const trades: Trade[] = [];
 const state: Record<string, SymbolState> = {};
+const aiState: Record<string, { lastCheck: number; sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL'; confidence: number }> = {};
+const API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GENAI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
+const aiClient = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 for (const s of Object.keys(symbols)) {
-  state[s] = { closes15m: [], closes1h: [], sma20: 0, sma50: 0, rsi14: 50, vwap: { pv: 0, v: 0, vwap: 0 }, range: { high: null, low: null, frozen: false, brokeAbove: false, brokeBelow: false } };
+  const defaults = s === 'BTCUSDT' ? ['VWAP','RANGE','AI_AGENT'] : ['VWAP','AI_AGENT'];
+  state[s] = { closes15m: [], closes1h: [], sma20: 0, sma50: 0, rsi14: 50, vwap: { pv: 0, v: 0, vwap: 0 }, range: { high: null, low: null, frozen: false, brokeAbove: false, brokeBelow: false }, botActive: true, activeStrategies: defaults };
+  aiState[s] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
 }
 
 function hasOpen(symbol: string, strategy: StrategyId) {
@@ -61,32 +74,41 @@ function placeTrade(symbol: string, strategy: StrategyId, type: Side, entry: num
 }
 
 function manageTrades(symbol: string, bid: number, ask: number, sma20: number, last1h?: OHLCV) {
+  let closed = 0;
   for (const t of trades) {
     if (t.symbol !== symbol || t.status !== 'OPEN') continue;
     const isBuy = t.type === 'BUY';
     const exit = isBuy ? bid : ask;
-    if (isBuy && exit <= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; continue; }
-    if (!isBuy && exit >= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; continue; }
+    if (state[symbol].activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > 80) {
+      const snt = aiState[symbol].sentiment;
+      if (isBuy && snt === 'BEARISH') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
+      if (!isBuy && snt === 'BULLISH') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
+    }
+    if (isBuy && exit <= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
+    if (!isBuy && exit >= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
     if (!t.tp1Hit) {
       const hit = isBuy ? exit >= t.tp1 : exit <= t.tp1;
-      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp1 - t.entryPrice : t.entryPrice - t.tp1) * qty; t.pnl += pnl; account.balance += pnl; t.currentSize -= qty; t.tp1Hit = true; t.stopLoss = t.entryPrice; }
+      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp1 - t.entryPrice : t.entryPrice - t.tp1) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp1Hit = true; t.stopLoss = t.entryPrice; }
     }
     if (t.tp1Hit && !t.tp2Hit) {
       const hit = isBuy ? exit >= t.tp2 : exit <= t.tp2;
-      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp2 - t.entryPrice : t.entryPrice - t.tp2) * qty; t.pnl += pnl; account.balance += pnl; t.currentSize -= qty; t.tp2Hit = true; if (t.strategy === 'VWAP_MEAN_REV') { if (isBuy) t.stopLoss = Math.max(t.stopLoss, sma20 * 0.999); else t.stopLoss = Math.min(t.stopLoss, sma20 * 1.001); } else if (t.strategy === 'BTC_RANGE_RETEST' && last1h) { if (isBuy) t.stopLoss = Math.max(t.stopLoss, last1h.low * 0.999); else t.stopLoss = Math.min(t.stopLoss, last1h.high * 1.001); } }
+      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp2 - t.entryPrice : t.entryPrice - t.tp2) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp2Hit = true; if (t.strategy === 'VWAP_MEAN_REV') { if (isBuy) t.stopLoss = Math.max(t.stopLoss, sma20 * 0.999); else t.stopLoss = Math.min(t.stopLoss, sma20 * 1.001); } else if (t.strategy === 'BTC_RANGE_RETEST' && last1h) { if (isBuy) t.stopLoss = Math.max(t.stopLoss, last1h.low * 0.999); else t.stopLoss = Math.min(t.stopLoss, last1h.high * 1.001); } }
     }
     if (t.tp2Hit && !t.tp3Hit) {
       const hit = isBuy ? exit >= t.tp3 : exit <= t.tp3;
-      if (hit) { const qty = t.initialSize * 0.2; const pnl = (isBuy ? t.tp3 - t.entryPrice : t.entryPrice - t.tp3) * qty; t.pnl += pnl; account.balance += pnl; t.currentSize -= qty; t.tp3Hit = true; t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; }
+      if (hit) { const qty = t.initialSize * 0.2; const pnl = (isBuy ? t.tp3 - t.entryPrice : t.entryPrice - t.tp3) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp3Hit = true; t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; }
     }
   }
   account.equity = account.balance;
+  account.dayPnL += closed;
+  account.totalPnL += closed;
 }
 
 function evaluateVWAPMeanReversion(symbol: string) {
   const cfg = (symbols as any)[symbol];
   if (!cfg.enabled || !cfg.runVWAPMeanReversion) return;
   const st = state[symbol];
+  if (!st.botActive || !st.activeStrategies.includes('VWAP')) return;
   if (st.closes15m.length < 60) return;
   const now = new Date(st.last15m!.time);
   if (!isWeekendUTC(now)) return;
@@ -119,6 +141,7 @@ function evaluateRangeBreakRetest(symbol: string) {
   const cfg = (symbols as any)[symbol];
   if (!cfg.enabled || !cfg.runRangeBreakRetest) return;
   const st = state[symbol];
+  if (!st.botActive || !st.activeStrategies.includes('RANGE')) return;
   if (!st.last1h) return;
   const now = new Date(st.last1h.time);
   if (!isWeekendUTC(now)) return;
@@ -153,7 +176,9 @@ function on15m(symbol: string, c: OHLCV) {
   st.sma50 = sma(st.closes15m, 50);
   st.rsi14 = rsi(st.closes15m, 14);
   st.vwap = updateVWAP(st.vwap, c.close, c.volume, c.time);
+  try { consultGemini(symbol); } catch {}
   evaluateVWAPMeanReversion(symbol);
+  evaluateAIAgent(symbol);
   const bid = c.close * 0.999;
   const ask = c.close * 1.001;
   manageTrades(symbol, bid, ask, st.sma20, state[symbol].last1h);
@@ -175,7 +200,102 @@ function main() {
     if (!(symbols as any)[s].enabled) continue;
     unsub.push(client.subscribe(s, '15m', c => on15m(s, c)));
     if ((symbols as any)[s].runRangeBreakRetest) unsub.push(client.subscribe(s, '1h', c => on1h(s, c)));
+    setTimeout(() => { try { consultGemini(s); } catch {} }, 2000);
   }
 }
 
 main();
+
+const app = express();
+app.use(cors());
+const clients = new Set<any>();
+function buildState() {
+  const assets: Record<string, any> = {};
+  for (const s of Object.keys(state)) {
+    const st = state[s];
+    const price = st.last15m ? st.last15m.close : 0;
+    const trend = price > st.sma50 ? 'UP' : 'DOWN';
+    const history = st.closes15m.slice(-100).map((v, i) => ({ time: String(i), value: v }));
+    const ai = aiState[s];
+    const aiAnalyzing = ai && (Date.now() - ai.lastCheck < 15000);
+    assets[s] = { symbol: s, currentPrice: price, history, rsi: st.rsi14, ema: st.sma20, ema200: st.sma50, trend, botActive: st.botActive, activeStrategies: st.activeStrategies, isLive: true, aiAnalyzing };
+  }
+  return { assets, account, trades };
+}
+app.get('/state', (req, res) => {
+  res.json(buildState());
+});
+app.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  clients.add(res);
+  const send = () => { try { res.write(`data: ${JSON.stringify(buildState())}\n\n`); } catch {} };
+  const timer = setInterval(send, 1000);
+  req.on('close', () => { try { clearInterval(timer); } catch {}; clients.delete(res); });
+});
+app.post('/toggle/:symbol', (req, res) => {
+  const s = req.params.symbol;
+  if (!state[s]) return res.status(404).end();
+  state[s].botActive = !state[s].botActive;
+  res.json({ botActive: state[s].botActive });
+});
+app.post('/strategy/:symbol', express.json(), (req, res) => {
+  const s = req.params.symbol;
+  const strat = String(req.body?.strategy || '').toUpperCase();
+  if (!state[s] || !strat) return res.status(400).end();
+  const list = state[s].activeStrategies;
+  const idx = list.indexOf(strat);
+  if (idx >= 0) list.splice(idx, 1); else list.push(strat);
+  state[s].activeStrategies = [...list];
+  res.json({ activeStrategies: state[s].activeStrategies });
+});
+const port = 3002;
+app.listen(port);
+app.get('/ai_status', (req, res) => {
+  try { res.json({ enabled: !!aiClient, aiState }); } catch { res.status(500).end(); }
+});
+
+async function consultGemini(symbol: string) {
+  const now = Date.now();
+  if (now - aiState[symbol].lastCheck < 5 * 60 * 1000) return;
+  aiState[symbol].lastCheck = now;
+  if (!aiClient) return;
+  const st = state[symbol];
+  if (!st.activeStrategies.includes('AI_AGENT')) return;
+  const price = st.last15m ? st.last15m.close : 0;
+  const prompt = `{"price":${price},"trend":"${price > st.sma50 ? 'UP' : 'DOWN'}","rsi":${st.rsi14.toFixed(2)}}`;
+  try {
+    const resp = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: 'application/json' } });
+    const text = (resp as any).text || '';
+    const obj = JSON.parse(text);
+    const snt = String(obj.sentiment || 'NEUTRAL').toUpperCase() as 'BULLISH'|'BEARISH'|'NEUTRAL';
+    const conf = typeof obj.confidence === 'number' ? obj.confidence : 0;
+    aiState[symbol] = { lastCheck: now, sentiment: snt, confidence: conf };
+  } catch {}
+}
+
+function evaluateAIAgent(symbol: string) {
+  const st = state[symbol];
+  if (!st.botActive || !st.activeStrategies.includes('AI_AGENT')) return;
+  const hasAnyOpen = trades.some(t => t.symbol === symbol && t.status === 'OPEN');
+  if (hasAnyOpen) return;
+  const info = aiState[symbol];
+  if (info.confidence < 70) return;
+  const price = st.last15m ? st.last15m.close : 0;
+  const isUp = price > st.sma50;
+  if (info.sentiment === 'BULLISH' && isUp) {
+    const sl = price * 0.992;
+    const tp1 = price * 1.006;
+    const tp2 = price * 1.012;
+    const tp3 = price * 1.03;
+    placeTrade(symbol, 'VWAP_MEAN_REV', 'BUY', price, sl, tp1, tp2, tp3);
+  } else if (info.sentiment === 'BEARISH' && !isUp) {
+    const sl = price * 1.008;
+    const tp1 = price * 0.994;
+    const tp2 = price * 0.988;
+    const tp3 = price * 0.97;
+    placeTrade(symbol, 'VWAP_MEAN_REV', 'SELL', price, sl, tp1, tp2, tp3);
+  }
+}

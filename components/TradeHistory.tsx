@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trade, TradeType, StrategyType, AssetSymbol } from '../types';
+import { Trade, TradeType, StrategyType } from '../types';
 import { DEFAULT_REMOTE_URL } from '../constants';
 import { Clock, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import TradeDetailModal from './TradeDetailModal';
@@ -86,7 +86,7 @@ const TradeRow: React.FC<TradeRowProps> = ({ trade, onSelect }) => {
 
 const TradeHistory: React.FC<Props> = ({ trades }) => {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
-  const [symbolFilter, setSymbolFilter] = useState<'ALL' | AssetSymbol>('ALL');
+  const [symbolFilter, setSymbolFilter] = useState<'ALL' | string>('ALL');
   const [strategyFilter, setStrategyFilter] = useState<'ALL' | StrategyType>('ALL');
   const [activeOpen, setActiveOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
@@ -111,32 +111,30 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
   return (
     <>
       <div className="pb-24">
-        {/* Symbol Filter */}
         <div className="mb-3 px-2 flex items-center justify-between">
           <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Filter</h3>
           <div className="flex gap-2">
-            {(['ALL', AssetSymbol.XAUUSD, AssetSymbol.NAS100] as const).map(opt => (
+            {(['ALL', ...Array.from(new Set(trades.map(t => t.symbol)))] as const).map(opt => (
               <button
-                key={opt}
-                onClick={() => setSymbolFilter(opt)}
-                className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${symbolFilter === opt ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
+                key={String(opt)}
+                onClick={() => setSymbolFilter(String(opt))}
+                className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${symbolFilter === String(opt) ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
-                {opt === 'ALL' ? 'Both' : opt === AssetSymbol.XAUUSD ? 'Gold' : 'NAS100'}
+                {String(opt) === 'ALL' ? 'All' : String(opt)}
               </button>
             ))}
           </div>
         </div>
-        {/* Strategy Filter */}
         <div className="mb-3 px-2 flex items-center justify-between">
           <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Strategy</h3>
           <div className="flex gap-2">
-            {(['ALL', StrategyType.AI_AGENT, StrategyType.NY_ORB, StrategyType.TREND_FOLLOW, StrategyType.LONDON_SWEEP] as const).map(opt => (
+            {(['ALL', ...Array.from(new Set(trades.map(t => t.strategy).filter(Boolean)))] as (('ALL'|StrategyType)[])).map(opt => (
               <button
-                key={opt}
-                onClick={() => setStrategyFilter(opt)}
+                key={String(opt)}
+                onClick={() => setStrategyFilter(opt as StrategyType | 'ALL')}
                 className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${strategyFilter === opt ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
               >
-                {opt === 'ALL' ? 'All' : opt === StrategyType.AI_AGENT ? 'Gemini' : opt === StrategyType.NY_ORB ? 'ORB' : opt === StrategyType.TREND_FOLLOW ? 'Trend' : 'Sweep'}
+                {opt === 'ALL' ? 'All' : getStrategyBadge(opt as StrategyType).label}
               </button>
             ))}
           </div>
