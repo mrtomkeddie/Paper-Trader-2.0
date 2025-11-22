@@ -614,6 +614,7 @@ app.get('/events', (req, res) => {
   } catch {}
   try { res.write(`retry: 3000\n\n`); } catch {}
   sseClients.add(res);
+  try { const payload = JSON.stringify({ account, trades, assets }); res.write(`data: ${payload}\n\n`); } catch {}
   req.on('close', () => { try { sseClients.delete(res); } catch {} });
 });
 
