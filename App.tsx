@@ -13,6 +13,64 @@ const App: React.FC = () => {
   const [view, setView] = useState<'dashboard' | 'history'>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(''); // used for display in offline banner
+  const [isWeekendClosed, setIsWeekendClosed] = useState(false);
+  const [marketCountdown, setMarketCountdown] = useState('');
+
+  const formatDuration = (ms: number) => {
+    const total = Math.floor(ms / 1000);
+    const days = Math.floor(total / 86400);
+    const hours = Math.floor((total % 86400) / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+    const prefix = days > 0 ? `${days}d ` : '';
+    return `${prefix}${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+  };
+
+  const nextOpen = (now: Date) => {
+    const day = now.getDay();
+    if (day === 6) {
+      const next = new Date(now);
+      const add = 7 - day;
+      next.setDate(now.getDate() + add);
+      next.setHours(18, 0, 0, 0);
+      return next;
+    }
+    if (day === 0) {
+      const next = new Date(now);
+      next.setHours(18, 0, 0, 0);
+      return next;
+    }
+    return now;
+  };
+
+  const isWeekend = (now: Date) => {
+    const day = now.getDay();
+    if (day === 6) return true;
+    if (day === 0) {
+      const open = new Date(now);
+      open.setHours(18, 0, 0, 0);
+      return now.getTime() < open.getTime();
+    }
+    return false;
+  };
+
+  React.useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      const closed = isWeekend(now);
+      setIsWeekendClosed(closed);
+      if (closed) {
+        const open = nextOpen(now);
+        const diff = open.getTime() - now.getTime();
+        setMarketCountdown(formatDuration(diff));
+      } else {
+        setMarketCountdown('');
+      }
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   React.useEffect(() => {
     const urlBase64ToUint8Array = (base64String: string) => {
@@ -49,6 +107,17 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-ios-blue/30">
+      {isWeekendClosed && (
+        <div className="fixed left-4 right-4 z-50" style={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}>
+          <div className="bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl shadow-black/50 max-w-lg mx-auto">
+            <Clock size={18} className="text-ios-blue" />
+            <div className="flex-1">
+              <div className="text-sm font-bold">Markets Closed (Weekend)</div>
+              <div className="text-xs text-ios-gray">Reopens in {marketCountdown}</div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <SettingsModal 
         isOpen={isSettingsOpen} 
@@ -59,7 +128,7 @@ const App: React.FC = () => {
       />
 
       {/* Main Scrollable Content */}
-      <main className="pb-28 px-5 pt-14 max-w-lg mx-auto">
+      <main className="pb-28 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
         
         {/* Premium Header */}
         <header className="mb-8">
