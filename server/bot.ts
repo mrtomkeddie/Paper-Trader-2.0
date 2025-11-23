@@ -55,6 +55,8 @@ const state: Record<string, SymbolState> = {};
 const aiState: Record<string, { lastCheck: number; sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL'; confidence: number }> = {};
 const API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GENAI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
 const aiClient = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
+let webpushClient: any = null;
+let pushSubscriptions: any[] = [];
 
 for (const s of Object.keys(symbols)) {
   const defaults = s === 'BTCUSDT' ? ['VWAP','RANGE','AI_AGENT'] : ['VWAP','AI_AGENT'];
@@ -71,6 +73,7 @@ function placeTrade(symbol: string, strategy: StrategyId, type: Side, entry: num
   if (size <= 0) return;
   const t: Trade = { id: uuidv4(), symbol, strategy, type, entryPrice: entry, initialSize: size, currentSize: size, stopLoss: sl, tp1, tp2, tp3, tp1Hit: false, tp2Hit: false, tp3Hit: false, openTime: Date.now(), pnl: 0, status: 'OPEN' };
   trades.unshift(t);
+  notifyAll('Trade Opened', `${symbol} ${type} @ ${entry.toFixed(2)} (${strategy})`);
 }
 
 function manageTrades(symbol: string, bid: number, ask: number, sma20: number, last1h?: OHLCV) {
@@ -88,15 +91,15 @@ function manageTrades(symbol: string, bid: number, ask: number, sma20: number, l
     if (!isBuy && exit >= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
     if (!t.tp1Hit) {
       const hit = isBuy ? exit >= t.tp1 : exit <= t.tp1;
-      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp1 - t.entryPrice : t.entryPrice - t.tp1) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp1Hit = true; t.stopLoss = t.entryPrice; }
+      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp1 - t.entryPrice : t.entryPrice - t.tp1) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp1Hit = true; t.stopLoss = t.entryPrice; notifyAll('TP1 Hit', `${t.symbol} ${t.type} PnL ${pnl.toFixed(2)}`); }
     }
     if (t.tp1Hit && !t.tp2Hit) {
       const hit = isBuy ? exit >= t.tp2 : exit <= t.tp2;
-      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp2 - t.entryPrice : t.entryPrice - t.tp2) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp2Hit = true; if (t.strategy === 'VWAP_MEAN_REV') { if (isBuy) t.stopLoss = Math.max(t.stopLoss, sma20 * 0.999); else t.stopLoss = Math.min(t.stopLoss, sma20 * 1.001); } else if (t.strategy === 'BTC_RANGE_RETEST' && last1h) { if (isBuy) t.stopLoss = Math.max(t.stopLoss, last1h.low * 0.999); else t.stopLoss = Math.min(t.stopLoss, last1h.high * 1.001); } }
+      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp2 - t.entryPrice : t.entryPrice - t.tp2) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp2Hit = true; if (t.strategy === 'VWAP_MEAN_REV') { if (isBuy) t.stopLoss = Math.max(t.stopLoss, sma20 * 0.999); else t.stopLoss = Math.min(t.stopLoss, sma20 * 1.001); } else if (t.strategy === 'BTC_RANGE_RETEST' && last1h) { if (isBuy) t.stopLoss = Math.max(t.stopLoss, last1h.low * 0.999); else t.stopLoss = Math.min(t.stopLoss, last1h.high * 1.001); } notifyAll('TP2 Hit', `${t.symbol} ${t.type} PnL ${pnl.toFixed(2)}`); }
     }
     if (t.tp2Hit && !t.tp3Hit) {
       const hit = isBuy ? exit >= t.tp3 : exit <= t.tp3;
-      if (hit) { const qty = t.initialSize * 0.2; const pnl = (isBuy ? t.tp3 - t.entryPrice : t.entryPrice - t.tp3) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp3Hit = true; t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; }
+      if (hit) { const qty = t.initialSize * 0.2; const pnl = (isBuy ? t.tp3 - t.entryPrice : t.entryPrice - t.tp3) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp3Hit = true; t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; notifyAll('Trade Closed', `${t.symbol} ${t.type} Final PnL ${pnl.toFixed(2)}`); }
     }
   }
   account.equity = account.balance;
@@ -235,6 +238,16 @@ app.get('/events', (req, res) => {
   const timer = setInterval(send, 1000);
   req.on('close', () => { try { clearInterval(timer); } catch {}; clients.delete(res); });
 });
+app.post('/push/subscribe', express.json(), (req, res) => {
+  try {
+    const sub = req.body;
+    if (!sub || !sub.endpoint) return res.status(400).end();
+    const exists = pushSubscriptions.find(s => s.endpoint === sub.endpoint);
+    if (!exists) pushSubscriptions.push(sub);
+    res.sendStatus(201);
+  } catch { res.sendStatus(500); }
+});
+app.post('/push/test', (req, res) => { try { notifyAll('Push Test', 'Crypto notifications enabled'); res.sendStatus(200); } catch { res.sendStatus(500); } });
 app.post('/toggle/:symbol', (req, res) => {
   const s = req.params.symbol;
   if (!state[s]) return res.status(404).end();
@@ -251,7 +264,7 @@ app.post('/strategy/:symbol', express.json(), (req, res) => {
   state[s].activeStrategies = [...list];
   res.json({ activeStrategies: state[s].activeStrategies });
 });
-const port = 3002;
+const port = Number(process.env.PORT || 3002);
 app.listen(port);
 app.get('/ai_status', (req, res) => {
   try { res.json({ enabled: !!aiClient, aiState }); } catch { res.status(500).end(); }
@@ -299,3 +312,21 @@ function evaluateAIAgent(symbol: string) {
     placeTrade(symbol, 'VWAP_MEAN_REV', 'SELL', price, sl, tp1, tp2, tp3);
   }
 }
+
+function notifyAll(title: string, body: string) {
+  try {
+    if (!webpushClient || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
+    const payload = JSON.stringify({ title, body });
+    for (const sub of pushSubscriptions) { try { webpushClient.sendNotification(sub, payload).catch(() => {}); } catch {} }
+  } catch {}
+}
+
+(async () => {
+  try {
+    const mod = await import('web-push');
+    webpushClient = (mod as any).default || mod;
+    const pub = process.env.VAPID_PUBLIC_KEY;
+    const priv = process.env.VAPID_PRIVATE_KEY;
+    if (pub && priv) webpushClient.setVapidDetails('mailto:admin@example.com', pub, priv);
+  } catch {}
+})();

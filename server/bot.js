@@ -25,11 +25,12 @@ app.use((req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3001;
-const API_KEY = process.env.API_KEY;
+const API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GENAI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
 const OANDA_TOKEN = process.env.OANDA_API_KEY;
 const OANDA_ACCOUNT_ID = process.env.OANDA_ACCOUNT_ID;
 const OANDA_ENV = process.env.OANDA_ENV || 'practice';
 const USE_OANDA = !!(OANDA_TOKEN && OANDA_ACCOUNT_ID);
+const CRYPTO_UPSTREAM_URL = process.env.CRYPTO_UPSTREAM_URL || process.env.CRYPTO_REMOTE_URL || 'http://localhost:3002';
 
 // --- NOTIFICATIONS (Twilio SMS) ---
 const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -674,7 +675,52 @@ app.post('/cloud/sync', (req, res) => {
   }
 });
 
-app.get('/health', (req, res) => res.send('OK')); // Cloud Health Check
+app.get('/health', (req, res) => res.send('OK'));
+app.get('/crypto/state', async (req, res) => {
+  try {
+    const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/state?ts=${Date.now()}`;
+    const r = await fetch(url, { headers: { 'Cache-Control': 'no-store' } });
+    const data = await r.json();
+    res.json(data);
+  } catch {
+    res.status(502).json({ error: 'bad_gateway' });
+  }
+});
+app.get('/crypto/events', (req, res) => {
+  try {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+  } catch {}
+  const target = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/events?ts=${Date.now()}`;
+  const isHttps = target.startsWith('https://');
+  const client = (isHttps ? https : http).request(target, (up) => {
+    up.on('data', (chunk) => { try { res.write(chunk); } catch {} });
+    up.on('end', () => { try { res.end(); } catch {} });
+  });
+  client.on('error', () => { try { res.end(); } catch {} });
+  client.end();
+  req.on('close', () => { try { client.destroy(); } catch {} });
+});
+app.post('/crypto/toggle/:symbol', async (req, res) => {
+  try {
+    const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/toggle/${encodeURIComponent(req.params.symbol)}`;
+    const r = await fetch(url, { method: 'POST' });
+    res.sendStatus(r.status);
+  } catch {
+    res.sendStatus(502);
+  }
+});
+app.post('/crypto/strategy/:symbol', async (req, res) => {
+  try {
+    const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/strategy/${encodeURIComponent(req.params.symbol)}`;
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strategy: req.body?.strategy }) });
+    const data = await r.json().catch(() => null);
+    if (data) res.json(data); else res.sendStatus(r.status);
+  } catch {
+    res.sendStatus(502);
+  }
+});
 
 app.post('/toggle/:symbol', (req, res) => {
     const { symbol } = req.params;

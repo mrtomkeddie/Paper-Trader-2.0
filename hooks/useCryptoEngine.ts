@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { DEFAULT_REMOTE_URL } from '../constants';
 
 export interface CryptoAssetData {
   symbol: string;
@@ -39,8 +40,16 @@ export interface CryptoTrade {
 export interface CryptoAccount { balance: number; equity: number; dayPnL: number; totalPnL?: number; }
 
 export const useCryptoEngine = () => {
-  const isDev = (import.meta as any)?.env?.DEV;
-  const [remoteUrl, setRemoteUrl] = useState(() => (isDev ? '/crypto' : 'http://localhost:3002'));
+  const isDev = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') || ((import.meta as any)?.env?.DEV);
+  const [remoteUrl, setRemoteUrl] = useState(() => {
+    const saved = (typeof window !== 'undefined') ? localStorage.getItem('cryptoRemoteUrl') : null;
+    if (saved) return saved.replace(/\/$/, '');
+    const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
+    if (envUrl) return envUrl.replace(/\/$/, '');
+    if (isDev) return '/crypto';
+    const base = DEFAULT_REMOTE_URL.replace(/\/$/, '');
+    return `${base}/crypto`;
+  });
   const [assets, setAssets] = useState<Record<string, CryptoAssetData>>({});
   const [account, setAccount] = useState<CryptoAccount>({ balance: 0, equity: 0, dayPnL: 0, totalPnL: 0 });
   const [trades, setTrades] = useState<CryptoTrade[]>([]);
@@ -51,6 +60,7 @@ export const useCryptoEngine = () => {
     const base = remoteUrl.trim().replace(/\/$/, '');
     const es = new EventSource(`${base}/events?ts=${Date.now()}`);
     esRef.current = es;
+    es.onopen = () => { try { setIsConnected(true); } catch {} };
     es.onmessage = (ev) => {
       try {
         const s = JSON.parse(ev.data);
@@ -63,6 +73,20 @@ export const useCryptoEngine = () => {
       } catch {}
     };
     es.onerror = () => { try { es.close(); } catch {}; esRef.current = null; setIsConnected(false); };
+    (async () => {
+      try {
+        const res = await fetch(`${base}/state?ts=${Date.now()}`, { cache: 'no-store' });
+        if (res.ok) {
+          const s = await res.json();
+          if (s.assets && s.account && s.trades) {
+            setAssets(s.assets);
+            setAccount(s.account);
+            setTrades(s.trades);
+            setIsConnected(true);
+          }
+        }
+      } catch {}
+    })();
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`${base}/state?ts=${Date.now()}`, { cache: 'no-store' });
@@ -88,5 +112,9 @@ export const useCryptoEngine = () => {
     const base = remoteUrl.trim().replace(/\/$/, '');
     try { await fetch(`${base}/strategy/${encodeURIComponent(symbol)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strategy }) }); } catch {}
   };
-  return { assets, account, trades, isConnected, remoteUrl, setRemoteUrl, toggleBot, setStrategy };
+  const changeRemote = (url: string) => {
+    try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', url); } catch {}
+    setRemoteUrl(url);
+  };
+  return { assets, account, trades, isConnected, remoteUrl, setRemoteUrl: changeRemote, toggleBot, setStrategy };
 };

@@ -95,7 +95,9 @@ const App: React.FC = () => {
         const existing = await reg.pushManager.getSubscription();
         const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
         const base = typeof window !== 'undefined' ? (localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL) : DEFAULT_REMOTE_URL;
+        const cryptoBase = typeof window !== 'undefined' ? (localStorage.getItem('cryptoRemoteUrl') || ((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`)) : `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
         await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+        await fetch(`${String(cryptoBase).replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
       } catch {}
     };
     run();
@@ -169,7 +171,7 @@ const App: React.FC = () => {
         <header className="mb-8">
           <div className="flex justify-between items-start mb-2">
              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${((view === 'crypto' || view === 'cryptoHistory') ? cConnected : isConnected) ? 'bg-ios-green' : 'bg-ios-red'}`} />
+                <div className={`w-2 h-2 rounded-full animate-pulse ${((view === 'crypto' || view === 'cryptoHistory') ? (cConnected || Object.keys(cAssets || {}).length > 0) : (isConnected || visibleAssets.some(s => !!assets[s]))) ? 'bg-ios-green' : 'bg-ios-red'}`} />
                 <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : view === 'indicesHistory' ? 'Indices History' : view === 'crypto' ? 'Crypto Desk' : 'Crypto History'}</span>
              </div>
              <div className="flex gap-3">
