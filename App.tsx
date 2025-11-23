@@ -157,7 +157,7 @@ const App: React.FC = () => {
               <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
                 <RefreshCw size={20} />
               </button>
-              <button onClick={() => setIsSettingsOpen(true)} className="text-ios-gray hover:text-white active:scale-95 transition-colors">
+              <button onClick={() => setIsSettingsOpen(true)} className="text-ios-gray hover:text-white active:scale-95 transition-colors relative z-50">
                 <Settings size={20} />
               </button>
             </div>
