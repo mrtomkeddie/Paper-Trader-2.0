@@ -11,68 +11,54 @@ interface Props {
   oandaConfig: OandaConfig;
   onSave: (mode: BrokerMode, config: OandaConfig, remoteUrl?: string) => Promise<boolean>;
   onSetCryptoRemote?: (url: string) => void;
+  isIndicesConnected?: boolean;
+  isCryptoConnected?: boolean;
 }
 
-const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, onSetCryptoRemote }) => {
+const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, onSetCryptoRemote, isIndicesConnected, isCryptoConnected }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(() => {
-      if (typeof window !== 'undefined') return localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL;
-      return DEFAULT_REMOTE_URL;
+    if (typeof window !== 'undefined') return localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL;
+    return DEFAULT_REMOTE_URL;
   });
   const [cryptoUrl, setCryptoUrl] = useState(() => {
-      try {
-        if (typeof window !== 'undefined') {
-          const saved = localStorage.getItem('cryptoRemoteUrl');
-          if (saved) return saved;
-          const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
-          if (envUrl) return envUrl;
-          return CRYPTO_DEFAULT_REMOTE_URL;
-        }
-      } catch {}
-      return CRYPTO_DEFAULT_REMOTE_URL;
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('cryptoRemoteUrl');
+        if (saved) return saved;
+        const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
+        if (envUrl) return envUrl;
+        return CRYPTO_DEFAULT_REMOTE_URL;
+      }
+    } catch { }
+    return CRYPTO_DEFAULT_REMOTE_URL;
   });
-  
-  const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+
   const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error'>('idle');
-  const [cryptoStatus, setCryptoStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [cryptoSample, setCryptoSample] = useState<string>('');
 
   if (!isOpen) return null;
 
   const handleConnect = async (urlToUse: string) => {
-    setStatus('testing');
     try {
-         const cleanUrl = urlToUse.trim().replace(/\/$/, "");
-         const res = await fetch(`${cleanUrl}/state`);
-         if (res.ok) {
-             await onSave(BrokerMode.REMOTE_SERVER, oandaConfig, cleanUrl);
-             setRemoteUrl(cleanUrl);
-             setStatus('success');
-             setTimeout(() => onClose(), 1500);
-         } else {
-             throw new Error("Server error");
-         }
-    } catch (e) {
-         setStatus('error');
-    }
+      const cleanUrl = urlToUse.trim().replace(/\/$/, "");
+      const res = await fetch(`${cleanUrl}/state`);
+      if (res.ok) {
+        await onSave(BrokerMode.REMOTE_SERVER, oandaConfig, cleanUrl);
+        setRemoteUrl(cleanUrl);
+      }
+    } catch (e) { }
   };
 
   const handleConnectCrypto = async (urlToUse: string) => {
-    setCryptoStatus('testing');
     try {
       const clean = urlToUse.trim().replace(/\/$/, '');
       const res = await fetch(`${clean}/state`);
       if (!res.ok) throw new Error('Server error');
-      const json = await res.json();
-      const hasCrypto = json && json.assets && (json.assets.BTCUSDT || json.assets.ETHUSDT || json.assets.SOLUSDT);
-      if (!hasCrypto) throw new Error('Wrong server');
-      try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', clean); } catch {}
+      try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', clean); } catch { }
       setCryptoUrl(clean);
       if (onSetCryptoRemote) onSetCryptoRemote(clean);
-      setCryptoStatus('success');
-    } catch {
-      setCryptoStatus('error');
-    }
+    } catch { }
   };
 
   const enablePush = async () => {
@@ -111,7 +97,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      
+
       <div className="bg-[#1C1C1E] w-full max-w-md rounded-[24px] border border-white/10 overflow-hidden shadow-2xl relative z-10 animate-fade-in-up flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
@@ -122,153 +108,126 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
         </div>
 
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
-          
+
           <div className="flex flex-col items-center justify-center py-6 text-center space-y-3 bg-white/5 rounded-2xl border border-white/5">
-             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${status === 'error' ? 'bg-ios-red/20 text-ios-red' : 'bg-ios-blue/20 text-ios-blue'}`}>
-                <Cloud size={32} />
-             </div>
-             <div>
-                <h3 className="text-white font-bold text-lg">Production Bot</h3>
-                <p className="text-xs text-ios-gray mt-1">Hosted on Render Cloud (24/7)</p>
-             </div>
-             
-             {status === 'error' && (
-                 <div className="flex items-center gap-2 text-ios-red text-xs font-bold bg-ios-red/10 px-4 py-2 rounded-lg animate-pulse mt-2">
-                    <AlertCircle size={14} />
-                    Connection Failed
-                 </div>
-             )}
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${!isIndicesConnected ? 'bg-ios-red/20 text-ios-red' : 'bg-ios-blue/20 text-ios-blue'}`}>
+              <Cloud size={32} />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">Production Bot</h3>
+              <p className="text-xs text-ios-gray mt-1">Hosted on Render Cloud (24/7)</p>
+            </div>
+
+            <div className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg mt-2 ${!isIndicesConnected ? 'text-ios-red bg-ios-red/10' : 'text-ios-green bg-ios-green/10'}`}>
+              {isIndicesConnected ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+              {isIndicesConnected ? 'Connected' : 'Disconnected'}
+            </div>
           </div>
 
-          {/* Main Action Button */}
-          <button 
-                onClick={() => handleConnect(DEFAULT_REMOTE_URL)}
-                disabled={status === 'testing'}
-                className={`w-full font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg
-                    ${status === 'success' ? 'bg-ios-green text-white' : 'bg-white text-black hover:bg-neutral-200'}
-                `}
+          <div className="flex flex-col items-center justify-center py-6 text-center space-y-3 bg-white/5 rounded-2xl border border-white/5">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${!isCryptoConnected ? 'bg-ios-red/20 text-ios-red' : 'bg-ios-blue/20 text-ios-blue'}`}>
+              <Cloud size={32} />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">Crypto Bot</h3>
+              <p className="text-xs text-ios-gray mt-1">Hosted 24/7</p>
+            </div>
+            <div className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg mt-2 ${!isCryptoConnected ? 'text-ios-red bg-ios-red/10' : 'text-ios-green bg-ios-green/10'}`}>
+              {isCryptoConnected ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
+              {isCryptoConnected ? 'Connected' : 'Disconnected'}
+            </div>
+
+            <div className="mt-2 flex items-center justify-between w-full">
+              <button
+                onClick={async () => {
+                  try {
+                    const clean = String(cryptoUrl || CRYPTO_DEFAULT_REMOTE_URL).replace(/\/$/, '');
+                    const r = await fetch(`${clean}/state`);
+                    const j = await r.json();
+                    const b = j?.assets?.BTCUSDT?.currentPrice;
+                    const e = j?.assets?.ETHUSDT?.currentPrice;
+                    const s = j?.assets?.SOLUSDT?.currentPrice;
+                    setCryptoSample(`BTC ${b?.toFixed ? b.toFixed(2) : b || '-'} | ETH ${e?.toFixed ? e.toFixed(2) : e || '-'} | SOL ${s?.toFixed ? s.toFixed(2) : s || '-'}`);
+                  } catch { setCryptoSample('Fetch failed'); }
+                }}
+                className="text-[10px] font-bold px-2 py-1 rounded bg-white/10 hover:bg-white/20"
               >
-                {status === 'testing' && <Loader2 size={18} className="animate-spin" />}
-                {status === 'success' && <CheckCircle size={18} />}
-                {status === 'idle' && <Cloud size={18} />}
-                {status === 'idle' ? 'Reconnect to Cloud' : status === 'testing' ? 'Connecting...' : status === 'success' ? 'Connected!' : 'Try Again'}
+                Test Feed
+              </button>
+              <span className="text-[10px] text-ios-gray truncate max-w-[60%]">{cryptoSample}</span>
+            </div>
+          </div>
+
+          {/* Push Notifications */}
+          <div className="mt-2">
+            <label className="text-[10px] text-ios-gray ml-1">Notifications</label>
+            <button
+              onClick={enablePush}
+              className={`w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 ${pushStatus === 'enabled' ? 'bg-ios-green text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+            >
+              <Bell size={16} /> {pushStatus === 'enabled' ? 'Enabled' : 'Enable Push'}
+            </button>
+            <p className="text-[10px] text-ios-gray mt-1">On iPhone, open from Home Screen after installing to allow push.</p>
+          </div>
+
+          {/* Analytics */}
+          <div className="mt-4">
+            <label className="text-[10px] text-ios-gray ml-1">Analytics</label>
+            <a
+              href={`${(remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, '')}/export/csv?status=closed`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 bg-white/10 text-white hover:bg-white/20"
+            >
+              Export Closed Trades CSV
+            </a>
+          </div>
+
+          {/* Advanced Toggle */}
+          <div className="pt-2 border-t border-white/5">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center justify-between text-xs text-ios-gray py-2 hover:text-white transition-colors"
+            >
+              <span className="flex items-center gap-2"><Terminal size={12} /> Advanced Options</span>
+              <span>{showAdvanced ? 'Hide' : 'Show'}</span>
             </button>
 
-            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3 bg-white/5 rounded-2xl border border-white/5">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${cryptoStatus === 'error' ? 'bg-ios-red/20 text-ios-red' : 'bg-ios-blue/20 text-ios-blue'}`}>
-                <Cloud size={32} />
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-lg">Crypto Bot</h3>
-                <p className="text-xs text-ios-gray mt-1">Hosted 24/7</p>
-              </div>
-              {cryptoStatus === 'error' && (
-                <div className="flex items-center gap-2 text-ios-red text-xs font-bold bg-ios-red/10 px-4 py-2 rounded-lg animate-pulse mt-2">
-                  <AlertCircle size={14} />
-                  Connection Failed
+            {showAdvanced && (
+              <div className="mt-3 space-y-2 animate-fade-in">
+                <label className="text-[10px] text-ios-gray ml-1">Custom Server URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={remoteUrl}
+                    onChange={(e) => setRemoteUrl(e.target.value)}
+                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
+                  />
+                  <button
+                    onClick={() => handleConnect(remoteUrl)}
+                    className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
+                  >
+                    Set
+                  </button>
                 </div>
-              )}
-              <button
-                onClick={() => handleConnectCrypto(((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL))}
-                disabled={cryptoStatus === 'testing'}
-                className={`w-full font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${cryptoStatus === 'success' ? 'bg-ios-green text-white' : 'bg-white text-black hover:bg-neutral-200'}`}
-              >
-                {cryptoStatus === 'testing' && <Loader2 size={18} className="animate-spin" />}
-                {cryptoStatus === 'success' && <CheckCircle size={18} />}
-                {cryptoStatus === 'idle' && <Cloud size={18} />}
-                {cryptoStatus === 'idle' ? 'Connect Crypto Cloud' : cryptoStatus === 'testing' ? 'Connecting...' : cryptoStatus === 'success' ? 'Connected!' : 'Try Again'}
-              </button>
-              <div className="mt-2 flex items-center justify-between w-full">
-                <button
-                  onClick={async () => {
-                    try {
-                      const clean = String(cryptoUrl || CRYPTO_DEFAULT_REMOTE_URL).replace(/\/$/, '');
-                      const r = await fetch(`${clean}/state`);
-                      const j = await r.json();
-                      const b = j?.assets?.BTCUSDT?.currentPrice;
-                      const e = j?.assets?.ETHUSDT?.currentPrice;
-                      const s = j?.assets?.SOLUSDT?.currentPrice;
-                      setCryptoSample(`BTC ${b?.toFixed ? b.toFixed(2) : b || '-'} | ETH ${e?.toFixed ? e.toFixed(2) : e || '-'} | SOL ${s?.toFixed ? s.toFixed(2) : s || '-'}`);
-                    } catch { setCryptoSample('Fetch failed'); }
-                  }}
-                  className="text-[10px] font-bold px-2 py-1 rounded bg-white/10 hover:bg-white/20"
-                >
-                  Test Feed
-                </button>
-                <span className="text-[10px] text-ios-gray truncate max-w-[60%]">{cryptoSample}</span>
+                <label className="text-[10px] text-ios-gray ml-1">Crypto Server URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={cryptoUrl}
+                    onChange={(e) => setCryptoUrl(e.target.value)}
+                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
+                  />
+                  <button
+                    onClick={() => handleConnectCrypto(cryptoUrl)}
+                    className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
+                  >
+                    Set
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Push Notifications */}
-            <div className="mt-2">
-              <label className="text-[10px] text-ios-gray ml-1">Notifications</label>
-              <button 
-                onClick={enablePush}
-                className={`w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 ${pushStatus==='enabled' ? 'bg-ios-green text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-              >
-                <Bell size={16} /> {pushStatus==='enabled' ? 'Enabled' : 'Enable Push'}
-              </button>
-              <p className="text-[10px] text-ios-gray mt-1">On iPhone, open from Home Screen after installing to allow push.</p>
-            </div>
-
-            {/* Analytics */}
-            <div className="mt-4">
-              <label className="text-[10px] text-ios-gray ml-1">Analytics</label>
-              <a
-                href={`${(remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, '')}/export/csv?status=closed`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 bg-white/10 text-white hover:bg-white/20"
-              >
-                Export Closed Trades CSV
-              </a>
-            </div>
-
-            {/* Advanced Toggle */}
-            <div className="pt-2 border-t border-white/5">
-                <button 
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="w-full flex items-center justify-between text-xs text-ios-gray py-2 hover:text-white transition-colors"
-                >
-                    <span className="flex items-center gap-2"><Terminal size={12} /> Advanced Options</span>
-                    <span>{showAdvanced ? 'Hide' : 'Show'}</span>
-                </button>
-
-                {showAdvanced && (
-                    <div className="mt-3 space-y-2 animate-fade-in">
-                        <label className="text-[10px] text-ios-gray ml-1">Custom Server URL</label>
-                        <div className="flex gap-2">
-                            <input 
-                                type="text" 
-                                value={remoteUrl}
-                                onChange={(e) => setRemoteUrl(e.target.value)}
-                                className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
-                            />
-                            <button 
-                                onClick={() => handleConnect(remoteUrl)}
-                                className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
-                            >
-                                Set
-                            </button>
-                        </div>
-                        <label className="text-[10px] text-ios-gray ml-1">Crypto Server URL</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={cryptoUrl}
-                                onChange={(e) => setCryptoUrl(e.target.value)}
-                                className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
-                            />
-                            <button
-                                onClick={() => handleConnectCrypto(cryptoUrl)}
-                                className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
-                            >
-                                Set
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
+            )}
+          </div>
 
         </div>
       </div>

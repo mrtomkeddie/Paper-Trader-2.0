@@ -60,7 +60,7 @@ export const useCryptoEngine = () => {
     const open = () => {
       const stream = new EventSource(`${base}/events?ts=${Date.now()}`);
       esRef.current = stream;
-      stream.onopen = () => { try { setIsConnected(true); } catch {} };
+      stream.onopen = () => { try { setIsConnected(true); } catch { } };
       stream.onmessage = (ev) => {
         try {
           const s = JSON.parse(ev.data);
@@ -70,13 +70,13 @@ export const useCryptoEngine = () => {
             setTrades(s.trades);
             setIsConnected(true);
           }
-        } catch {}
+        } catch { }
       };
       stream.onerror = () => {
-        try { stream.close(); } catch {};
+        try { stream.close(); } catch { };
         esRef.current = null;
         setIsConnected(false);
-        setTimeout(() => { try { open(); } catch {} }, 2000);
+        setTimeout(() => { try { open(); } catch { } }, 2000);
       };
     };
     open();
@@ -92,7 +92,7 @@ export const useCryptoEngine = () => {
             setIsConnected(true);
           }
         }
-      } catch {}
+      } catch { }
     })();
     const interval = setInterval(async () => {
       try {
@@ -106,21 +106,21 @@ export const useCryptoEngine = () => {
             setIsConnected(true);
           }
         }
-      } catch {}
+      } catch { }
     }, 1500);
-    return () => { try { clearInterval(interval); } catch {}; try { esRef.current?.close(); } catch {}; esRef.current = null; };
+    return () => { try { clearInterval(interval); } catch { }; try { esRef.current?.close(); } catch { }; esRef.current = null; };
   }, [remoteUrl]);
 
   const toggleBot = async (symbol: string) => {
     const base = remoteUrl.trim().replace(/\/$/, '');
-    try { await fetch(`${base}/toggle/${encodeURIComponent(symbol)}`, { method: 'POST' }); } catch {}
+    try { await fetch(`${base}/toggle/${encodeURIComponent(symbol)}`, { method: 'POST' }); } catch { }
   };
   const setStrategy = async (symbol: string, strategy: string) => {
     const base = remoteUrl.trim().replace(/\/$/, '');
-    try { await fetch(`${base}/strategy/${encodeURIComponent(symbol)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strategy }) }); } catch {}
+    try { await fetch(`${base}/strategy/${encodeURIComponent(symbol)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strategy }) }); } catch { }
   };
   const changeRemote = (url: string) => {
-    try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', url); } catch {}
+    try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', url); } catch { }
     setRemoteUrl(url);
   };
   return { assets, account, trades, isConnected, remoteUrl, setRemoteUrl: changeRemote, toggleBot, setStrategy };

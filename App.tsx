@@ -26,7 +26,7 @@ const App: React.FC = () => {
     const minutes = Math.floor((total % 3600) / 60);
     const seconds = total % 60;
     const prefix = days > 0 ? `${days}d ` : '';
-    return `${prefix}${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    return `${prefix}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const nextOpen = (now: Date) => {
@@ -98,7 +98,7 @@ const App: React.FC = () => {
         const cryptoBase = typeof window !== 'undefined' ? (localStorage.getItem('cryptoRemoteUrl') || ((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL)) : CRYPTO_DEFAULT_REMOTE_URL;
         await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
         await fetch(`${String(cryptoBase).replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
-      } catch {}
+      } catch { }
     };
     run();
   }, []);
@@ -155,44 +155,46 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-      
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         currentMode={brokerMode}
         oandaConfig={oandaConfig}
         onSave={configureOanda}
-        onSetCryptoRemote={(url) => { try { setCryptoRemote(url); } catch {} }}
+        onSetCryptoRemote={(url) => { try { setCryptoRemote(url); } catch { } }}
+        isIndicesConnected={isConnected}
+        isCryptoConnected={cConnected}
       />
 
       {/* Main Scrollable Content */}
       <main className="pb-28 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
-        
+
         {/* Premium Header */}
         <header className="mb-8">
           <div className="flex justify-between items-start mb-2">
-             <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full animate-pulse ${((view === 'crypto' || view === 'cryptoHistory') ? (cConnected || Object.keys(cAssets || {}).length > 0) : (isConnected || visibleAssets.some(s => !!assets[s]))) ? 'bg-ios-green' : 'bg-ios-red'}`} />
-                <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : view === 'indicesHistory' ? 'Indices History' : view === 'crypto' ? 'Crypto Desk' : 'Crypto History'}</span>
-             </div>
-             <div className="flex gap-3">
-                <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
-                    <RefreshCw size={20} />
-                </button>
-                <button onClick={() => setIsSettingsOpen(true)} className="text-ios-gray hover:text-white active:scale-95 transition-colors">
-                    <Settings size={20} />
-                </button>
-             </div>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${((view === 'crypto' || view === 'cryptoHistory') ? (cConnected || Object.keys(cAssets || {}).length > 0) : (isConnected || visibleAssets.some(s => !!assets[s]))) ? 'bg-ios-green' : 'bg-ios-red'}`} />
+              <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : view === 'indicesHistory' ? 'Indices History' : view === 'crypto' ? 'Crypto Desk' : 'Crypto History'}</span>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
+                <RefreshCw size={20} />
+              </button>
+              <button onClick={() => setIsSettingsOpen(true)} className="text-ios-gray hover:text-white active:scale-95 transition-colors">
+                <Settings size={20} />
+              </button>
+            </div>
           </div>
           <h1 className="text-5xl font-bold tracking-tight text-white tabular-nums mb-3">
             £{((view === 'crypto' || view === 'cryptoHistory') ? cAccount.equity : account.equity).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h1>
-          
+
           {/* Daily PnL Badge */}
           <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL >= 0 : account.dayPnL >= 0) ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-red/15 text-ios-red'}`}>
             {((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL >= 0 : account.dayPnL >= 0) ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
             <span>
-                £{Math.abs((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL).toFixed(2)} ({((((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL) / ((view === 'crypto' || view === 'cryptoHistory') ? cAccount.balance : account.balance)) * 100).toFixed(2)}%)
+              £{Math.abs((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL).toFixed(2)} ({((((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL) / ((view === 'crypto' || view === 'cryptoHistory') ? cAccount.balance : account.balance)) * 100).toFixed(2)}%)
             </span>
             <span className="ml-1 opacity-60 font-medium text-xs">Today</span>
           </div>
@@ -200,28 +202,28 @@ const App: React.FC = () => {
 
         {view === 'dashboard' ? (
           <div className="space-y-6 animate-fade-in">
-             <div>
-                <h2 className="text-xl font-bold text-white mb-4">
-                    Institutional Desk
-                </h2>
-                
-                {visibleAssets.map(symbol => (
-                    <AssetCard 
-                        key={symbol}
-                        asset={assets[symbol]} 
-                        trades={trades.filter(t => t.symbol === symbol)}
-                        toggleBot={toggleBot} 
-                        setStrategy={setStrategy}
-                    />
-                ))}
-             </div>
+            <div>
+              <h2 className="text-xl font-bold text-white mb-4">
+                Institutional Desk
+              </h2>
+
+              {visibleAssets.map(symbol => (
+                <AssetCard
+                  key={symbol}
+                  asset={assets[symbol]}
+                  trades={trades.filter(t => t.symbol === symbol)}
+                  toggleBot={toggleBot}
+                  setStrategy={setStrategy}
+                />
+              ))}
+            </div>
           </div>
         ) : view === 'crypto' ? (
           <div className="space-y-6 animate-fade-in">
             <div>
               <h2 className="text-xl font-bold text-white mb-4">Crypto Desk</h2>
               <div className="space-y-6">
-                {['BTCUSDT','ETHUSDT','SOLUSDT'].map(sym => (
+                {['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].map(sym => (
                   cAssets[sym] ? <CryptoAssetCard key={sym} asset={cAssets[sym]} trades={cTrades.filter(t => t.symbol === sym)} toggleBot={cToggleBot} setStrategy={cSetStrategy} /> : null
                 ))}
               </div>
@@ -240,16 +242,16 @@ const App: React.FC = () => {
 
       {/* iOS Style Floating Tab Bar */}
       <div className="fixed bottom-6 left-4 right-4 h-16 bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-[32px] flex justify-around items-center z-50 shadow-2xl shadow-black/50 max-w-lg mx-auto">
-        <button 
+        <button
           onClick={() => setView('dashboard')}
           className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'dashboard' ? 'text-ios-blue' : 'text-neutral-500'}`}
         >
           <BarChart2 size={24} strokeWidth={view === 'dashboard' ? 2.5 : 2} />
         </button>
-        
+
         <div className="w-[1px] h-8 bg-white/10"></div>
 
-        <button 
+        <button
           onClick={() => setView('indicesHistory')}
           className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'indicesHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
         >
@@ -258,7 +260,7 @@ const App: React.FC = () => {
 
         <div className="w-[1px] h-8 bg-white/10"></div>
 
-        <button 
+        <button
           onClick={() => setView('crypto')}
           className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'crypto' ? 'text-ios-blue' : 'text-neutral-500'}`}
         >
@@ -267,14 +269,14 @@ const App: React.FC = () => {
 
         <div className="w-[1px] h-8 bg-white/10"></div>
 
-        <button 
+        <button
           onClick={() => setView('cryptoHistory')}
           className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'cryptoHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
         >
           <Clock size={24} strokeWidth={view === 'cryptoHistory' ? 2.5 : 2} />
         </button>
       </div>
-      
+
       {/* Background Ambience */}
       <div className="fixed top-0 left-0 right-0 h-96 bg-gradient-to-b from-yellow-900/10 to-transparent pointer-events-none -z-10" />
     </div>

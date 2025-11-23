@@ -63,7 +63,7 @@ let webpushClient: any = null;
 let pushSubscriptions: any[] = [];
 
 for (const s of Object.keys(symbols)) {
-  const defaults = s === 'BTCUSDT' ? ['VWAP','RANGE','AI_AGENT'] : ['VWAP','AI_AGENT'];
+  const defaults = s === 'BTCUSDT' ? ['VWAP', 'RANGE', 'AI_AGENT'] : ['VWAP', 'AI_AGENT'];
   state[s] = { closes15m: [], closes1h: [], sma20: 0, sma50: 0, rsi14: 50, vwap: { pv: 0, v: 0, vwap: 0 }, range: { high: null, low: null, frozen: false, brokeAbove: false, brokeBelow: false }, lastTick: undefined, uiTicks: [], botActive: true, activeStrategies: defaults };
   aiState[s] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
 }
@@ -183,7 +183,7 @@ function on15m(symbol: string, c: OHLCV) {
   st.sma50 = sma(st.closes15m, 50);
   st.rsi14 = rsi(st.closes15m, 14);
   st.vwap = updateVWAP(st.vwap, c.close, c.volume, c.time);
-  try { consultGemini(symbol); } catch {}
+  try { consultGemini(symbol); } catch { }
   evaluateVWAPMeanReversion(symbol);
   evaluateAIAgent(symbol);
   const bid = c.close * 0.999;
@@ -201,17 +201,20 @@ function on1h(symbol: string, c: OHLCV) {
 }
 
 function main() {
+  console.log('Bot starting...');
   const client = new ExchangeClient();
   const unsub: (() => void)[] = [];
   for (const s of Object.keys(symbols) as SymbolKey[]) {
     if (!(symbols as any)[s].enabled) continue;
+    console.log(`Subscribing to ${s}...`);
     unsub.push(client.subscribe(s, '15m', c => on15m(s, c)));
     if ((symbols as any)[s].runRangeBreakRetest) unsub.push(client.subscribe(s, '1h', c => on1h(s, c)));
-    setTimeout(() => { try { consultGemini(s); } catch {} }, 2000);
+    setTimeout(() => { try { consultGemini(s); } catch { } }, 2000);
     try {
       const stream = `${s.toLowerCase()}@miniTicker`;
       const url = `wss://stream.binance.com:9443/ws/${stream}`;
       const ws = new WebSocket(url);
+      ws.on('open', () => console.log(`Connected to Binance ticker for ${s}`));
       ws.on('message', (buf: any) => {
         try {
           const ev = JSON.parse(buf.toString());
@@ -226,12 +229,12 @@ function main() {
           const bid = p * 0.999;
           const ask = p * 1.001;
           manageTrades(s, bid, ask, state[s].sma20, state[s].last1h);
-        } catch {}
+        } catch (e) { console.error('Error processing ticker:', e); }
       });
-      ws.on('error', () => {});
-      ws.on('close', () => {});
-      unsub.push(() => { try { ws.close(); } catch {} });
-    } catch {}
+      ws.on('error', (e) => console.error(`WebSocket error for ${s}:`, e));
+      ws.on('close', () => console.log(`WebSocket closed for ${s}`));
+      unsub.push(() => { try { ws.close(); } catch { } });
+    } catch (e) { console.error(`Error setting up ticker for ${s}:`, e); }
   }
 }
 
@@ -266,9 +269,9 @@ app.get('/events', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
   clients.add(res);
-  const send = () => { try { res.write(`data: ${JSON.stringify(buildState())}\n\n`); } catch {} };
+  const send = () => { try { res.write(`data: ${JSON.stringify(buildState())}\n\n`); } catch { } };
   const timer = setInterval(send, 1000);
-  req.on('close', () => { try { clearInterval(timer); } catch {}; clients.delete(res); });
+  req.on('close', () => { try { clearInterval(timer); } catch { }; clients.delete(res); });
 });
 app.post('/push/subscribe', express.json(), (req, res) => {
   try {
@@ -297,7 +300,9 @@ app.post('/strategy/:symbol', express.json(), (req, res) => {
   res.json({ activeStrategies: state[s].activeStrategies });
 });
 const port = Number(process.env.PORT || 3002);
-app.listen(port);
+app.listen(port, () => {
+  console.log(`Crypto bot server listening on port ${port}`);
+});
 app.get('/ai_status', (req, res) => {
   try { res.json({ enabled: !!aiClient, aiState }); } catch { res.status(500).end(); }
 });
@@ -315,10 +320,10 @@ async function consultGemini(symbol: string) {
     const resp = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: 'application/json' } });
     const text = (resp as any).text || '';
     const obj = JSON.parse(text);
-    const snt = String(obj.sentiment || 'NEUTRAL').toUpperCase() as 'BULLISH'|'BEARISH'|'NEUTRAL';
+    const snt = String(obj.sentiment || 'NEUTRAL').toUpperCase() as 'BULLISH' | 'BEARISH' | 'NEUTRAL';
     const conf = typeof obj.confidence === 'number' ? obj.confidence : 0;
     aiState[symbol] = { lastCheck: now, sentiment: snt, confidence: conf };
-  } catch {}
+  } catch { }
 }
 
 function evaluateAIAgent(symbol: string) {
@@ -349,8 +354,8 @@ function notifyAll(title: string, body: string) {
   try {
     if (!webpushClient || !process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return;
     const payload = JSON.stringify({ title, body });
-    for (const sub of pushSubscriptions) { try { webpushClient.sendNotification(sub, payload).catch(() => {}); } catch {} }
-  } catch {}
+    for (const sub of pushSubscriptions) { try { webpushClient.sendNotification(sub, payload).catch(() => { }); } catch { } }
+  } catch { }
 }
 
 (async () => {
@@ -360,7 +365,7 @@ function notifyAll(title: string, body: string) {
     const pub = process.env.VAPID_PUBLIC_KEY;
     const priv = process.env.VAPID_PRIVATE_KEY;
     if (pub && priv) webpushClient.setVapidDetails('mailto:admin@example.com', pub, priv);
-  } catch {}
+  } catch { }
 })();
 
 async function fetchPrice(symbol: string) {
@@ -376,7 +381,7 @@ async function fetchPrice(symbol: string) {
     arr.push(p);
     if (arr.length > 120) arr.shift();
     state[symbol].uiTicks = arr;
-  } catch {}
+  } catch { }
 }
 
 setInterval(() => {
@@ -386,5 +391,5 @@ setInterval(() => {
       const ts = state[s].lastTickTs || 0;
       if (!ts || now - ts > 8000) fetchPrice(s);
     }
-  } catch {}
+  } catch { }
 }, 5000);
