@@ -47,6 +47,7 @@ interface SymbolState {
   last15m?: OHLCV;
   last1h?: OHLCV;
   lastTick?: number;
+  lastTickTs?: number;
   uiTicks?: number[];
   botActive: boolean;
   activeStrategies: string[];
@@ -217,6 +218,7 @@ function main() {
           const p = parseFloat(ev.c);
           if (!isFinite(p)) return;
           state[s].lastTick = p;
+          state[s].lastTickTs = Date.now();
           const arr = state[s].uiTicks || [];
           arr.push(p);
           if (arr.length > 120) arr.shift();
@@ -360,3 +362,29 @@ function notifyAll(title: string, body: string) {
     if (pub && priv) webpushClient.setVapidDetails('mailto:admin@example.com', pub, priv);
   } catch {}
 })();
+
+async function fetchPrice(symbol: string) {
+  try {
+    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+    if (!r.ok) return;
+    const j = await r.json();
+    const p = parseFloat(j.price);
+    if (!isFinite(p)) return;
+    state[symbol].lastTick = p;
+    state[symbol].lastTickTs = Date.now();
+    const arr = state[symbol].uiTicks || [];
+    arr.push(p);
+    if (arr.length > 120) arr.shift();
+    state[symbol].uiTicks = arr;
+  } catch {}
+}
+
+setInterval(() => {
+  try {
+    const now = Date.now();
+    for (const s of Object.keys(state)) {
+      const ts = state[s].lastTickTs || 0;
+      if (!ts || now - ts > 8000) fetchPrice(s);
+    }
+  } catch {}
+}, 5000);
