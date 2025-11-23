@@ -143,6 +143,17 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-ios-blue/30">
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        currentMode={brokerMode}
+        oandaConfig={oandaConfig}
+        onSave={configureOanda}
+        onSetCryptoRemote={(url) => { try { setCryptoRemote(url); } catch { } }}
+        isIndicesConnected={isConnected}
+        isCryptoConnected={cConnected}
+      />
+
       {/* Main Scrollable Content */}
       <main className="pb-28 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
 
@@ -157,7 +168,7 @@ const App: React.FC = () => {
               <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
                 <RefreshCw size={20} />
               </button>
-              <button onClick={() => setIsSettingsOpen(true)} className="text-ios-gray hover:text-white active:scale-95 transition-colors relative z-50">
+              <button onClick={() => { console.log('Opening settings...'); setIsSettingsOpen(true); }} className="text-ios-gray hover:text-white active:scale-95 transition-colors relative z-50">
                 <Settings size={20} />
               </button>
             </div>
