@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { WebSocket } from 'ws';
 
 dotenv.config();
 
@@ -45,6 +46,8 @@ interface SymbolState {
   range: RangeState;
   last15m?: OHLCV;
   last1h?: OHLCV;
+  lastTick?: number;
+  uiTicks?: number[];
   botActive: boolean;
   activeStrategies: string[];
 }
@@ -60,7 +63,7 @@ let pushSubscriptions: any[] = [];
 
 for (const s of Object.keys(symbols)) {
   const defaults = s === 'BTCUSDT' ? ['VWAP','RANGE','AI_AGENT'] : ['VWAP','AI_AGENT'];
-  state[s] = { closes15m: [], closes1h: [], sma20: 0, sma50: 0, rsi14: 50, vwap: { pv: 0, v: 0, vwap: 0 }, range: { high: null, low: null, frozen: false, brokeAbove: false, brokeBelow: false }, botActive: true, activeStrategies: defaults };
+  state[s] = { closes15m: [], closes1h: [], sma20: 0, sma50: 0, rsi14: 50, vwap: { pv: 0, v: 0, vwap: 0 }, range: { high: null, low: null, frozen: false, brokeAbove: false, brokeBelow: false }, lastTick: undefined, uiTicks: [], botActive: true, activeStrategies: defaults };
   aiState[s] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
 }
 
@@ -204,6 +207,29 @@ function main() {
     unsub.push(client.subscribe(s, '15m', c => on15m(s, c)));
     if ((symbols as any)[s].runRangeBreakRetest) unsub.push(client.subscribe(s, '1h', c => on1h(s, c)));
     setTimeout(() => { try { consultGemini(s); } catch {} }, 2000);
+    try {
+      const stream = `${s.toLowerCase()}@miniTicker`;
+      const url = `wss://stream.binance.com:9443/ws/${stream}`;
+      const ws = new (require('ws').WebSocket)(url);
+      ws.on('message', (buf: any) => {
+        try {
+          const ev = JSON.parse(buf.toString());
+          const p = parseFloat(ev.c);
+          if (!isFinite(p)) return;
+          state[s].lastTick = p;
+          const arr = state[s].uiTicks || [];
+          arr.push(p);
+          if (arr.length > 120) arr.shift();
+          state[s].uiTicks = arr;
+          const bid = p * 0.999;
+          const ask = p * 1.001;
+          manageTrades(s, bid, ask, state[s].sma20, state[s].last1h);
+        } catch {}
+      });
+      ws.on('error', () => {});
+      ws.on('close', () => {});
+      unsub.push(() => { try { ws.close(); } catch {} });
+    } catch {}
   }
 }
 
@@ -216,9 +242,10 @@ function buildState() {
   const assets: Record<string, any> = {};
   for (const s of Object.keys(state)) {
     const st = state[s];
-    const price = st.last15m ? st.last15m.close : 0;
+    const price = typeof st.lastTick === 'number' ? st.lastTick : (st.last15m ? st.last15m.close : 0);
     const trend = price > st.sma50 ? 'UP' : 'DOWN';
-    const history = st.closes15m.slice(-100).map((v, i) => ({ time: String(i), value: v }));
+    const fast = (st.uiTicks || []).slice(-100);
+    const history = fast.length > 0 ? fast.map((v, i) => ({ time: String(i), value: v })) : st.closes15m.slice(-100).map((v, i) => ({ time: String(i), value: v }));
     const ai = aiState[s];
     const aiAnalyzing = ai && (Date.now() - ai.lastCheck < 15000);
     assets[s] = { symbol: s, currentPrice: price, history, rsi: st.rsi14, ema: st.sma20, ema200: st.sma50, trend, botActive: st.botActive, activeStrategies: st.activeStrategies, isLive: true, aiAnalyzing };
