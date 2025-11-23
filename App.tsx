@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useTradingEngine } from './hooks/useTradingEngine';
 import { useCryptoEngine } from './hooks/useCryptoEngine';
@@ -144,29 +143,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-ios-blue/30">
-      {view === 'dashboard' && isWeekendClosed && (
-        <div className="fixed left-4 right-4 z-50" style={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}>
-          <div className="bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl shadow-black/50 max-w-lg mx-auto">
-            <Clock size={18} className="text-ios-blue" />
-            <div className="flex-1">
-              <div className="text-sm font-bold">Markets Closed (Weekend)</div>
-              <div className="text-xs text-ios-gray">Reopens in {marketCountdown}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        currentMode={brokerMode}
-        oandaConfig={oandaConfig}
-        onSave={configureOanda}
-        onSetCryptoRemote={(url) => { try { setCryptoRemote(url); } catch { } }}
-        isIndicesConnected={isConnected}
-        isCryptoConnected={cConnected}
-      />
-
       {/* Main Scrollable Content */}
       <main className="pb-28 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
 
