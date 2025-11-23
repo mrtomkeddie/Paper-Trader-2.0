@@ -210,7 +210,7 @@ function main() {
     try {
       const stream = `${s.toLowerCase()}@miniTicker`;
       const url = `wss://stream.binance.com:9443/ws/${stream}`;
-      const ws = new (require('ws').WebSocket)(url);
+      const ws = new WebSocket(url);
       ws.on('message', (buf: any) => {
         try {
           const ev = JSON.parse(buf.toString());
@@ -243,12 +243,15 @@ function buildState() {
   for (const s of Object.keys(state)) {
     const st = state[s];
     const price = typeof st.lastTick === 'number' ? st.lastTick : (st.last15m ? st.last15m.close : 0);
-    const trend = price > st.sma50 ? 'UP' : 'DOWN';
     const fast = (st.uiTicks || []).slice(-100);
+    const fastSma50 = fast.length >= 50 ? sma(fast, 50) : 0;
+    const trend = price > (fastSma50 > 0 ? fastSma50 : st.sma50) ? 'UP' : 'DOWN';
     const history = fast.length > 0 ? fast.map((v, i) => ({ time: String(i), value: v })) : st.closes15m.slice(-100).map((v, i) => ({ time: String(i), value: v }));
     const ai = aiState[s];
     const aiAnalyzing = ai && (Date.now() - ai.lastCheck < 15000);
-    assets[s] = { symbol: s, currentPrice: price, history, rsi: st.rsi14, ema: st.sma20, ema200: st.sma50, trend, botActive: st.botActive, activeStrategies: st.activeStrategies, isLive: true, aiAnalyzing };
+    const fastRsi = fast.length >= 15 ? rsi(fast, 14) : st.rsi14;
+    const ema200 = fastSma50 > 0 ? fastSma50 : st.sma50;
+    assets[s] = { symbol: s, currentPrice: price, history, rsi: fastRsi, ema: st.sma20, ema200, trend, botActive: st.botActive, activeStrategies: st.activeStrategies, isLive: true, aiAnalyzing };
   }
   return { assets, account, trades };
 }
