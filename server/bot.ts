@@ -210,32 +210,67 @@ function main() {
     unsub.push(client.subscribe(s, '15m', c => on15m(s, c)));
     if ((symbols as any)[s].runRangeBreakRetest) unsub.push(client.subscribe(s, '1h', c => on1h(s, c)));
     setTimeout(() => { try { consultGemini(s); } catch { } }, 2000);
-    try {
-      const stream = `${s.toLowerCase()}@miniTicker`;
-      const url = `wss://stream.binance.com:9443/ws/${stream}`;
-      const ws = new WebSocket(url);
-      ws.on('open', () => console.log(`Connected to Binance ticker for ${s}`));
-      ws.on('message', (buf: any) => {
-        try {
-          const ev = JSON.parse(buf.toString());
-          const p = parseFloat(ev.c);
-          if (!isFinite(p)) return;
-          state[s].lastTick = p;
-          state[s].lastTickTs = Date.now();
-          const arr = state[s].uiTicks || [];
-          arr.push(p);
-          if (arr.length > 120) arr.shift();
-          state[s].uiTicks = arr;
-          const bid = p * 0.999;
-          const ask = p * 1.001;
-          manageTrades(s, bid, ask, state[s].sma20, state[s].last1h);
-        } catch (e) { console.error('Error processing ticker:', e); }
-      });
-      ws.on('error', (e) => console.error(`WebSocket error for ${s}:`, e));
-      ws.on('close', () => console.log(`WebSocket closed for ${s}`));
-      unsub.push(() => { try { ws.close(); } catch { } });
-    } catch (e) { console.error(`Error setting up ticker for ${s}:`, e); }
   }
+  // Coinbase WebSocket for real-time price updates (single connection for all symbols)
+  try {
+    const symbolMap: Record<string, string> = {
+      'BTCUSDT': 'BTC-USD',
+      'ETHUSDT': 'ETH-USD',
+      'SOLUSDT': 'SOL-USD'
+    };
+    const reverseMap: Record<string, string> = {
+      'BTC-USD': 'BTCUSDT',
+      'ETH-USD': 'ETHUSDT',
+      'SOL-USD': 'SOLUSDT'
+    };
+    const productIds = Object.keys(symbols)
+      .filter(s => (symbols as any)[s].enabled)
+      .map(s => symbolMap[s as SymbolKey])
+      .filter(Boolean);
+    console.log('Connecting to Coinbase WebSocket...');
+    const ws = new WebSocket('wss://advanced-trade-ws.coinbase.com');
+    ws.on('open', () => {
+      console.log('Connected to Coinbase WebSocket');
+      const subscribeMsg = {
+        type: 'subscribe',
+        product_ids: productIds,
+        channel: 'ticker'
+      };
+      ws.send(JSON.stringify(subscribeMsg));
+      console.log(`Subscribed to Coinbase ticker for: ${productIds.join(', ')}`);
+    });
+    ws.on('message', (buf: any) => {
+      try {
+        const msg = JSON.parse(buf.toString());
+        if (msg.channel === 'ticker' && msg.events) {
+          for (const event of msg.events) {
+            if (event.type === 'ticker' && event.tickers) {
+              for (const ticker of event.tickers) {
+                const productId = ticker.product_id;
+                const internalSymbol = reverseMap[productId];
+                if (!internalSymbol || !state[internalSymbol]) continue;
+                const p = parseFloat(ticker.price);
+                if (!isFinite(p)) continue;
+                const s = internalSymbol as SymbolKey;
+                state[s].lastTick = p;
+                state[s].lastTickTs = Date.now();
+                const arr = state[s].uiTicks || [];
+                arr.push(p);
+                if (arr.length > 120) arr.shift();
+                state[s].uiTicks = arr;
+                const bid = p * 0.999;
+                const ask = p * 1.001;
+                manageTrades(s, bid, ask, state[s].sma20, state[s].last1h);
+              }
+            }
+          }
+        }
+      } catch (e) { console.error('Error processing Coinbase ticker:', e); }
+    });
+    ws.on('error', (e) => console.error('Coinbase WebSocket error:', e));
+    ws.on('close', () => console.log('Coinbase WebSocket closed'));
+    unsub.push(() => { try { ws.close(); } catch { } });
+  } catch (e) { console.error('Error setting up Coinbase WebSocket:', e); }
 }
 
 main();
