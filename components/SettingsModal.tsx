@@ -136,6 +136,29 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
               {isCryptoConnected ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
               {isCryptoConnected ? 'Connected' : 'Disconnected'}
             </div>
+
+            <div className="mt-2 flex items-center justify-between w-full">
+              <button
+                onClick={async () => {
+                  try {
+                    const clean = String(cryptoUrl || CRYPTO_DEFAULT_REMOTE_URL).replace(/\/$/, '');
+                    console.log('[TestFeed] Fetching from:', clean);
+                    const r = await fetch(`${clean}/state`);
+                    console.log('[TestFeed] Response status:', r.status);
+                    const j = await r.json();
+                    console.log('[TestFeed] Data:', j);
+                    const b = j?.assets?.BTCUSDT?.currentPrice;
+                    const e = j?.assets?.ETHUSDT?.currentPrice;
+                    const s = j?.assets?.SOLUSDT?.currentPrice;
+                    setCryptoSample(`BTC ${b?.toFixed ? b.toFixed(2) : b || '-'} | ETH ${e?.toFixed ? e.toFixed(2) : e || '-'} | SOL ${s?.toFixed ? s.toFixed(2) : s || '-'}`);
+                  } catch (err) { console.error('[TestFeed] Error:', err); setCryptoSample('Fetch failed'); }
+                }}
+                className="text-[10px] font-bold px-2 py-1 rounded bg-white/10 hover:bg-white/20"
+              >
+                Test Feed
+              </button>
+              <span className="text-[10px] text-ios-gray truncate max-w-[60%]">{cryptoSample}</span>
+            </div>
           </div>
 
           {/* Push Notifications */}
