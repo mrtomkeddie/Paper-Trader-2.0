@@ -61,14 +61,14 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
     try {
       const clean = urlToUse.trim().replace(/\/$/, '');
       const res = await fetch(`${clean}/state`);
-      if (res.ok) {
-        try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', clean); } catch {}
-        setCryptoUrl(clean);
-        if (onSetCryptoRemote) onSetCryptoRemote(clean);
-        setCryptoStatus('success');
-      } else {
-        throw new Error('Server error');
-      }
+      if (!res.ok) throw new Error('Server error');
+      const json = await res.json();
+      const hasCrypto = json && json.assets && (json.assets.BTCUSDT || json.assets.ETHUSDT || json.assets.SOLUSDT);
+      if (!hasCrypto) throw new Error('Wrong server');
+      try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', clean); } catch {}
+      setCryptoUrl(clean);
+      if (onSetCryptoRemote) onSetCryptoRemote(clean);
+      setCryptoStatus('success');
     } catch {
       setCryptoStatus('error');
     }
