@@ -9,18 +9,32 @@ interface Props {
   onClose: () => void;
   currentMode: BrokerMode;
   oandaConfig: OandaConfig;
-  onSave: (mode: BrokerMode, config: OandaConfig, remoteUrl?: string) => Promise<boolean>; 
+  onSave: (mode: BrokerMode, config: OandaConfig, remoteUrl?: string) => Promise<boolean>;
+  onSetCryptoRemote?: (url: string) => void;
 }
 
-const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }) => {
+const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, onSetCryptoRemote }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(() => {
       if (typeof window !== 'undefined') return localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL;
       return DEFAULT_REMOTE_URL;
   });
+  const [cryptoUrl, setCryptoUrl] = useState(() => {
+      try {
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('cryptoRemoteUrl');
+          if (saved) return saved;
+          const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
+          if (envUrl) return envUrl;
+          return `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
+        }
+      } catch {}
+      return `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
+  });
   
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error'>('idle');
+  const [cryptoStatus, setCryptoStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
 
   if (!isOpen) return null;
 
@@ -39,6 +53,24 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
          }
     } catch (e) {
          setStatus('error');
+    }
+  };
+
+  const handleConnectCrypto = async (urlToUse: string) => {
+    setCryptoStatus('testing');
+    try {
+      const clean = urlToUse.trim().replace(/\/$/, '');
+      const res = await fetch(`${clean}/state`);
+      if (res.ok) {
+        try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', clean); } catch {}
+        setCryptoUrl(clean);
+        if (onSetCryptoRemote) onSetCryptoRemote(clean);
+        setCryptoStatus('success');
+      } else {
+        throw new Error('Server error');
+      }
+    } catch {
+      setCryptoStatus('error');
     }
   };
 
@@ -114,12 +146,38 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
                 className={`w-full font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg
                     ${status === 'success' ? 'bg-ios-green text-white' : 'bg-white text-black hover:bg-neutral-200'}
                 `}
-            >
+              >
                 {status === 'testing' && <Loader2 size={18} className="animate-spin" />}
                 {status === 'success' && <CheckCircle size={18} />}
                 {status === 'idle' && <Cloud size={18} />}
                 {status === 'idle' ? 'Reconnect to Cloud' : status === 'testing' ? 'Connecting...' : status === 'success' ? 'Connected!' : 'Try Again'}
             </button>
+
+            <div className="flex flex-col items-center justify-center py-6 text-center space-y-3 bg-white/5 rounded-2xl border border-white/5">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${cryptoStatus === 'error' ? 'bg-ios-red/20 text-ios-red' : 'bg-ios-blue/20 text-ios-blue'}`}>
+                <Cloud size={32} />
+              </div>
+              <div>
+                <h3 className="text-white font-bold text-lg">Crypto Bot</h3>
+                <p className="text-xs text-ios-gray mt-1">Hosted 24/7</p>
+              </div>
+              {cryptoStatus === 'error' && (
+                <div className="flex items-center gap-2 text-ios-red text-xs font-bold bg-ios-red/10 px-4 py-2 rounded-lg animate-pulse mt-2">
+                  <AlertCircle size={14} />
+                  Connection Failed
+                </div>
+              )}
+              <button
+                onClick={() => handleConnectCrypto(((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`))}
+                disabled={cryptoStatus === 'testing'}
+                className={`w-full font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${cryptoStatus === 'success' ? 'bg-ios-green text-white' : 'bg-white text-black hover:bg-neutral-200'}`}
+              >
+                {cryptoStatus === 'testing' && <Loader2 size={18} className="animate-spin" />}
+                {cryptoStatus === 'success' && <CheckCircle size={18} />}
+                {cryptoStatus === 'idle' && <Cloud size={18} />}
+                {cryptoStatus === 'idle' ? 'Connect Crypto Cloud' : cryptoStatus === 'testing' ? 'Connecting...' : cryptoStatus === 'success' ? 'Connected!' : 'Try Again'}
+              </button>
+            </div>
 
             {/* Push Notifications */}
             <div className="mt-2">
@@ -168,6 +226,21 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave }
                             />
                             <button 
                                 onClick={() => handleConnect(remoteUrl)}
+                                className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
+                            >
+                                Set
+                            </button>
+                        </div>
+                        <label className="text-[10px] text-ios-gray ml-1">Crypto Server URL</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={cryptoUrl}
+                                onChange={(e) => setCryptoUrl(e.target.value)}
+                                className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
+                            />
+                            <button
+                                onClick={() => handleConnectCrypto(cryptoUrl)}
                                 className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
                             >
                                 Set

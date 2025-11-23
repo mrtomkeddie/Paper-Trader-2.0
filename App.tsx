@@ -12,7 +12,7 @@ import { DEFAULT_REMOTE_URL } from './constants';
 
 const App: React.FC = () => {
   const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
-  const { assets: cAssets, account: cAccount, trades: cTrades, isConnected: cConnected, toggleBot: cToggleBot, setStrategy: cSetStrategy } = useCryptoEngine();
+  const { assets: cAssets, account: cAccount, trades: cTrades, isConnected: cConnected, toggleBot: cToggleBot, setStrategy: cSetStrategy, setRemoteUrl: setCryptoRemote } = useCryptoEngine();
   const [view, setView] = useState<'dashboard' | 'indicesHistory' | 'crypto' | 'cryptoHistory'>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(''); // used for display in offline banner
@@ -162,6 +162,7 @@ const App: React.FC = () => {
         currentMode={brokerMode}
         oandaConfig={oandaConfig}
         onSave={configureOanda}
+        onSetCryptoRemote={(url) => { try { setCryptoRemote(url); } catch {} }}
       />
 
       {/* Main Scrollable Content */}
