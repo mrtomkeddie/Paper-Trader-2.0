@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { BrokerMode, OandaConfig } from '../types';
 import { X, CheckCircle, AlertCircle, Loader2, Cloud, Terminal, Bell } from 'lucide-react';
-import { DEFAULT_REMOTE_URL } from '../constants';
+import { DEFAULT_REMOTE_URL, CRYPTO_DEFAULT_REMOTE_URL } from '../constants';
 
 interface Props {
   isOpen: boolean;
@@ -26,10 +26,10 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
           if (saved) return saved;
           const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
           if (envUrl) return envUrl;
-          return `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
+          return CRYPTO_DEFAULT_REMOTE_URL;
         }
       } catch {}
-      return `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
+      return CRYPTO_DEFAULT_REMOTE_URL;
   });
   
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -97,9 +97,9 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
         try {
           const ls = typeof window !== 'undefined' ? localStorage.getItem('cryptoRemoteUrl') : null;
           const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
-          const fallback = `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
+          const fallback = CRYPTO_DEFAULT_REMOTE_URL;
           return (ls || envUrl || fallback).replace(/\/$/, '');
-        } catch { return `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`; }
+        } catch { return CRYPTO_DEFAULT_REMOTE_URL; }
       })();
       const r1 = await fetch(`${base}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
       const r2 = await fetch(`${cryptoBase}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
@@ -168,7 +168,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
                 </div>
               )}
               <button
-                onClick={() => handleConnectCrypto(((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`))}
+                onClick={() => handleConnectCrypto(((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL))}
                 disabled={cryptoStatus === 'testing'}
                 className={`w-full font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg ${cryptoStatus === 'success' ? 'bg-ios-green text-white' : 'bg-white text-black hover:bg-neutral-200'}`}
               >

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_REMOTE_URL } from '../constants';
+import { DEFAULT_REMOTE_URL, CRYPTO_DEFAULT_REMOTE_URL } from '../constants';
 
 export interface CryptoAssetData {
   symbol: string;
@@ -47,8 +47,7 @@ export const useCryptoEngine = () => {
     const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
     if (envUrl) return envUrl.replace(/\/$/, '');
     if (isDev) return '/crypto';
-    const base = DEFAULT_REMOTE_URL.replace(/\/$/, '');
-    return `${base}/crypto`;
+    return CRYPTO_DEFAULT_REMOTE_URL.replace(/\/$/, '');
   });
   const [assets, setAssets] = useState<Record<string, CryptoAssetData>>({});
   const [account, setAccount] = useState<CryptoAccount>({ balance: 0, equity: 0, dayPnL: 0, totalPnL: 0 });

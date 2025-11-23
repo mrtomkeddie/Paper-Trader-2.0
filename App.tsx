@@ -8,7 +8,7 @@ import TradeHistory from './components/TradeHistory';
 import SettingsModal from './components/SettingsModal';
 import { Wallet, BarChart2, Clock, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Server, Wifi, WifiOff } from 'lucide-react';
 import { AssetSymbol, Trade, StrategyType, TradeType } from './types';
-import { DEFAULT_REMOTE_URL } from './constants';
+import { DEFAULT_REMOTE_URL, CRYPTO_DEFAULT_REMOTE_URL } from './constants';
 
 const App: React.FC = () => {
   const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
@@ -95,7 +95,7 @@ const App: React.FC = () => {
         const existing = await reg.pushManager.getSubscription();
         const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
         const base = typeof window !== 'undefined' ? (localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL) : DEFAULT_REMOTE_URL;
-        const cryptoBase = typeof window !== 'undefined' ? (localStorage.getItem('cryptoRemoteUrl') || ((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`)) : `${DEFAULT_REMOTE_URL.replace(/\/$/, '')}/crypto`;
+        const cryptoBase = typeof window !== 'undefined' ? (localStorage.getItem('cryptoRemoteUrl') || ((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL)) : CRYPTO_DEFAULT_REMOTE_URL;
         await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
         await fetch(`${String(cryptoBase).replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
       } catch {}
