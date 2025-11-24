@@ -451,7 +451,7 @@ setInterval(() => {
     const now = Date.now();
     for (const s of Object.keys(state)) {
       const ts = state[s].lastTickTs || 0;
-      if (!ts || now - ts > 8000) fetchPrice(s);
+      if (!ts || now - ts > 2000) fetchPrice(s);
     }
   } catch { }
-}, 5000);
+}, 1000);

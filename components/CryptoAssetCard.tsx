@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
-import { TrendingUp, TrendingDown, Sparkles, BrainCircuit, ChevronUp, ChevronDown, Activity, Landmark, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Sparkles, BrainCircuit, ChevronUp, ChevronDown, Activity, Landmark, Clock, CircleDollarSign, Zap, Layers } from 'lucide-react';
 import { CryptoAssetData, CryptoTrade } from '../hooks/useCryptoEngine';
+import Sparkline from './Sparkline';
 
 interface Props { asset: CryptoAssetData; trades: CryptoTrade[]; toggleBot: (s: string) => void; setStrategy: (s: string, st: string) => void; }
 
 const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) => {
   const isUp = asset.history.length > 1 && asset.history[asset.history.length - 1].value >= asset.history[asset.history.length - 2].value;
   const trendIsBullish = asset.trend === 'UP';
+
   const stats = useMemo(() => {
     const closedTrades = trades.filter(t => t.status === 'CLOSED');
     const openCount = trades.filter(t => t.status === 'OPEN').length;
@@ -17,12 +19,28 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
     const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
     return { totalPnL, winRate, wins, losses, totalTrades, openCount };
   }, [trades]);
+
   const pnlIsPositive = stats.totalPnL >= 0;
-  const strategies = ['VWAP','RANGE','AI_AGENT'];
+  const strategies = ['VWAP', 'RANGE', 'AI_AGENT'];
+
+  const getIcon = () => {
+    if (asset.symbol.includes('BTC')) return <CircleDollarSign size={24} strokeWidth={2} />;
+    if (asset.symbol.includes('ETH')) return <Layers size={24} strokeWidth={2} />;
+    if (asset.symbol.includes('SOL')) return <Zap size={24} strokeWidth={2} />;
+    return <Activity size={24} strokeWidth={2} />;
+  };
+
+  const getIconColor = () => {
+    if (asset.symbol.includes('BTC')) return 'bg-orange-500/20 text-orange-400';
+    if (asset.symbol.includes('ETH')) return 'bg-indigo-500/20 text-indigo-400';
+    if (asset.symbol.includes('SOL')) return 'bg-teal-500/20 text-teal-400';
+    return 'bg-blue-500/20 text-blue-400';
+  };
+
   return (
-    <div className="bg-ios-card rounded-[22px] p-5 pt-8 mb-6 relative overflow-hidden shadow-2xl shadow-black/50 border border-white/5">
+    <div className="bg-ios-card rounded-[22px] p-5 mb-6 relative overflow-hidden shadow-2xl shadow-black/50 border border-white/5">
       {asset.aiAnalyzing && asset.activeStrategies.includes('AI_AGENT') && (
-        <div className="absolute top-3 right-3 z-10 pointer-events-none">
+        <div className="absolute top-0 right-0 p-4 z-10 pointer-events-none">
           <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
             <BrainCircuit size={14} className="text-purple-400 animate-pulse" />
             <span className="text-[10px] font-bold text-purple-200">AI ANALYZING</span>
@@ -31,8 +49,8 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
       )}
       <div className="flex justify-between items-start mb-6 pt-2">
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-blue-500/20 text-blue-400`}>
-            <Activity size={24} strokeWidth={2} />
+          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${getIconColor()}`}>
+            {getIcon()}
           </div>
           <div>
             <h3 className="text-lg font-bold text-white tracking-tight">{asset.symbol}</h3>
@@ -47,7 +65,7 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
           <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${isUp ? 'bg-ios-green/10 text-ios-green' : 'bg-ios-red/10 text-ios-red'}`}>
             {isUp ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
             <span className="text-sm font-bold tabular-nums">
-              {asset.history.length > 0 ? (((asset.currentPrice - asset.history[0].value)/asset.history[0].value)*100).toFixed(2) : '0.00'}%
+              {asset.history.length > 0 ? (((asset.currentPrice - asset.history[0].value) / asset.history[0].value) * 100).toFixed(2) : '0.00'}%
             </span>
           </div>
           <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${trendIsBullish ? 'border-ios-green/30 text-ios-green' : 'border-ios-red/30 text-ios-red'}`}>
@@ -56,6 +74,9 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
             <span>{asset.trend}</span>
           </div>
         </div>
+      </div>
+      <div className="h-12 w-full mb-6 mt-[-10px] opacity-90">
+        <Sparkline data={asset.history.map(h => h.value)} trend={asset.trend} width={320} height={48} />
       </div>
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col justify-center">
@@ -101,7 +122,7 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
                 >
                   {strat === 'AI_AGENT' && <Sparkles size={10} className={isActive ? 'text-white' : ''} />}
                   {strat === 'RANGE' && <Clock size={10} className={isActive ? 'text-white' : ''} />}
-                  {strat === 'VWAP' && <Landmark size={10} className={isActive ? 'text-white' : ''} />}
+                  {strat === 'VWAP' && <Activity size={10} className={isActive ? 'text-white' : ''} />}
                   {label}
                 </button>
               );

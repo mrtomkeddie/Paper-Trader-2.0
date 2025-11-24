@@ -265,7 +265,11 @@ const App: React.FC = () => {
       </div>
 
       {/* Background Ambience */}
-      <div className="fixed top-0 left-0 right-0 h-96 bg-gradient-to-b from-yellow-900/10 to-transparent pointer-events-none -z-10" />
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
+        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[50%] bg-purple-900/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute top-[0%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 rounded-full blur-[100px] animate-pulse delay-700" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[60%] h-[40%] bg-yellow-900/5 rounded-full blur-[120px]" />
+      </div>
     </div>
   );
 };

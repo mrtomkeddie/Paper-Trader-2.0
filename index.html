@@ -1,75 +1,81 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#000000" />
-    <title>Paper Trader 2.0</title>
-    <link rel="icon" type="image/png" href="/pt2logo.png" />
-    <link rel="manifest" href="/manifest.json" />
-    
-    <!-- POLYFILL: Define process.env to prevent blank screen crash on Vercel/Browser -->
-    <script>
-      window.process = window.process || { env: {} };
-    </script>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#000000" />
+  <title>Paper Trader 2.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="/pt2logo.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- POLYFILL: Define process.env to prevent blank screen crash on Vercel/Browser -->
+  <script>
+    window.process = window.process || { env: {} };
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+          },
+          colors: {
+            ios: {
+              bg: '#000000',
+              card: '#1C1C1E',
+              separator: '#38383A',
+              blue: '#0A84FF',
+              green: '#30D158',
+              red: '#FF453A',
+              gray: '#8E8E93',
+              lightGray: '#C7C7CC',
+            }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'fade-in-up': 'fadeInUp 0.5s ease-out',
+          },
+          keyframes: {
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
             },
-            colors: {
-              ios: {
-                bg: '#000000',
-                card: '#1C1C1E',
-                separator: '#38383A',
-                blue: '#0A84FF',
-                green: '#30D158',
-                red: '#FF453A',
-                gray: '#8E8E93',
-                lightGray: '#C7C7CC',
-              }
-            },
-            animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
-              'fade-in-up': 'fadeInUp 0.5s ease-out',
-            },
-            keyframes: {
-              fadeIn: {
-                '0%': { opacity: '0' },
-                '100%': { opacity: '1' },
-              },
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1' },
-              }
+            fadeInUp: {
+              '0%': { opacity: '0', transform: 'translateY(10px)' },
+              '100%': { opacity: '1' },
             }
           }
         }
       }
-    </script>
-    <style>
-      /* Hide scrollbar for cleaner UI */
-      ::-webkit-scrollbar {
-        display: none;
-      }
-      body {
-        background-color: #000000;
-        color: #FFFFFF;
-        -webkit-tap-highlight-color: transparent;
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      }
-      /* Smooth transitions for numbers */
-      .tabular-nums {
-        font-variant-numeric: tabular-nums;
-      }
-    </style>
+    }
+  </script>
+  <style>
+    /* Hide scrollbar for cleaner UI */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    body {
+      background-color: #000000;
+      color: #FFFFFF;
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Smooth transitions for numbers */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -91,9 +97,11 @@
 }
 </script>
 </head>
-  <body>
-    <div id="root"></div>
-    <!-- ENTRY POINT: This loads the React App -->
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body>
+  <div id="root"></div>
+  <!-- ENTRY POINT: This loads the React App -->
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>
