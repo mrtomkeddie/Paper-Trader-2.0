@@ -273,8 +273,6 @@ function main() {
   } catch (e) { console.error('Error setting up Coinbase WebSocket:', e); }
 }
 
-main();
-
 const app = express();
 app.use(cors());
 const clients = new Set<any>();
@@ -335,8 +333,19 @@ app.post('/strategy/:symbol', express.json(), (req, res) => {
   res.json({ activeStrategies: state[s].activeStrategies });
 });
 const port = Number(process.env.PORT || 3002);
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`Crypto bot server listening on port ${port}`);
+  try { main(); } catch (e) { console.error('Error starting bot main loop:', e); }
+});
+// Graceful single-instance behavior: if port is in use, exit quietly
+(server as any).on('error', (err: any) => {
+  if (err && err.code === 'EADDRINUSE') {
+    console.log(`[SYSTEM] Crypto bot already running on port ${port}. Exiting.`);
+    try { process.exit(0); } catch {}
+  } else {
+    console.error('Server error:', err);
+    try { process.exit(1); } catch {}
+  }
 });
 app.get('/ai_status', (req, res) => {
   try { res.json({ enabled: !!aiClient, aiState }); } catch { res.status(500).end(); }

@@ -5,19 +5,37 @@ import { spawn } from 'child_process';
 // https://vitejs.dev/config/
 const runCryptoBot = () => {
   let proc: any;
+  const isCryptoBotRunning = async () => {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 1000);
+      const res = await fetch('http://localhost:3002/ai_status', { signal: ctrl.signal });
+      clearTimeout(t);
+      return res.ok;
+    } catch {
+      return false;
+    }
+  };
   return {
     name: 'run-crypto-bot',
-    configureServer(server) {
+    async configureServer(server) {
       if (proc) return;
+      const already = await isCryptoBotRunning();
+      if (already) {
+        console.log('[DevPlugin] Crypto bot detected on :3002 — skipping spawn');
+        return;
+      }
       const cmd = process.platform === 'win32' ? 'npm' : 'npm';
       proc = spawn(cmd, ['run', 'crypto-bot'], { stdio: 'inherit', shell: true });
       const stop = () => { try { proc.kill(); } catch {} proc = undefined; };
       server.httpServer?.once('close', stop);
       if (proc && typeof proc.on === 'function') {
-        proc.on('exit', () => {
+        proc.on('exit', async () => {
           proc = undefined;
-          setTimeout(() => {
+          setTimeout(async () => {
             if (!proc && server.httpServer) {
+              const up = await isCryptoBotRunning();
+              if (up) return;
               proc = spawn(cmd, ['run', 'crypto-bot'], { stdio: 'inherit', shell: true });
               if (proc && typeof proc.on === 'function') proc.on('exit', () => { proc = undefined; });
             }
