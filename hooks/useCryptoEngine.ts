@@ -54,6 +54,7 @@ export const useCryptoEngine = () => {
   const [trades, setTrades] = useState<CryptoTrade[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const esRef = useRef<EventSource | null>(null);
+  const lastUpdateRef = useRef<number>(0);
 
   useEffect(() => {
     const base = remoteUrl.trim().replace(/\/$/, '');
@@ -69,6 +70,7 @@ export const useCryptoEngine = () => {
             setAccount(s.account);
             setTrades(s.trades);
             setIsConnected(true);
+            lastUpdateRef.current = Date.now();
           }
         } catch { }
       };
@@ -90,6 +92,7 @@ export const useCryptoEngine = () => {
             setAccount(s.account);
             setTrades(s.trades);
             setIsConnected(true);
+            lastUpdateRef.current = Date.now();
           }
         }
       } catch { }
@@ -104,11 +107,23 @@ export const useCryptoEngine = () => {
             setAccount(s.account);
             setTrades(s.trades);
             setIsConnected(true);
+            lastUpdateRef.current = Date.now();
           }
         }
       } catch { }
     }, 1500);
-    return () => { try { clearInterval(interval); } catch { }; try { esRef.current?.close(); } catch { }; esRef.current = null; };
+    const watchdog = setInterval(() => {
+      const stale = Date.now() - (lastUpdateRef.current || 0) > 12000;
+      if (stale) {
+        const fallback = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL;
+        const clean = String(fallback).replace(/\/$/, '');
+        if (clean && clean !== base) {
+          try { if (typeof window !== 'undefined') localStorage.setItem('cryptoRemoteUrl', clean); } catch { }
+          setRemoteUrl(clean);
+        }
+      }
+    }, 5000);
+    return () => { try { clearInterval(interval); } catch { }; try { clearInterval(watchdog); } catch { }; try { esRef.current?.close(); } catch { }; esRef.current = null; };
   }, [remoteUrl]);
 
   const toggleBot = async (symbol: string) => {

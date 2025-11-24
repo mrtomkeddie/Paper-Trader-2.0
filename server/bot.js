@@ -158,6 +158,19 @@ function updateMarketFromMid(symbol, mid) {
     market[symbol] = { bid, ask, mid };
 }
 
+function isWithinLondonSweepWindow(ts) {
+    try {
+        const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(ts));
+        let hh = 0, mm = 0;
+        for (const p of parts) {
+            if (p.type === 'hour') hh = parseInt(p.value, 10);
+            else if (p.type === 'minute') mm = parseInt(p.value, 10);
+        }
+        const m = hh * 60 + mm;
+        return m >= (7*60 + 45) && m <= (10*60 + 30);
+    } catch { return false; }
+}
+
 // AI CACHE (To prevent spamming API)
 let aiState = {
     'XAU/USD': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' },
@@ -308,7 +321,8 @@ function connectBinance() {
                 if (asset.history.length > 300) asset.history.shift();
                 asset.ema = calculateEMA(asset.currentPrice, asset.ema, 20);
                 asset.ema200 = calculateEMA(asset.currentPrice, asset.ema200, 200);
-                asset.slope = calculateSlope(asset.history.map(h => h.value), 10);
+                const closedCloses = candlesM5[symbol].filter(c => c.isClosed).map(c => c.close);
+                asset.slope = calculateSlope(closedCloses, 10);
                 asset.rsi = calculateRSI(asset.history.map(h => h.value));
                 asset.trend = price > asset.ema200 ? 'UP' : 'DOWN';
                 const sma = asset.ema;
@@ -555,12 +569,15 @@ function processTicks(symbol) {
     
     // B. LONDON SWEEP (GOLD)
     if (asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAU/USD') {
-            const candles = candlesM5[symbol];
-            if (candles.length > 10) {
-                const lowest = Math.min(...candles.slice(-10, -1).map(c => c.low));
-                const current = candles[candles.length - 1];
-                if (current.low < lowest && asset.currentPrice > lowest + 0.5) {
-                    executeTrade(symbol, 'BUY', asset.currentPrice, 'LONDON_SWEEP', 'CONSERVATIVE');
+            const allow = isWithinLondonSweepWindow(Date.now());
+            if (allow) {
+                const candles = candlesM5[symbol];
+                if (candles.length > 10) {
+                    const lowest = Math.min(...candles.slice(-10, -1).map(c => c.low));
+                    const current = candles[candles.length - 1];
+                    if (current.low < lowest && asset.currentPrice > lowest + 0.5) {
+                        executeTrade(symbol, 'BUY', asset.currentPrice, 'LONDON_SWEEP', 'CONSERVATIVE');
+                    }
                 }
             }
     }
@@ -569,6 +586,7 @@ function processTicks(symbol) {
     if (asset.activeStrategies.includes('NY_ORB') && symbol === 'NAS100') {
             const volExpansion = asset.bollinger.upper - asset.bollinger.lower > asset.currentPrice * 0.002;
             if (volExpansion && asset.trend === 'UP' && asset.currentPrice > asset.bollinger.upper) {
+                console.log(`[NY_ORB] ${symbol} BUY @ ${asset.currentPrice.toFixed(2)}`);
                 executeTrade(symbol, 'BUY', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE');
             }
     }

@@ -405,11 +405,14 @@ function notifyAll(title: string, body: string) {
 
 async function fetchPrice(symbol: string) {
   try {
-    const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+    const pid = symbol === 'BTCUSDT' ? 'BTC-USD' : symbol === 'ETHUSDT' ? 'ETH-USD' : symbol === 'SOLUSDT' ? 'SOL-USD' : '';
+    if (!pid) return;
+    const r = await fetch(`https://api.coinbase.com/v2/prices/${pid}/spot`);
     if (!r.ok) return;
     const j = await r.json();
-    const p = parseFloat(j.price);
-    if (!isFinite(p)) return;
+    const amt = parseFloat(String(j?.data?.amount || '0'));
+    if (!isFinite(amt) || amt <= 0) return;
+    const p = amt;
     state[symbol].lastTick = p;
     state[symbol].lastTickTs = Date.now();
     const arr = state[symbol].uiTicks || [];
