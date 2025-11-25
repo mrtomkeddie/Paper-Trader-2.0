@@ -673,6 +673,13 @@ function processTicks(symbol) {
     // 2. Run Strategies (Only if no open trade)
     if (!asset.botActive) return;
     if (openTrades.length > 0) return; // Max 1 trade per asset
+    {
+        const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date());
+        const hh = parseInt(String(parts.find(p => p.type === 'hour')?.value || '0'), 10);
+        const mm = parseInt(String(parts.find(p => p.type === 'minute')?.value || '0'), 10);
+        const inLunch = (hh === 11 && mm >= 30) || (hh > 11 && hh < 14);
+        if (inLunch) { console.log('[FILTER] Signal skipped - Lunch Pause'); return; }
+    }
     const nowUtc = new Date();
     const dow = nowUtc.getUTCDay();
     const hour = nowUtc.getUTCHours();
@@ -993,8 +1000,8 @@ let webpushClient = null;
     try {
         const mod = await import('web-push');
         webpushClient = mod.default || mod;
-        const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
-        const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+        const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY;
+        const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || process.env.VITE_VAPID_PRIVATE_KEY;
         if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
             webpushClient.setVapidDetails('mailto:admin@example.com', VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
             console.log('[SYSTEM] Web Push initialized');

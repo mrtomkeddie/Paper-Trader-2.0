@@ -97,6 +97,11 @@ const App: React.FC = () => {
         const cryptoBase = typeof window !== 'undefined' ? (localStorage.getItem('cryptoRemoteUrl') || ((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL)) : CRYPTO_DEFAULT_REMOTE_URL;
         await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
         await fetch(`${String(cryptoBase).replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+        const isLocal = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+        if (isLocal) {
+          try { await fetch(`http://localhost:3001/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) }); } catch {}
+          try { await fetch(`http://localhost:3002/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) }); } catch {}
+        }
       } catch { }
     };
     run();

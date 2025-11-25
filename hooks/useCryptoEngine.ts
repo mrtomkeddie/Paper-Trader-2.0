@@ -122,7 +122,22 @@ export const useCryptoEngine = () => {
         }
       }
     }, 5000);
-    return () => { try { clearInterval(interval); } catch { }; try { clearInterval(watchdog); } catch { }; try { esRef.current?.close(); } catch { }; esRef.current = null; };
+    const refresh = setInterval(async () => {
+      const stale = Date.now() - (lastUpdateRef.current || 0) > 6000;
+      if (!stale) return;
+      try {
+        const r = await fetch(`${base}/state?ts=${Date.now()}`, { cache: 'no-store' });
+        if (r.ok) {
+          const s = await r.json();
+          if (s.assets) setAssets(s.assets);
+          if (s.account) setAccount(s.account);
+          if (s.trades) setTrades(s.trades);
+          setIsConnected(true);
+          lastUpdateRef.current = Date.now();
+        }
+      } catch { }
+    }, 5000);
+    return () => { try { clearInterval(interval); } catch { }; try { clearInterval(refresh); } catch { }; try { clearInterval(watchdog); } catch { }; try { esRef.current?.close(); } catch { }; esRef.current = null; };
   }, [remoteUrl]);
 
   const toggleBot = async (symbol: string) => {
