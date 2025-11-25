@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import admin from 'firebase-admin';
+import { initFirebase, loadStateFromCloud, saveStateToCloud } from './firebase.js';
 
 // Load .env file from root
 dotenv.config();
@@ -1057,22 +1057,13 @@ let webpushClient = null;
         console.warn('[SYSTEM] web-push module not available; push notifications disabled');
     }
 })();
-const FIREBASE_SA = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-let db = null;
-try {
-  if (FIREBASE_SA) {
-    admin.initializeApp({ credential: admin.credential.cert(JSON.parse(FIREBASE_SA)) });
-    db = admin.firestore();
-    console.log('[SYSTEM] Firestore initialized');
-  }
-} catch {}
+// --- FIREBASE CLOUD PERSISTENCE ---
+initFirebase();
 
 async function cloudLoadState() {
   try {
-    if (!db) return;
-    const snap = await db.doc('pt2/state').get();
-    if (snap.exists) {
-      const data = snap.data() || {};
+    const data = await loadStateFromCloud();
+    if (data) {
       const cloudTrades = Array.isArray(data.trades) ? data.trades : [];
       const mergedById = new Map();
       for (const t of trades) mergedById.set(t.id, t);
@@ -1092,10 +1083,7 @@ async function cloudLoadState() {
 }
 
 function cloudSaveState() {
-  try {
-    if (!db) return;
-    db.doc('pt2/state').set({ account, trades, pushSubscriptions, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true }).catch(() => {});
-  } catch {}
+    saveStateToCloud({ account, trades, pushSubscriptions });
 }
 
 setInterval(() => { try { cloudSaveState(); } catch {} }, 5 * 60 * 1000);
