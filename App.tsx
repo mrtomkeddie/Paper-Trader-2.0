@@ -104,7 +104,7 @@ const App: React.FC = () => {
   const isPositiveDay = account.dayPnL >= 0;
 
   // Fixed Assets: Gold and Nasdaq only
-  const visibleAssets = [AssetSymbol.XAUUSD];
+  const visibleAssets = [AssetSymbol.XAUUSD, AssetSymbol.NAS100];
 
   const combinedTrades: Trade[] = React.useMemo(() => {
     return [];
@@ -159,10 +159,6 @@ const App: React.FC = () => {
         {view === 'dashboard' ? (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <h2 className="text-xl font-bold text-white mb-4">
-                Institutional Desk
-              </h2>
-
               {visibleAssets.map(symbol => (
                 <AssetCard
                   key={symbol}
@@ -182,26 +178,26 @@ const App: React.FC = () => {
       </main>
 
       {/* iOS Style Floating Tab Bar */}
-      <div className="fixed bottom-6 left-4 right-4 h-16 bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-[32px] flex justify-around items-center z-50 shadow-2xl shadow-black/50 max-w-lg mx-auto">
-        <button
-          onClick={() => setView('dashboard')}
-          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'dashboard' ? 'text-ios-blue' : 'text-neutral-500'}`}
-        >
-          <BarChart2 size={24} strokeWidth={view === 'dashboard' ? 2.5 : 2} />
-        </button>
+      <div className="fixed bottom-6 left-4 right-4 h-16 bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-[32px] flex items-center z-50 shadow-2xl shadow-black/50 max-w-lg mx-auto">
+        <div className="flex-1 flex items-center justify-center">
+          <button
+            onClick={() => setView('dashboard')}
+            className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'dashboard' ? 'text-ios-blue' : 'text-neutral-500'}`}
+          >
+            <BarChart2 size={24} strokeWidth={view === 'dashboard' ? 2.5 : 2} />
+          </button>
+        </div>
 
         <div className="w-[1px] h-8 bg-white/10"></div>
 
-        <button
-          onClick={() => setView('indicesHistory')}
-          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'indicesHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
-        >
-          <Clock size={24} strokeWidth={view === 'indicesHistory' ? 2.5 : 2} />
-        </button>
-
-        <div className="w-[1px] h-8 bg-white/10"></div>
-
-        
+        <div className="flex-1 flex items-center justify-center">
+          <button
+            onClick={() => setView('indicesHistory')}
+            className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'indicesHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
+          >
+            <Clock size={24} strokeWidth={view === 'indicesHistory' ? 2.5 : 2} />
+          </button>
+        </div>
       </div>
 
       {/* Background Ambience */}
