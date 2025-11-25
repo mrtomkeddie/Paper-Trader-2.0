@@ -47,7 +47,7 @@ const runCryptoBot = () => {
 };
 
 export default defineConfig({
-  plugins: [react(), runCryptoBot()],
+  plugins: [react()],
   server: {
     proxy: {
       '/api': {
@@ -55,12 +55,6 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
         rewrite: (p) => p.replace(/^\/api/, '')
-      },
-      '/crypto': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        ws: true,
-        rewrite: (p) => p.replace(/^\/crypto/, '')
       }
     }
   },

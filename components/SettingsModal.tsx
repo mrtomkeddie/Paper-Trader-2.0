@@ -80,17 +80,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
       const existing = await reg.pushManager.getSubscription();
       const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
       const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
-      const cryptoBase = (() => {
-        try {
-          const ls = typeof window !== 'undefined' ? localStorage.getItem('cryptoRemoteUrl') : null;
-          const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
-          const fallback = CRYPTO_DEFAULT_REMOTE_URL;
-          return (ls || envUrl || fallback).replace(/\/$/, '');
-        } catch { return CRYPTO_DEFAULT_REMOTE_URL; }
-      })();
       const r1 = await fetch(`${base}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
-      const r2 = await fetch(`${cryptoBase}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
-      if (r1.ok || r2.ok) setPushStatus('enabled'); else setPushStatus('error');
+      if (r1.ok) setPushStatus('enabled'); else setPushStatus('error');
     } catch { setPushStatus('error'); }
   };
 
@@ -124,42 +115,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center py-6 text-center space-y-3 bg-white/5 rounded-2xl border border-white/5">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-2 transition-colors ${!isCryptoConnected ? 'bg-ios-red/20 text-ios-red' : 'bg-ios-blue/20 text-ios-blue'}`}>
-              <Cloud size={32} />
-            </div>
-            <div>
-              <h3 className="text-white font-bold text-lg">Crypto Bot</h3>
-              <p className="text-xs text-ios-gray mt-1">Hosted 24/7</p>
-            </div>
-            <div className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-lg mt-2 ${!isCryptoConnected ? 'text-ios-red bg-ios-red/10' : 'text-ios-green bg-ios-green/10'}`}>
-              {isCryptoConnected ? <CheckCircle size={14} /> : <AlertCircle size={14} />}
-              {isCryptoConnected ? 'Connected' : 'Disconnected'}
-            </div>
-
-            <div className="mt-2 flex items-center justify-between w-full">
-              <button
-                onClick={async () => {
-                  try {
-                    const clean = String(cryptoUrl || CRYPTO_DEFAULT_REMOTE_URL).replace(/\/$/, '');
-                    console.log('[TestFeed] Fetching from:', clean);
-                    const r = await fetch(`${clean}/state`);
-                    console.log('[TestFeed] Response status:', r.status);
-                    const j = await r.json();
-                    console.log('[TestFeed] Data:', j);
-                    const b = j?.assets?.BTCUSDT?.currentPrice;
-                    const e = j?.assets?.ETHUSDT?.currentPrice;
-                    const s = j?.assets?.SOLUSDT?.currentPrice;
-                    setCryptoSample(`BTC ${b?.toFixed ? b.toFixed(2) : b || '-'} | ETH ${e?.toFixed ? e.toFixed(2) : e || '-'} | SOL ${s?.toFixed ? s.toFixed(2) : s || '-'}`);
-                  } catch (err) { console.error('[TestFeed] Error:', err); setCryptoSample('Fetch failed'); }
-                }}
-                className="text-[10px] font-bold px-2 py-1 rounded bg-white/10 hover:bg-white/20"
-              >
-                Test Feed
-              </button>
-              <span className="text-[10px] text-ios-gray truncate max-w-[60%]">{cryptoSample}</span>
-            </div>
-          </div>
+          
 
           {/* Push Notifications */}
           <div className="mt-2">
@@ -213,21 +169,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
                     Set
                   </button>
                 </div>
-                <label className="text-[10px] text-ios-gray ml-1">Crypto Server URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={cryptoUrl}
-                    onChange={(e) => setCryptoUrl(e.target.value)}
-                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
-                  />
-                  <button
-                    onClick={() => handleConnectCrypto(cryptoUrl)}
-                    className="bg-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/20"
-                  >
-                    Set
-                  </button>
-                </div>
+                
               </div>
             )}
           </div>

@@ -426,7 +426,7 @@ function connectOanda() {
 }
 
 function connectLiveFeed() {
-    if (USE_OANDA) connectOanda(); else connectBinance();
+    connectOanda();
 }
 
 connectLiveFeed();

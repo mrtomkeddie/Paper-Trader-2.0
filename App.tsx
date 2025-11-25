@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { useTradingEngine } from './hooks/useTradingEngine';
-import { useCryptoEngine } from './hooks/useCryptoEngine';
 import AssetCard from './components/AssetCard';
-import CryptoAssetCard from './components/CryptoAssetCard';
 import TradeHistory from './components/TradeHistory';
 import SettingsModal from './components/SettingsModal';
-import { Wallet, BarChart2, Clock, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Server, Wifi, WifiOff } from 'lucide-react';
+import { Wallet, BarChart2, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Clock } from 'lucide-react';
 import { AssetSymbol, Trade, StrategyType, TradeType } from './types';
-import { DEFAULT_REMOTE_URL, CRYPTO_DEFAULT_REMOTE_URL } from './constants';
+import { DEFAULT_REMOTE_URL } from './constants';
 
 const App: React.FC = () => {
   const { assets, account, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
-  const { assets: cAssets, account: cAccount, trades: cTrades, isConnected: cConnected, toggleBot: cToggleBot, setStrategy: cSetStrategy, setRemoteUrl: setCryptoRemote } = useCryptoEngine();
-  const [view, setView] = useState<'dashboard' | 'indicesHistory' | 'crypto' | 'cryptoHistory'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'indicesHistory'>('dashboard');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [remoteUrl, setRemoteUrl] = useState(''); // used for display in offline banner
   const [isWeekendClosed, setIsWeekendClosed] = useState(false);
@@ -94,13 +91,10 @@ const App: React.FC = () => {
         const existing = await reg.pushManager.getSubscription();
         const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
         const base = typeof window !== 'undefined' ? (localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL) : DEFAULT_REMOTE_URL;
-        const cryptoBase = typeof window !== 'undefined' ? (localStorage.getItem('cryptoRemoteUrl') || ((import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || CRYPTO_DEFAULT_REMOTE_URL)) : CRYPTO_DEFAULT_REMOTE_URL;
         await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
-        await fetch(`${String(cryptoBase).replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
         const isLocal = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
         if (isLocal) {
           try { await fetch(`http://localhost:3001/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) }); } catch {}
-          try { await fetch(`http://localhost:3002/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) }); } catch {}
         }
       } catch { }
     };
@@ -110,54 +104,24 @@ const App: React.FC = () => {
   const isPositiveDay = account.dayPnL >= 0;
 
   // Fixed Assets: Gold and Nasdaq only
-  const visibleAssets = [AssetSymbol.XAUUSD, AssetSymbol.NAS100];
+  const visibleAssets = [AssetSymbol.XAUUSD];
 
   const combinedTrades: Trade[] = React.useMemo(() => {
-    const mapCrypto = (ct: any): Trade => {
-      const isBuy = ct.type === 'BUY';
-      const price = cAssets?.[ct.symbol]?.currentPrice ?? ct.entryPrice;
-      const exit = isBuy ? price * 0.999 : price * 1.001;
-      const tpLevels = [
-        { id: 1, price: ct.tp1, percentage: 0.4, hit: !!ct.tp1Hit },
-        { id: 2, price: ct.tp2, percentage: 0.4, hit: !!ct.tp2Hit },
-        { id: 3, price: ct.tp3, percentage: 0.2, hit: !!ct.tp3Hit },
-      ];
-      return {
-        id: ct.id,
-        symbol: ct.symbol as any,
-        type: ct.type as any,
-        entryPrice: ct.entryPrice,
-        initialSize: ct.initialSize,
-        currentSize: ct.currentSize,
-        stopLoss: ct.stopLoss,
-        tpLevels,
-        openTime: ct.openTime,
-        closeTime: ct.closeTime,
-        closePrice: ct.closePrice,
-        pnl: ct.pnl,
-        floatingPnl: ct.status === 'OPEN' ? (isBuy ? exit - ct.entryPrice : ct.entryPrice - exit) * ct.currentSize : undefined,
-        status: ct.status as any,
-        strategy: StrategyType.AI_AGENT,
-      };
-    };
-    const cryptoMapped = cTrades.map(mapCrypto).sort((a, b) => b.openTime - a.openTime);
-    return cryptoMapped;
-  }, [cTrades, cAssets]);
+    return [];
+  }, []);
 
   const currentRemoteUrl = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') || 'Default' : 'Default';
 
   return (
     <div className="min-h-screen bg-black text-white font-sans selection:bg-ios-blue/30">
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        currentMode={brokerMode}
-        oandaConfig={oandaConfig}
-        onSave={configureOanda}
-        onSetCryptoRemote={(url) => { try { setCryptoRemote(url); } catch { } }}
-        isIndicesConnected={isConnected}
-        isCryptoConnected={cConnected}
-      />
+              <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                currentMode={brokerMode}
+                oandaConfig={oandaConfig}
+                onSave={configureOanda}
+                isIndicesConnected={isConnected}
+              />
 
       {/* Main Scrollable Content */}
       <main className="pb-28 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
@@ -166,8 +130,8 @@ const App: React.FC = () => {
         <header className="mb-8 relative z-20">
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full animate-pulse ${((view === 'crypto' || view === 'cryptoHistory') ? (cConnected || Object.keys(cAssets || {}).length > 0) : (isConnected || visibleAssets.some(s => !!assets[s]))) ? 'bg-ios-green' : 'bg-ios-red'}`} />
-              <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : view === 'indicesHistory' ? 'Indices History' : view === 'crypto' ? 'Crypto Desk' : 'Crypto History'}</span>
+              <div className={`w-2 h-2 rounded-full animate-pulse ${(isConnected || visibleAssets.some(s => !!assets[s])) ? 'bg-ios-green' : 'bg-ios-red'}`} />
+              <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : 'Indices History'}</span>
             </div>
             <div className="flex gap-3">
               <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
@@ -179,14 +143,14 @@ const App: React.FC = () => {
             </div>
           </div>
           <h1 className="text-5xl font-bold tracking-tight text-white tabular-nums mb-3">
-            £{((view === 'crypto' || view === 'cryptoHistory') ? cAccount.equity : account.equity).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            £{account.equity.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </h1>
 
           {/* Daily PnL Badge */}
-          <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL >= 0 : account.dayPnL >= 0) ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-red/15 text-ios-red'}`}>
-            {((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL >= 0 : account.dayPnL >= 0) ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+          <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${account.dayPnL >= 0 ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-red/15 text-ios-red'}`}>
+            {account.dayPnL >= 0 ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
             <span>
-              £{Math.abs((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL).toFixed(2)} ({((((view === 'crypto' || view === 'cryptoHistory') ? cAccount.dayPnL : account.dayPnL) / ((view === 'crypto' || view === 'cryptoHistory') ? cAccount.balance : account.balance)) * 100).toFixed(2)}%)
+              £{Math.abs(account.dayPnL).toFixed(2)} ({((account.dayPnL / account.balance) * 100).toFixed(2)}%)
             </span>
             <span className="ml-1 opacity-60 font-medium text-xs">Today</span>
           </div>
@@ -210,26 +174,11 @@ const App: React.FC = () => {
               ))}
             </div>
           </div>
-        ) : view === 'crypto' ? (
-          <div className="space-y-6 animate-fade-in">
-            <div>
-              <h2 className="text-xl font-bold text-white mb-4">Crypto Desk</h2>
-              <div className="space-y-6">
-                {['BTCUSDT', 'ETHUSDT', 'SOLUSDT'].map(sym => (
-                  cAssets[sym] ? <CryptoAssetCard key={sym} asset={cAssets[sym]} trades={cTrades.filter(t => t.symbol === sym)} toggleBot={cToggleBot} setStrategy={cSetStrategy} /> : null
-                ))}
-              </div>
-            </div>
-          </div>
         ) : view === 'indicesHistory' ? (
           <div className="animate-fade-in">
             <TradeHistory trades={trades} />
           </div>
-        ) : (
-          <div className="animate-fade-in">
-            <TradeHistory trades={combinedTrades} />
-          </div>
-        )}
+        ) : null}
       </main>
 
       {/* iOS Style Floating Tab Bar */}
@@ -252,29 +201,11 @@ const App: React.FC = () => {
 
         <div className="w-[1px] h-8 bg-white/10"></div>
 
-        <button
-          onClick={() => setView('crypto')}
-          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'crypto' ? 'text-ios-blue' : 'text-neutral-500'}`}
-        >
-          <Server size={24} strokeWidth={view === 'crypto' ? 2.5 : 2} />
-        </button>
-
-        <div className="w-[1px] h-8 bg-white/10"></div>
-
-        <button
-          onClick={() => setView('cryptoHistory')}
-          className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-all duration-300 ${view === 'cryptoHistory' ? 'text-ios-blue' : 'text-neutral-500'}`}
-        >
-          <Clock size={24} strokeWidth={view === 'cryptoHistory' ? 2.5 : 2} />
-        </button>
+        
       </div>
 
       {/* Background Ambience */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[50%] bg-purple-900/10 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute top-[0%] right-[-10%] w-[50%] h-[50%] bg-blue-900/10 rounded-full blur-[100px] animate-pulse delay-700" />
-        <div className="absolute bottom-[-10%] left-[20%] w-[60%] h-[40%] bg-yellow-900/5 rounded-full blur-[120px]" />
-      </div>
+      <div className="fixed top-0 left-0 right-0 h-96 bg-gradient-to-b from-yellow-900/10 to-transparent pointer-events-none -z-10" />
     </div>
   );
 };
