@@ -42,10 +42,12 @@ export interface CryptoAccount { balance: number; equity: number; dayPnL: number
 export const useCryptoEngine = () => {
   const isDev = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') || ((import.meta as any)?.env?.DEV);
   const [remoteUrl, setRemoteUrl] = useState(() => {
-    const saved = (typeof window !== 'undefined') ? localStorage.getItem('cryptoRemoteUrl') : null;
-    if (saved) return saved.replace(/\/$/, '');
+    const raw = (typeof window !== 'undefined') ? localStorage.getItem('cryptoRemoteUrl') : null;
+    const saved = raw ? raw.trim().replace(/\/$/, '') : '';
+    const hasProto = /^https?:\/\//i.test(saved);
+    if (saved && hasProto) return saved;
     const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
-    if (envUrl) return envUrl.replace(/\/$/, '');
+    if (envUrl) return String(envUrl).trim().replace(/\/$/, '');
     if (isDev) return '/crypto';
     return CRYPTO_DEFAULT_REMOTE_URL.replace(/\/$/, '');
   });
@@ -65,13 +67,11 @@ export const useCryptoEngine = () => {
       stream.onmessage = (ev) => {
         try {
           const s = JSON.parse(ev.data);
-          if (s.assets && s.account && s.trades) {
-            setAssets(s.assets);
-            setAccount(s.account);
-            setTrades(s.trades);
-            setIsConnected(true);
-            lastUpdateRef.current = Date.now();
-          }
+          if (s.assets) setAssets(s.assets);
+          if (s.account) setAccount(s.account);
+          if (s.trades) setTrades(s.trades);
+          setIsConnected(true);
+          lastUpdateRef.current = Date.now();
         } catch { }
       };
       stream.onerror = () => {

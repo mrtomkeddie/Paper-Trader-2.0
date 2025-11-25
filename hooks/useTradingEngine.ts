@@ -10,8 +10,10 @@ export const useTradingEngine = () => {
   const isDev = (import.meta as any)?.env?.DEV;
   const [remoteUrl, setRemoteUrl] = useState(() => {
       if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('remoteUrl');
-        if (saved) return saved;
+        const raw = localStorage.getItem('remoteUrl');
+        const saved = raw ? raw.trim().replace(/\/$/, '') : '';
+        const hasProto = /^https?:\/\//i.test(saved);
+        if (saved && hasProto) return saved;
         if (isDev) return '/api';
         return DEFAULT_REMOTE_URL;
       }
