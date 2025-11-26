@@ -85,6 +85,12 @@ const App: React.FC = () => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
         const reg = await navigator.serviceWorker.register('/sw.js');
         try { await reg.update(); } catch {}
+        try {
+          if (reg.waiting && reg.waiting.postMessage) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          if (navigator.serviceWorker && typeof navigator.serviceWorker.addEventListener === 'function') {
+            navigator.serviceWorker.addEventListener('controllerchange', () => { try { window.location.reload(); } catch {} });
+          }
+        } catch {}
         if (reg && typeof reg.addEventListener === 'function') {
           try {
             reg.addEventListener('updatefound', () => {
@@ -92,7 +98,10 @@ const App: React.FC = () => {
               if (!installing) return;
               installing.addEventListener('statechange', () => {
                 if (installing.state === 'installed' && navigator.serviceWorker && navigator.serviceWorker.controller) {
-                  try { window.location.reload(); } catch {}
+                  try {
+                    if (reg.waiting && reg.waiting.postMessage) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                    window.location.reload();
+                  } catch {}
                 }
               });
             });

@@ -14,3 +14,20 @@ self.addEventListener('notificationclick', function(event) {
     if (clients.openWindow) return clients.openWindow('/');
   }));
 });
+
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener('message', function(event) {
+  const d = event.data || {};
+  if (d && d.type === 'SKIP_WAITING') self.skipWaiting();
+});
