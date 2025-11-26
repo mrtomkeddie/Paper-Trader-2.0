@@ -278,6 +278,46 @@ loadState();
 console.log(USE_OANDA ? '[SYSTEM] Using OANDA pricing stream' : '[SYSTEM] Using Binance pricing stream (fallback)');
 cloudLoadState();
 
+async function githubLoadState() {
+  try {
+    if (trades.length >= 2) return;
+    const url = 'https://raw.githubusercontent.com/mrtomkeddie/Paper-Trader-2.0/main/data/state.json';
+    const raw = await new Promise((resolve) => {
+      try {
+        const req = https.get(url, (res) => {
+          let buf = '';
+          res.on('data', (d) => { buf += d; });
+          res.on('end', () => resolve(buf));
+        });
+        req.on('error', () => resolve(null));
+        req.end();
+      } catch { resolve(null); }
+    });
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed?.trades) ? parsed.trades : [];
+    if (arr.length < 2) return;
+    const keyForTrade = (t) => {
+      if (!t) return '';
+      if (t.id) return t.id;
+      const parts = [t.symbol, t.entryPrice, t.openTime || t.open_time || t.openTimestamp, t.initialSize];
+      return parts.filter(Boolean).join('|');
+    };
+    const mergedByKey = new Map();
+    for (const t of trades) mergedByKey.set(keyForTrade(t), t);
+    for (const t of arr) {
+      const k = keyForTrade(t);
+      if (!k) continue;
+      if (!mergedByKey.has(k)) mergedByKey.set(k, t);
+    }
+    trades = Array.from(mergedByKey.values());
+    if (parsed?.account && typeof parsed.account.balance === 'number') account = parsed.account;
+    saveState();
+  } catch {}
+}
+
+(async () => { try { await githubLoadState(); } catch {} })();
+
 // --- INDICATORS MATH ---
 const calculateEMA = (currentPrice, prevEMA, period) => {
     if (!prevEMA) return currentPrice;
