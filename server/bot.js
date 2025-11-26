@@ -128,6 +128,25 @@ const sseClients = new Set();
 const DATA_DIR = path.join(process.cwd(), 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 
+function recalculateAccountState() {
+    let realized = 0;
+    let day = 0;
+    const startOfDay = new Date().setHours(0,0,0,0);
+    for(const t of trades) {
+        if(t.status === 'CLOSED') {
+            realized += (t.pnl || 0);
+            const time = t.closeTime || t.openTime || 0;
+            if(time >= startOfDay) day += (t.pnl || 0);
+        }
+    }
+    account.balance = INITIAL_BALANCE + realized;
+    account.equity = account.balance; 
+    account.totalPnL = realized;
+    account.dayPnL = day;
+    console.log(`[SYSTEM] Recalculated: Bal £${account.balance.toFixed(2)}, Day £${account.dayPnL.toFixed(2)}`);
+    saveState();
+}
+
 function loadState() {
     try {
         if (fs.existsSync(STATE_FILE)) {
@@ -138,6 +157,7 @@ function loadState() {
                     account = parsed.account;
                     trades = parsed.trades;
                     pushSubscriptions = Array.isArray(parsed.pushSubscriptions) ? parsed.pushSubscriptions : [];
+                    recalculateAccountState();
                     console.log(`[SYSTEM] Loaded persisted state: ${trades.length} trades, balance £${account.balance.toFixed(2)}`);
                     return;
                 }
@@ -155,6 +175,7 @@ function loadState() {
                 account = parsed.account;
                 trades = parsed.trades;
                 pushSubscriptions = Array.isArray(parsed.pushSubscriptions) ? parsed.pushSubscriptions : [];
+                recalculateAccountState();
                 console.log(`[SYSTEM] Loaded backup state: ${trades.length} trades`);
             }
         }
@@ -647,6 +668,7 @@ function executeTrade(symbol, type, price, strategy, risk) {
 
 function processTicks(symbol) {
     let closedPnL = 0;
+    let closedAnyTrade = false;
     const openTrades = trades.filter(t => t.status === 'OPEN' && t.symbol === symbol);
     const asset = assets[symbol];
     const { bid, ask, mid } = market[symbol];
@@ -665,6 +687,7 @@ function processTicks(symbol) {
                 console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
                 const pnl = (price - trade.entryPrice) * trade.currentSize;
                 trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+                closedAnyTrade = true;
                 sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
                 notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
                 continue; // Next trade
@@ -675,6 +698,7 @@ function processTicks(symbol) {
                 console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
                 const pnl = (trade.entryPrice - price) * trade.currentSize;
                 trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+                closedAnyTrade = true;
                 sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
                 notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
                 continue;
@@ -718,6 +742,7 @@ function processTicks(symbol) {
             const exit = isBuy ? bid : ask;
             const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
             trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+            closedAnyTrade = true;
             sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
             notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
         }
@@ -730,7 +755,7 @@ function processTicks(symbol) {
     account.dayPnL += closedPnL;
     account.totalPnL += closedPnL;
     account.equity = account.balance;
-    if (closedPnL !== 0) saveState();
+    if (closedAnyTrade || closedPnL !== 0) saveState();
 
     // 2. Run Strategies (Only if no open trade)
     if (!asset.botActive) return;
@@ -980,6 +1005,103 @@ app.post('/import', (req, res) => {
   }
 });
 
+app.post('/import/csv', (req, res) => {
+  try {
+    const secret = process.env.IMPORT_SECRET || null;
+    const header = req.headers['x-import-secret'];
+    if (secret && header !== secret) return res.status(403).json({ error: 'forbidden' });
+    const body = req.body || {};
+    const fileArg = body.path || body.file || body.filename || 'public/trades (3).csv';
+    const fullPath = path.resolve(process.cwd(), fileArg);
+    const publicDir = path.join(process.cwd(), 'public');
+    if (!fullPath.startsWith(publicDir)) return res.status(400).json({ error: 'invalid_path' });
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'not_found' });
+    const raw = fs.readFileSync(fullPath, 'utf8');
+    const splitCSV = (line) => {
+      const out = []; let cur = ''; let q = false; for (let i = 0; i < line.length; i++) { const ch = line[i]; if (ch === '"') { if (q && line[i+1] === '"') { cur += '"'; i++; } else { q = !q; } } else if (ch === ',' && !q) { out.push(cur); cur = ''; } else { cur += ch; } } out.push(cur); return out;
+    };
+    const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length < 2) return res.status(400).json({ error: 'empty_csv' });
+    const headerRow = splitCSV(lines[0]).map(s => s.trim());
+    const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const mapKey = (s) => {
+      const k = norm(s);
+      if (k === 'id') return 'id';
+      if (k === 'symbol' || k === 'asset' || k === 'instrument') return 'symbol';
+      if (k === 'type' || k === 'side') return 'type';
+      if (k === 'entryprice' || k === 'entry' || k === 'openprice' || k === 'priceopen') return 'entryPrice';
+      if (k === 'initialsize' || k === 'size' || k === 'quantity' || k === 'lot') return 'initialSize';
+      if (k === 'currentsize') return 'currentSize';
+      if (k === 'stoploss' || k === 'sl') return 'stopLoss';
+      if (k === 'opentime' || k === 'opened' || k === 'openat' || k === 'dateopened') return 'openTime';
+      if (k === 'closetime' || k === 'closed' || k === 'closeat' || k === 'dateclosed') return 'closeTime';
+      if (k === 'closeprice' || k === 'exitprice' || k === 'priceclose') return 'closePrice';
+      if (k === 'pnl' || k === 'profit' || k === 'pl') return 'pnl';
+      if (k === 'status') return 'status';
+      if (k === 'strategy') return 'strategy';
+      return s;
+    };
+    const idx = headerRow.map(mapKey);
+    const toNum = (v) => { const n = typeof v === 'string' ? parseFloat(v.replace(/[^0-9.\-]/g, '')) : v; return isFinite(n) ? n : 0; };
+    const toTime = (v) => {
+      if (v == null || v === '') return undefined;
+      if (typeof v === 'number') return v;
+      const s = v.toString().trim();
+      const asNum = Number(s);
+      if (Number.isFinite(asNum) && asNum > 0) return asNum;
+      const t = Date.parse(s);
+      return Number.isFinite(t) ? t : undefined;
+    };
+    const symMap = (s) => { const u = (s || '').toString().toUpperCase().replace(/\s+/g, ''); if (u === 'XAUUSD' || u === 'XAU_USD' || u === 'GOLD') return 'XAU/USD'; if (u === 'NAS100' || u === 'NAS100_USD') return 'NAS100'; return s; };
+    const typeMap = (s) => { const u = (s || '').toString().toUpperCase(); if (u === 'LONG' || u === 'BUY') return 'BUY'; if (u === 'SHORT' || u === 'SELL') return 'SELL'; return 'BUY'; };
+    const stratMap = (s) => { const u = (s || '').toString().toUpperCase(); if (u.includes('TREND')) return 'TREND_FOLLOW'; if (u.includes('ORB')) return 'NY_ORB'; if (u.includes('LONDON')) return 'LONDON_SWEEP'; if (u.includes('GEMINI') || u.includes('AI')) return 'AI_AGENT'; return 'MANUAL'; };
+    const parsed = [];
+    for (let r = 1; r < lines.length; r++) {
+      const row = splitCSV(lines[r]);
+      const obj = {};
+      for (let c = 0; c < idx.length; c++) obj[idx[c]] = row[c];
+      const symbol = symMap(obj['symbol']);
+      const type = typeMap(obj['type']);
+      const entryPrice = toNum(obj['entryPrice']);
+      const initialSize = toNum(obj['initialSize']);
+      const currentSize = obj['currentSize'] != null ? toNum(obj['currentSize']) : initialSize;
+      const stopLoss = obj['stopLoss'] != null ? toNum(obj['stopLoss']) : entryPrice;
+      const openTime = toTime(obj['openTime']) || Date.now();
+      const closeTime = toTime(obj['closeTime']);
+      const closePrice = obj['closePrice'] != null ? toNum(obj['closePrice']) : undefined;
+      const strategy = stratMap(obj['strategy']);
+      const status = (obj['status'] || '').toString().toUpperCase() === 'OPEN' ? 'OPEN' : 'CLOSED';
+      const idVal = obj['id'] || '';
+      const idFinal = idVal && idVal.toString().length > 0 ? idVal : uuidv4();
+      let pnl = obj['pnl'] != null ? toNum(obj['pnl']) : 0;
+      if (pnl === 0 && closePrice != null) {
+        const isBuy = type === 'BUY';
+        pnl = (isBuy ? closePrice - entryPrice : entryPrice - closePrice) * (status === 'OPEN' ? currentSize : initialSize);
+      }
+      parsed.push({ id: idFinal, symbol, type, entryPrice, initialSize, currentSize, stopLoss, openTime, closeTime, closePrice, pnl, status, strategy });
+    }
+    const keyForTrade = (t) => { if (!t) return ''; if (t.id) return t.id; const parts = [t.symbol, t.entryPrice, t.openTime, t.initialSize]; return parts.filter(Boolean).join('|'); };
+    const map = new Map();
+    for (const t of trades) map.set(keyForTrade(t), t);
+    for (const t of parsed) {
+      const k = keyForTrade(t);
+      const ex = map.get(k);
+      if (!ex) { map.set(k, t); continue; }
+      const preferNew = (
+        (ex.status !== 'CLOSED' && t.status === 'CLOSED') ||
+        (typeof ex.closeTime !== 'number' && typeof t.closeTime === 'number') ||
+        (typeof t.closeTime === 'number' && typeof ex.closeTime === 'number' && t.closeTime > ex.closeTime)
+      );
+      if (preferNew) map.set(k, t);
+    }
+    trades = Array.from(map.values());
+    saveState();
+    res.json({ imported: parsed.length, total: trades.length });
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'error' });
+  }
+});
+
 app.post('/push/subscribe', (req, res) => {
     try {
         const sub = req.body;
@@ -1082,10 +1204,31 @@ async function cloudLoadState() {
     const data = await loadStateFromCloud();
     if (data) {
       const cloudTrades = Array.isArray(data.trades) ? data.trades : [];
-      const mergedById = new Map();
-      for (const t of trades) mergedById.set(t.id, t);
-      for (const t of cloudTrades) if (t && t.id && !mergedById.has(t.id)) mergedById.set(t.id, t);
-      trades = Array.from(mergedById.values());
+
+      const keyForTrade = (t) => {
+        if (!t) return '';
+        if (t.id) return t.id;
+        const parts = [t.symbol, t.entryPrice, t.openTime || t.open_time || t.openTimestamp, t.initialSize];
+        return parts.filter(Boolean).join('|');
+      };
+
+      const mergedByKey = new Map();
+      for (const t of trades) mergedByKey.set(keyForTrade(t), t);
+      for (const t of cloudTrades) {
+        const k = keyForTrade(t);
+        if (!k) continue;
+        const existing = mergedByKey.get(k);
+        if (!existing) {
+          mergedByKey.set(k, t);
+        } else {
+          try {
+            const preferCloud = (existing.status !== 'CLOSED' && t.status === 'CLOSED') ||
+              (typeof t.closeTime === 'number' && typeof existing.closeTime === 'number' && t.closeTime > existing.closeTime);
+            if (preferCloud) mergedByKey.set(k, t);
+          } catch {}
+        }
+      }
+      trades = Array.from(mergedByKey.values());
 
       const cloudSubs = Array.isArray(data.pushSubscriptions) ? data.pushSubscriptions : [];
       const subsByEndpoint = new Map();
@@ -1103,4 +1246,15 @@ function cloudSaveState() {
     saveStateToCloud({ account, trades, pushSubscriptions });
 }
 
-setInterval(() => { try { cloudSaveState(); } catch {} }, 5 * 60 * 1000);
+setInterval(() => { try { cloudSaveState(); } catch {} }, 60 * 1000);
+
+async function flushAndExit(code = 0) {
+  try {
+    saveState();
+    await saveStateToCloud({ account, trades, pushSubscriptions });
+  } catch {}
+  process.exit(code);
+}
+
+process.on('SIGINT', () => flushAndExit(0));
+process.on('SIGTERM', () => flushAndExit(0));

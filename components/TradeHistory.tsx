@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trade, TradeType, StrategyType } from '../types';
+import { Trade, TradeType, StrategyType, TimeFilter } from '../types';
 import { DEFAULT_REMOTE_URL } from '../constants';
 import { Clock, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import TradeDetailModal from './TradeDetailModal';
@@ -75,7 +75,7 @@ const TradeRow: React.FC<TradeRowProps> = ({ trade, onSelect }) => {
             </div>
           )}
           <div className="text-[10px] text-ios-gray mt-0.5">
-            {new Date(trade.openTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            {new Date(trade.status === 'CLOSED' ? (trade.closeTime || trade.openTime) : trade.openTime).toLocaleDateString([], {month: 'short', day: 'numeric'})} {new Date(trade.status === 'CLOSED' ? (trade.closeTime || trade.openTime) : trade.openTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
           </div>
         </div>
         <ChevronRight size={16} className="text-white/20 group-hover:text-white/50 transition-colors" />
@@ -88,6 +88,7 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [symbolFilter, setSymbolFilter] = useState<'ALL' | string>('ALL');
   const [strategyFilter, setStrategyFilter] = useState<'ALL' | StrategyType>('ALL');
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('ALL');
   const [activeOpen, setActiveOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
 
@@ -140,7 +141,11 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
           </div>
         </div>
 
-        <PerformanceSummary trades={closedTrades} />
+        <PerformanceSummary 
+          trades={closedTrades} 
+          filter={timeFilter}
+          onFilterChange={setTimeFilter}
+        />
 
         {/* Active Trades Section */}
         {activeTrades.length > 0 && (

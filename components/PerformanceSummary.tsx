@@ -5,23 +5,36 @@ import { Calendar, TrendingUp, Percent, BarChart3 } from 'lucide-react';
 
 interface Props {
   trades: Trade[];
+  filter: TimeFilter;
+  onFilterChange: (filter: TimeFilter) => void;
 }
 
-const PerformanceSummary: React.FC<Props> = ({ trades }) => {
-  const [filter, setFilter] = useState<TimeFilter>('TODAY');
-
+const PerformanceSummary: React.FC<Props> = ({ trades, filter, onFilterChange }) => {
+  
   const stats = useMemo(() => {
     const now = Date.now();
     const oneDay = 24 * 60 * 60 * 1000;
     
     const filteredTrades = trades.filter(t => {
         if (t.status === 'OPEN') return false; // Only count closed trades for stats
-        if (!t.closeTime) return false;
+        
+        // Fallback to openTime if closeTime is missing
+        const time = t.closeTime || t.openTime || 0;
+        
+        // If no time is found and filter is NOT ALL, exclude it.
+        // If filter is ALL, include it (legacy/imported).
+        if (time === 0 && filter !== 'ALL') return false;
+
+        const tradeDate = new Date(time);
+        const currentDate = new Date(now);
         
         switch (filter) {
-            case 'TODAY': return (now - t.closeTime) < oneDay;
-            case 'WEEK': return (now - t.closeTime) < (oneDay * 7);
-            case 'MONTH': return (now - t.closeTime) < (oneDay * 30);
+            case 'TODAY': 
+                return tradeDate.toDateString() === currentDate.toDateString();
+            case 'WEEK': 
+                return (now - time) < (oneDay * 7);
+            case 'MONTH': 
+                return (now - time) < (oneDay * 30);
             case 'ALL': return true;
             default: return true;
         }
@@ -50,7 +63,7 @@ const PerformanceSummary: React.FC<Props> = ({ trades }) => {
                 {(['TODAY', 'WEEK', 'MONTH', 'ALL'] as TimeFilter[]).map(f => (
                     <button
                         key={f}
-                        onClick={() => setFilter(f)}
+                        onClick={() => onFilterChange(f)}
                         className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${filter === f ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
                     >
                         {f}
