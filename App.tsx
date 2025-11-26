@@ -147,14 +147,16 @@ const App: React.FC = () => {
               />
 
       {/* Main Scrollable Content */}
-      <main className="pb-28 lg:pb-12 px-5 max-w-lg lg:max-w-7xl mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
+      <main className="pb-28 lg:pb-12 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
 
         {/* Premium Header */}
         <header className="mb-8 relative z-20">
           <div className="flex justify-between items-start mb-2">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full animate-pulse ${(isConnected || visibleAssets.some(s => !!assets[s])) ? 'bg-ios-green' : 'bg-ios-red'}`} />
-              <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : 'Indices History'}</span>
+              <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide" onClick={() => { localStorage.removeItem('remoteUrl'); window.location.reload(); }}>
+                {view === 'dashboard' ? 'Indices Dashboard' : 'Indices History'}
+              </span>
             </div>
             <div className="flex gap-3">
               <button onClick={() => { console.log('Opening settings...'); setIsSettingsOpen(true); }} className="text-ios-gray hover:text-white active:scale-95 transition-colors relative z-50">
