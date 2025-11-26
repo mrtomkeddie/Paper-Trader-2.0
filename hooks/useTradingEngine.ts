@@ -162,12 +162,14 @@ export const useTradingEngine = () => {
   useEffect(() => {
     const chooseUrl = async () => {
       try {
-        const saved = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') : null;
+        const rawSaved = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') : null;
+        const saved = rawSaved ? rawSaved.trim().replace(/\/$/, '') : null;
+        const hasProto = saved ? /^https?:\/\//i.test(saved) : false;
         const candidates = [
           ...(isDev ? ['/api'] : []),
           'http://localhost:3001',
           'http://localhost:3002',
-          ...(saved ? [saved] : []),
+          ...(hasProto && saved ? [saved] : []),
           DEFAULT_REMOTE_URL,
         ];
         for (const base of candidates) {
