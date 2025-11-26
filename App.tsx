@@ -3,7 +3,7 @@ import { useTradingEngine } from './hooks/useTradingEngine';
 import AssetCard from './components/AssetCard';
 import TradeHistory from './components/TradeHistory';
 import SettingsModal from './components/SettingsModal';
-import { Wallet, BarChart2, RefreshCw, ArrowUpRight, ArrowDownRight, Settings, Clock } from 'lucide-react';
+import { Wallet, BarChart2, ArrowUpRight, ArrowDownRight, Settings, Clock } from 'lucide-react';
 import { AssetSymbol, Trade, StrategyType, TradeType } from './types';
 import { DEFAULT_REMOTE_URL } from './constants';
 
@@ -157,9 +157,6 @@ const App: React.FC = () => {
               <span className="text-sm font-semibold text-ios-gray uppercase tracking-wide">{view === 'dashboard' ? 'Indices Dashboard' : 'Indices History'}</span>
             </div>
             <div className="flex gap-3">
-              <button onClick={resetAccount} className="text-ios-blue hover:opacity-80 active:scale-95 transition-transform">
-                <RefreshCw size={20} />
-              </button>
               <button onClick={() => { console.log('Opening settings...'); setIsSettingsOpen(true); }} className="text-ios-gray hover:text-white active:scale-95 transition-colors relative z-50">
                 <Settings size={20} />
               </button>
