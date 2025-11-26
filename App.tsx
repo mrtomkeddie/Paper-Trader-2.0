@@ -124,7 +124,7 @@ const App: React.FC = () => {
               />
 
       {/* Main Scrollable Content */}
-      <main className="pb-28 px-5 max-w-lg mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
+      <main className="pb-28 lg:pb-12 px-5 max-w-lg lg:max-w-7xl mx-auto" style={{ paddingTop: 'calc(max(56px, env(safe-area-inset-top)) + 8px)' }}>
 
         {/* Premium Header */}
         <header className="mb-8 relative z-20">
@@ -156,9 +156,12 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {view === 'dashboard' ? (
-          <div className="space-y-6 animate-fade-in">
-            <div>
+        {/* Unified Responsive Grid Layout */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
+          
+          {/* Assets Section */}
+          <div className={`lg:col-span-8 lg:grid lg:grid-cols-2 lg:gap-6 ${view === 'dashboard' ? 'block' : 'hidden lg:block'}`}>
+            <div className="space-y-6 lg:space-y-0 lg:contents animate-fade-in">
               {visibleAssets.map(symbol => (
                 <AssetCard
                   key={symbol}
@@ -170,15 +173,20 @@ const App: React.FC = () => {
               ))}
             </div>
           </div>
-        ) : view === 'indicesHistory' ? (
-          <div className="animate-fade-in">
-            <TradeHistory trades={trades} />
+
+          {/* History Section */}
+          <div className={`lg:col-span-4 ${view === 'indicesHistory' ? 'block' : 'hidden lg:block'}`}>
+            <div className="animate-fade-in lg:bg-ios-card/50 lg:rounded-3xl lg:p-6 lg:border lg:border-white/5 lg:sticky lg:top-24">
+               <h2 className="hidden lg:block text-xl font-bold mb-4 text-white">History</h2>
+               <TradeHistory trades={trades} />
+            </div>
           </div>
-        ) : null}
+
+        </div>
       </main>
 
       {/* iOS Style Floating Tab Bar */}
-      <div className="fixed bottom-6 left-4 right-4 h-16 bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-[32px] flex items-center z-50 shadow-2xl shadow-black/50 max-w-lg mx-auto">
+      <div className="lg:hidden fixed bottom-6 left-4 right-4 h-16 bg-ios-card/80 backdrop-blur-2xl border border-white/10 rounded-[32px] flex items-center z-50 shadow-2xl shadow-black/50 max-w-lg mx-auto">
         <div className="flex-1 flex items-center justify-center">
           <button
             onClick={() => setView('dashboard')}

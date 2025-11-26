@@ -110,7 +110,7 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
 
   return (
     <>
-      <div className="pb-24">
+      <div className="pb-24 lg:pb-0">
         <div className="mb-3 px-2 flex items-center justify-between">
           <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Filter</h3>
           <div className="flex gap-2">

@@ -60,7 +60,7 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
     const pnlIsPositive = stats.totalPnL >= 0;
 
     return (
-        <div className="bg-ios-card rounded-[22px] p-5 mb-6 relative overflow-hidden shadow-2xl shadow-black/50 border border-white/5">
+        <div className="bg-ios-card rounded-[22px] p-5 mb-6 lg:mb-0 relative overflow-hidden shadow-2xl shadow-black/50 border border-white/5">
 
             {/* Thinking Indicator Overlay */}
             {asset.isThinking && (
