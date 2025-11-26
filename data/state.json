@@ -1,9 +1,9 @@
 {
   "account": {
-    "balance": 525.2766500000031,
-    "equity": 525.2766500000031,
-    "dayPnL": 2.043700000004913,
-    "totalPnL": 25.27665000000311
+    "balance": 528.6632500000024,
+    "equity": 528.6632500000024,
+    "dayPnL": 5.430300000004257,
+    "totalPnL": 28.663250000002453
   },
   "trades": [
     {
@@ -89,7 +89,7 @@
       "entryPrice": 4162.81,
       "initialSize": 0.8200000000000001,
       "currentSize": 0.8200000000000001,
-      "stopLoss": 4156.565785000001,
+      "stopLoss": 4167.15867,
       "tpLevels": [
         {
           "id": 1,
@@ -111,11 +111,14 @@
         }
       ],
       "openTime": 1764172911009,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "AI_AGENT",
-      "pnl": 0,
+      "pnl": 3.386599999999344,
       "entryReason": "AI_AGENT Signal",
-      "floatingPnl": 5.1741999999995825
+      "floatingPnl": 3.386599999999344,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764181762149,
+      "closePrice": 4167.285
     },
     {
       "id": "83a9e4a1-12c0-4dba-9394-75506a0e2b73",
