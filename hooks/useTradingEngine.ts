@@ -99,41 +99,7 @@ export const useTradingEngine = () => {
     return () => { try { clearInterval(id); } catch {} };
   }, [remoteUrl]);
 
-  useEffect(() => {
-    const applyFallback = async () => {
-      try {
-        if (trades.length >= 2) return;
-        const url = 'https://raw.githubusercontent.com/mrtomkeddie/Paper-Trader-2.0/main/data/state.json';
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        const arr = Array.isArray(data?.trades) ? data.trades : [];
-        if (arr.length > trades.length) {
-          setTrades(arr);
-          if (data?.account) setAccount(data.account);
-        }
-      } catch {}
-    };
-    const t = setTimeout(applyFallback, 1200);
-    return () => { try { clearTimeout(t); } catch {} };
-  }, [trades.length]);
-
-  useEffect(() => {
-    const id = setInterval(async () => {
-      try {
-        const url = 'https://raw.githubusercontent.com/mrtomkeddie/Paper-Trader-2.0/main/data/state.json';
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        const arr = Array.isArray(data?.trades) ? data.trades : [];
-        if (arr.length > trades.length + 1) {
-          setTrades(arr);
-          if (data?.account) setAccount(data.account);
-        }
-      } catch {}
-    }, 15000);
-    return () => { try { clearInterval(id); } catch {} };
-  }, [trades.length]);
+  
 
   useEffect(() => {
     if (isConnected) return;
@@ -275,9 +241,9 @@ export const useTradingEngine = () => {
 
 function createInitialAsset(symbol: AssetSymbol): AssetData {
     // Default strategies match server/bot.js defaults
-    const defaultStrategies = symbol === AssetSymbol.XAUUSD 
-        ? [StrategyType.LONDON_SWEEP, StrategyType.TREND_FOLLOW]
-        : [StrategyType.NY_ORB, StrategyType.TREND_FOLLOW];
+    const defaultStrategies = symbol === AssetSymbol.NAS100 
+        ? [StrategyType.NY_ORB, StrategyType.AI_AGENT]
+        : [StrategyType.AI_AGENT];
 
     return {
       symbol,

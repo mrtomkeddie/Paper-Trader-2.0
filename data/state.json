@@ -1,9 +1,9 @@
 {
   "account": {
-    "dayPnL": -30.039100000000552,
-    "balance": 511.2834500000024,
-    "equity": 511.2834500000024,
-    "totalPnL": 11.283450000002397
+    "dayPnL": -40.01010000000018,
+    "balance": 501.31245000000274,
+    "equity": 501.31245000000274,
+    "totalPnL": 1.312450000002773
   },
   "trades": [
     {
@@ -77,7 +77,7 @@
       "strategy": "NY_ORB",
       "pnl": 0,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": 1.2460000000002038
+      "floatingPnl": -0.8539999999997964
     },
     {
       "id": "17a3f989-d21e-4c8d-9ab9-bd7c77d86171",
@@ -3184,7 +3184,7 @@
       "strategy": "NY_ORB",
       "pnl": 0,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": 0.18200000000018918
+      "floatingPnl": -1.7679999999998108
     },
     {
       "id": "59b9ca10-0371-4045-a388-c0d88b11c0e9",
@@ -3253,11 +3253,14 @@
         }
       ],
       "openTime": 1764179618486,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "NY_ORB",
-      "pnl": 0,
+      "pnl": -4.991999999999717,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": -3.0419999999997165
+      "floatingPnl": -4.991999999999717,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764244817500,
+      "closePrice": 25257.45
     },
     {
       "id": "86feede8-a5fb-4823-8218-cb0eb448080e",
@@ -3330,7 +3333,7 @@
       "strategy": "NY_ORB",
       "pnl": 0,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": 0.7020000000001893
+      "floatingPnl": -1.2479999999998108
     },
     {
       "id": "0a9098e3-e1fd-43eb-8c4c-4f66b5dbf455",
@@ -3365,7 +3368,7 @@
       "strategy": "NY_ORB",
       "pnl": 0,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": -0.012999999999810826
+      "floatingPnl": -1.962999999999811
     },
     {
       "id": "54e7b3b4-1a6e-4c98-a171-0e3cf1f89c7e",
@@ -3396,11 +3399,14 @@
         }
       ],
       "openTime": 1764181377710,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "NY_ORB",
-      "pnl": 0,
+      "pnl": -4.978999999999906,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": -3.0289999999999053
+      "floatingPnl": -4.978999999999906,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764244817500,
+      "closePrice": 25257.45
     },
     {
       "id": "5bf7413e-a5cc-4787-a9c1-da648191c79f",
@@ -3473,7 +3479,7 @@
       "strategy": "NY_ORB",
       "pnl": 0,
       "entryReason": "NY_ORB Signal",
-      "floatingPnl": 1.876000000000204
+      "floatingPnl": -0.2239999999997963
     },
     {
       "id": "95aa6dfb-17af-4fe6-b808-13e491564bd9",
@@ -3938,7 +3944,7 @@
       "activeStrategies": [
         "NY_ORB"
       ],
-      "botActive": true
+      "botActive": false
     }
   }
 }

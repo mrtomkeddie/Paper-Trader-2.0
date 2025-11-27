@@ -117,7 +117,7 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
         <div className="mb-3 px-2 flex items-center justify-between">
           <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Filter</h3>
           <div className="flex gap-2">
-            {(['ALL', ...Array.from(new Set(trades.map(t => t.symbol)))] as const).map(opt => (
+            {(() => { const allowed = ['NAS100']; const opts = ['ALL', ...allowed.filter(s => trades.some(t => t.symbol === s))] as const; return opts; })().map(opt => (
               <button
                 key={String(opt)}
                 onClick={() => setSymbolFilter(String(opt))}
@@ -131,7 +131,7 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
         <div className="mb-3 px-2 flex items-center justify-between">
           <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Strategy</h3>
           <div className="flex gap-2">
-            {(() => { const allowed: StrategyType[] = [StrategyType.NY_ORB, StrategyType.AI_AGENT, StrategyType.MANUAL]; const opts: ('ALL' | StrategyType)[] = ['ALL', ...allowed.filter(s => trades.some(t => t.strategy === s))]; return opts; })().map(opt => (
+            {(() => { const allowed: StrategyType[] = [StrategyType.NY_ORB, StrategyType.AI_AGENT]; const opts: ('ALL' | StrategyType)[] = ['ALL', ...allowed.filter(s => trades.some(t => t.strategy === s))]; return opts; })().map(opt => (
               <button
                 key={String(opt)}
                 onClick={() => setStrategyFilter(opt as StrategyType | 'ALL')}
