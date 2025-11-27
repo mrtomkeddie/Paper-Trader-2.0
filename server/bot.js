@@ -1250,6 +1250,15 @@ app.post('/push/subscribe', (req, res) => {
     }
 });
 
+app.get('/push/config', (req, res) => {
+    try {
+        const pub = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY || '';
+        res.json({ publicKey: pub });
+    } catch {
+        res.json({ publicKey: '' });
+    }
+});
+
 app.post('/push/test', (req, res) => {
     notifyAll('Push Test', 'Notifications are configured');
     res.sendStatus(200);

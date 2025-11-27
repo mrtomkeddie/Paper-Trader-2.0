@@ -75,7 +75,12 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
       const reg = await navigator.serviceWorker.register('/sw.js');
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') { setPushStatus('error'); return; }
-      const vapid = (import.meta as any)?.env?.VITE_VAPID_PUBLIC_KEY;
+      const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
+      let vapid = (import.meta as any)?.env?.VITE_VAPID_PUBLIC_KEY as string | undefined;
+      try {
+        const cfg = await fetch(`${base}/push/config`, { cache: 'no-store' });
+        if (cfg.ok) { const j = await cfg.json(); if (j && j.publicKey) vapid = j.publicKey; }
+      } catch {}
       if (!vapid) { setPushStatus('error'); return; }
       const urlBase64ToUint8Array = (base64String: string) => {
         const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -87,10 +92,16 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
       };
       const existing = await reg.pushManager.getSubscription();
       const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
-      const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
       const r1 = await fetch(`${base}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
       if (r1.ok) setPushStatus('enabled'); else setPushStatus('error');
     } catch { setPushStatus('error'); }
+  };
+
+  const testPush = async () => {
+    try {
+      const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
+      await fetch(`${base}/push/test`, { method: 'POST' });
+    } catch {}
   };
 
   return (
@@ -134,7 +145,13 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
             >
               <Bell size={16} /> {pushStatus === 'enabled' ? 'Enabled' : 'Enable Push'}
             </button>
-            <p className="text-[10px] text-ios-gray mt-1">On iPhone, open from Home Screen after installing to allow push.</p>
+            <div className="mt-2 flex justify-between gap-2">
+              <button onClick={testPush} className="w-1/2 font-bold py-2 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs">
+                Send Test Push
+              </button>
+              <a href="/sw.js" target="_blank" className="w-1/2 text-center font-bold py-2 rounded-xl border border-white/10 bg-white/5 text-white hover:bg-white/10 text-xs">Service Worker</a>
+            </div>
+            <p className="text-[10px] text-ios-gray mt-1">On iPhone, install to Home Screen and open from there to enable push.</p>
           </div>
 
           {/* Analytics */}
