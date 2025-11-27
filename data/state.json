@@ -3941,9 +3941,7 @@
   "pushSubscriptions": [],
   "assets": {
     "NAS100": {
-      "activeStrategies": [
-        "NY_ORB"
-      ],
+      "activeStrategies": [],
       "botActive": false
     }
   }

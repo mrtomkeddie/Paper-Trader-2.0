@@ -309,7 +309,6 @@ function createAsset(symbol, defaultStrategies) {
 
 loadState();
 console.log(USE_OANDA ? '[SYSTEM] Using OANDA pricing stream' : '[SYSTEM] Using Binance pricing stream (fallback)');
-cloudLoadState();
 
 async function githubLoadState() {
   try {
@@ -358,8 +357,7 @@ async function githubLoadState() {
   } catch {}
 }
 
-(async () => { try { await githubLoadState(); } catch {} })();
-setInterval(() => { try { githubLoadState(); } catch {} }, 10 * 60 * 1000);
+
 
 // --- INDICATORS MATH ---
 const calculateEMA = (currentPrice, prevEMA, period) => {
@@ -913,7 +911,6 @@ app.get('/state', (req, res) => {
     res.setHeader('Surrogate-Control', 'no-store');
   } catch {}
   try {
-    if (trades.length < 2) githubLoadState();
   } catch {}
   try {
     for (const t of trades) {
