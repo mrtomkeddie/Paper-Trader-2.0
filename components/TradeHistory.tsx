@@ -95,14 +95,14 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
   const [historyOpen, setHistoryOpen] = useState(true);
 
   const filteredTrades = trades.filter(t => {
-    const symbolOk = symbolFilter === 'ALL' ? true : t.symbol === symbolFilter;
+    const symbolOk = symbolFilter === 'ALL' ? t.symbol === 'NAS100' : t.symbol === symbolFilter;
     const strategyOk = strategyFilter === 'ALL' ? true : t.strategy === strategyFilter;
     return symbolOk && strategyOk;
   });
   const activeTrades = filteredTrades.filter(t => t.status === 'OPEN');
   const closedTrades = filteredTrades.filter(t => t.status === 'CLOSED');
 
-  if (trades.length === 0) {
+  if (filteredTrades.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-ios-gray">
         <Clock className="w-12 h-12 mb-4 opacity-20" strokeWidth={1} />

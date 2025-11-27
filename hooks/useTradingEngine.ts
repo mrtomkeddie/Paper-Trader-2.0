@@ -11,7 +11,7 @@ export const useTradingEngine = () => {
   const [remoteUrl, setRemoteUrl] = useState(() => {
       if (typeof window !== 'undefined') {
         if (isDev) return '/api';
-        const hostIsLocal = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+        const hostIsLocal = typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         const raw = localStorage.getItem('remoteUrl');
         const saved = raw ? raw.trim().replace(/\/$/, '') : '';
         const hasProto = /^https?:\/\//i.test(saved);
@@ -137,7 +137,7 @@ export const useTradingEngine = () => {
           return;
         }
         let preferred = DEFAULT_REMOTE_URL;
-        const onLocal = typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost';
+        const onLocal = typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         if (onLocal) {
           preferred = 'http://localhost:3001';
         } else if (hasProto && saved) {
