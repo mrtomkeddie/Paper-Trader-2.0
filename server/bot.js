@@ -48,6 +48,7 @@ const OANDA_ACCOUNT_ID = process.env.OANDA_ACCOUNT_ID;
 const OANDA_ENV = process.env.OANDA_ENV || 'practice';
 const USE_OANDA = !!(OANDA_TOKEN && OANDA_ACCOUNT_ID);
 const CRYPTO_UPSTREAM_URL = process.env.CRYPTO_UPSTREAM_URL || process.env.CRYPTO_REMOTE_URL || 'http://localhost:3002';
+const ENABLE_GITHUB_SYNC = process.env.GITHUB_SYNC_ENABLED === 'true';
 
 // --- NOTIFICATIONS (Twilio SMS) ---
 const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -312,8 +313,10 @@ console.log(USE_OANDA ? '[SYSTEM] Using OANDA pricing stream' : '[SYSTEM] Using 
 cloudLoadState();
 setInterval(() => { try { cloudLoadState(); } catch {} }, 10 * 60 * 1000);
 
-(async () => { try { await githubLoadState(); } catch {} })();
-setInterval(() => { try { githubLoadState(); } catch {} }, 10 * 60 * 1000);
+if (ENABLE_GITHUB_SYNC) {
+  (async () => { try { await githubLoadState(); } catch {} })();
+  setInterval(() => { try { githubLoadState(); } catch {} }, 10 * 60 * 1000);
+}
 async function githubLoadState() {
   try {
     const url = 'https://raw.githubusercontent.com/mrtomkeddie/Paper-Trader-2.0/main/data/state.json';
@@ -1370,6 +1373,16 @@ let webpushClient = null;
 })();
 // --- FIREBASE CLOUD PERSISTENCE ---
 initFirebase();
+((async () => {
+  if (process.env.AUTOCLEAR_ON_BOOT === 'true') {
+    try {
+      await clearCloudState(account);
+      trades = [];
+      account = { balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0, totalPnL: 0 };
+      saveState();
+    } catch {}
+  }
+})());
 
 async function cloudLoadState() {
   try {
@@ -1408,6 +1421,7 @@ async function cloudLoadState() {
       for (const s of cloudSubs) if (s && s.endpoint && !subsByEndpoint.has(s.endpoint)) subsByEndpoint.set(s.endpoint, s);
       pushSubscriptions = Array.from(subsByEndpoint.values());
 
+      try { recalculateAccountState(); } catch {}
       console.log(`[SYSTEM] Cloud state merged: ${trades.length} trades`);
       saveState();
     }
