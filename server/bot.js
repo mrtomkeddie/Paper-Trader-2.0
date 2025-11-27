@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import { initFirebase, loadStateFromCloud, saveStateToCloud } from './firebase.js';
+import { initFirebase, loadStateFromCloud, saveStateToCloud, clearCloudState } from './firebase.js';
 import webpush from 'web-push';
 
 // Load .env file from root
@@ -309,7 +309,8 @@ function createAsset(symbol, defaultStrategies) {
 
 loadState();
 console.log(USE_OANDA ? '[SYSTEM] Using OANDA pricing stream' : '[SYSTEM] Using Binance pricing stream (fallback)');
-
+cloudLoadState();
+setInterval(() => { try { cloudLoadState(); } catch {} }, 10 * 60 * 1000);
 async function githubLoadState() {
   try {
     const url = 'https://raw.githubusercontent.com/mrtomkeddie/Paper-Trader-2.0/main/data/state.json';
@@ -998,6 +999,19 @@ app.post('/cloud/merge', async (req, res) => {
   try {
     await cloudLoadState();
     res.json({ trades: trades.length, accountBalance: account.balance });
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'error' });
+  }
+});
+
+app.post('/cloud/clear', async (req, res) => {
+  try {
+    const ok = await clearCloudState(account);
+    if (!ok) return res.status(500).json({ error: 'clear_failed' });
+    trades = [];
+    account = { balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0, totalPnL: 0 };
+    saveState();
+    res.json({ cleared: true, trades: trades.length, balance: account.balance });
   } catch (e) {
     res.status(500).json({ error: e?.message || 'error' });
   }

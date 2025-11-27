@@ -118,3 +118,16 @@ export async function saveStateToCloud(state) {
         console.error('[FIREBASE] Save error:', e.message);
     }
 }
+
+export async function clearCloudState(account) {
+    if (!db) return false;
+    try {
+        const ref = db.collection(COLLECTION).doc(DOC_ID);
+        const base = account && typeof account.balance === 'number' ? account : { balance: 500, equity: 500, dayPnL: 0, totalPnL: 0 };
+        await ref.set({ account: base, trades: [], pushSubscriptions: [], updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: false });
+        return true;
+    } catch (e) {
+        console.error('[FIREBASE] Clear error:', e.message);
+        return false;
+    }
+}
