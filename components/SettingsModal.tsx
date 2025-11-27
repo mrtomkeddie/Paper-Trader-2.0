@@ -134,8 +134,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
             <label className="text-[10px] text-ios-gray ml-1">Analytics</label>
             <a
               href={`${(remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, '')}/export/csv?status=closed`}
-              target="_blank"
-              rel="noopener noreferrer"
+              download="trades.csv"
               className="w-full mt-1 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-white/10 bg-white/10 text-white hover:bg-white/20"
             >
               Export Closed Trades CSV
