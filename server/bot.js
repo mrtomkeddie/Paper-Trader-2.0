@@ -891,8 +891,8 @@ function processTicks(symbol) {
 
   // C. NY ORB (NAS100)
   if (asset.activeStrategies.includes('NY_ORB') && symbol === 'NAS100') {
-    const volExpansion = asset.bollinger.upper - asset.bollinger.lower > asset.currentPrice * 0.0016;
-    if (volExpansion && asset.trend === 'UP' && asset.currentPrice > asset.bollinger.upper) {
+    const volExpansion = asset.bollinger.upper - asset.bollinger.lower > asset.currentPrice * 0.0012;
+    if (volExpansion && asset.currentPrice > asset.bollinger.upper) {
       console.log(`[NY_ORB] ${symbol} BUY @ ${asset.currentPrice.toFixed(2)}`);
       executeTrade(symbol, 'BUY', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE');
     }
