@@ -26,7 +26,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
         if (hostIsLocal) return 'http://localhost:3001';
         return DEFAULT_REMOTE_URL;
       }
-    } catch {}
+    } catch { }
     return DEFAULT_REMOTE_URL;
   });
   const [cryptoUrl, setCryptoUrl] = useState(() => {
@@ -44,6 +44,8 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
 
   const [pushStatus, setPushStatus] = useState<'idle' | 'enabled' | 'error'>('idle');
   const [cryptoSample, setCryptoSample] = useState<string>('');
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   if (!isOpen) return null;
 
@@ -80,7 +82,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
       try {
         const cfg = await fetch(`${base}/push/config`, { cache: 'no-store' });
         if (cfg.ok) { const j = await cfg.json(); if (j && j.publicKey) vapid = j.publicKey; }
-      } catch {}
+      } catch { }
       if (!vapid) { setPushStatus('error'); return; }
       const urlBase64ToUint8Array = (base64String: string) => {
         const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -101,7 +103,25 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
     try {
       const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
       await fetch(`${base}/push/test`, { method: 'POST' });
-    } catch {}
+    } catch { }
+  };
+
+  const handleResetTrades = async () => {
+    try {
+      setResetStatus('loading');
+      const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
+      const res = await fetch(`${base}/cloud/clear`, { method: 'POST' });
+      if (res.ok) {
+        setResetStatus('success');
+        setShowResetConfirm(false);
+        // Reload the page to show cleared state
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        setResetStatus('error');
+      }
+    } catch {
+      setResetStatus('error');
+    }
   };
 
   return (
@@ -134,7 +154,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
             </div>
           </div>
 
-          
+
 
           {/* Push Notifications */}
           <div className="mt-2">
@@ -164,6 +184,12 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
             >
               Export Closed Trades CSV
             </a>
+            <button
+              onClick={() => setShowResetConfirm(true)}
+              className="w-full mt-2 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border border-ios-red/30 bg-ios-red/10 text-ios-red hover:bg-ios-red/20"
+            >
+              Reset All Trades
+            </button>
           </div>
 
           {/* Advanced Toggle */}
@@ -193,7 +219,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
                     Set
                   </button>
                 </div>
-                
+
               </div>
             )}
           </div>
@@ -204,6 +230,54 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
 
         </div>
       </div>
+
+      {/* Reset Confirmation Dialog */}
+      {showResetConfirm && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setShowResetConfirm(false)} />
+          <div className="bg-[#1C1C1E] w-full max-w-sm rounded-[20px] border border-white/10 overflow-hidden shadow-2xl relative z-10 animate-fade-in-up">
+            <div className="p-6 space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-ios-red/20 text-ios-red flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Reset All Trades?</h3>
+                <p className="text-sm text-ios-gray mb-4">
+                  This will permanently delete all trade history (open and closed) from the server, local storage, and cloud.
+                </p>
+                <div className="bg-ios-red/10 border border-ios-red/30 rounded-xl p-3 mb-4">
+                  <p className="text-xs text-ios-red font-semibold">
+                    ⚠️ Have you exported your data? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  disabled={resetStatus === 'loading'}
+                  className="flex-1 font-bold py-3 rounded-xl border border-white/10 bg-white/10 text-white hover:bg-white/20 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleResetTrades}
+                  disabled={resetStatus === 'loading'}
+                  className="flex-1 font-bold py-3 rounded-xl bg-ios-red text-white hover:bg-ios-red/80 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {resetStatus === 'loading' ? (
+                    <><Loader2 size={16} className="animate-spin" /> Resetting...</>
+                  ) : (
+                    'Confirm Reset'
+                  )}
+                </button>
+              </div>
+              {resetStatus === 'error' && (
+                <p className="text-xs text-ios-red text-center">Failed to reset. Please try again.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
