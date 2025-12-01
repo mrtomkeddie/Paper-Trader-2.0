@@ -435,35 +435,31 @@ async function consultGemini(symbol, asset) {
 
   try {
     console.log(`[AI] Consulting Gemini for ${symbol}...`);
-
+    
     const prompt = `
-You are a seasoned Trend Following Swing Trader. You do not panic during noise.
-Your Goal: Identify valid entries in the direction of the trend and ignore temporary pullbacks.
+You are a pragmatic intraday trader who respects the higher-timeframe trend. You do not panic during noise.
+Goal: Increase trading opportunities while respecting the higher-timeframe bias.
 
 Market Data for ${symbol}:
 - Price: ${asset.currentPrice}
 - Primary Trend (200 EMA): ${asset.trend}
 - Higher Timeframe Trend (1H 200 EMA): ${asset.htfTrend}
+- H1 Distance to 200 EMA (%): ${(((asset.currentPrice - asset.ema200H1) / asset.ema200H1) * 100).toFixed(3)}
 - Momentum (RSI 14): ${asset.rsi.toFixed(2)}
 - Immediate Slope: ${asset.slope.toFixed(4)}
 - Volatility (Band Width): ${(asset.bollinger.upper - asset.bollinger.lower).toFixed(2)}
 
-CRITICAL RULES:
-CONTEXT: The Higher Timeframe (1H) Trend is the 'King'. Follow these rules:
-- If 1H Trend is UP: Look for BUYS (view 5m dips as buying opportunities). Do not bet against the trend.
-- If 1H Trend is DOWN: Look for SELLS (view 5m rallies as selling opportunities). Do not bet against the trend.
-- If 1H Trend is NEUTRAL or FLAT: You are FREE to trade BOTH directions. Scalp the range and look for momentum in either direction.
+Rules:
+- King Rule (H1): The 1H trend sets preference.
+- If H1 is UP: prefer BUYS; buy dips.
+- If H1 is DOWN: prefer SELLS; sell rallies.
+- If H1 is NEUTRAL/FLAT (distance to 200 EMA < 0.20%): both directions are allowed; scalp the range.
+- When both directions are allowed, base your decision on near-term momentum and mean-reversion vs breakout context.
+- Only label BEARISH in H1 UP when downside momentum is strong; otherwise keep bias neutral.
+- Confidence: >80 when alignment is strong; <50 when signals conflict.
 
-1. RESPECT THE TREND: In a strong trend (UP/DOWN), temporary counter-moves are likely healthy pullbacks, NOT reversals. Rate them as NEUTRAL, not against the trend.
-2. THE GUARDIAN CHECK: Only output a counter-trend signal if there is a catastrophic reversal (e.g. price crashing in an uptrend). Otherwise, hold the bias or stay NEUTRAL.
-3. NEUTRAL MARKET FREEDOM: In a NEUTRAL/FLAT 1H trend, you can be BULLISH or BEARISH based on 5m momentum, RSI, and slope. Look for breakouts or range scalps.
-4. CONFIDENCE SCORING:
-   - High Confidence (>80): Perfect alignment (e.g. Uptrend + Positive Slope + RSI rising from 40, OR Neutral trend + strong momentum signal).
-   - Low Confidence (<50): Conflicting signals (e.g. Uptrend + Negative Slope without clear pullback pattern).
-
-Determine the market sentiment based on specific Trend Following logic.
-Respond ONLY with a JSON object in this format:
-{ "sentiment": "BULLISH" | "BEARISH" | "NEUTRAL", "confidence": number (0-100), "reason": "concise trade rationale" }`;
+Return ONLY this JSON:
+{ "sentiment": "BULLISH" | "BEARISH" | "NEUTRAL", "confidence": number (0-100), "reason": "concise rationale" }`;
 
     const response = await aiClient.models.generateContent({
       model: 'gemini-2.5-flash',

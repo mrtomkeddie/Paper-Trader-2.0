@@ -100,7 +100,33 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
     return symbolOk && strategyOk;
   });
   const activeTrades = filteredTrades.filter(t => t.status === 'OPEN');
-  const closedTrades = filteredTrades.filter(t => t.status === 'CLOSED');
+  const closedTrades = filteredTrades
+    .filter(t => t.status === 'CLOSED')
+    .filter(t => {
+      const now = Date.now();
+      const oneDay = 24 * 60 * 60 * 1000;
+      const time = (t.closeTime ?? t.openTime ?? 0) as number;
+      if (time === 0 && timeFilter !== 'ALL') return false;
+      switch (timeFilter) {
+        case 'TODAY': {
+          const tradeDate = new Date(time);
+          const currentDate = new Date(now);
+          return tradeDate.toDateString() === currentDate.toDateString();
+        }
+        case 'WEEK':
+          return (now - time) < (oneDay * 7);
+        case 'MONTH':
+          return (now - time) < (oneDay * 30);
+        case 'ALL':
+        default:
+          return true;
+      }
+    })
+    .sort((a, b) => {
+      const ta = (a.closeTime ?? a.openTime ?? 0) as number;
+      const tb = (b.closeTime ?? b.openTime ?? 0) as number;
+      return tb - ta;
+    });
 
   if (filteredTrades.length === 0) {
     return (

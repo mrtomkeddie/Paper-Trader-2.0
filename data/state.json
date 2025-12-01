@@ -1,16 +1,368 @@
 {
   "account": {
-    "balance": 500,
-    "equity": 500,
-    "dayPnL": 0,
-    "totalPnL": 0
+    "balance": 490.62700000000063,
+    "equity": 490.62700000000063,
+    "dayPnL": -14.936999999999717,
+    "totalPnL": -9.372999999999337
   },
-  "trades": [],
-  "pushSubscriptions": [],
+  "trades": [
+    {
+      "id": "15a817cd-f51d-4410-b7c7-5f02014df5c4",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25251.4,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25213.522900000004,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25402.9084,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25503.914,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26008.942000000003,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764587383674,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": -4.94,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": -4.94,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764591089222,
+      "closePrice": 25214.65
+    },
+    {
+      "id": "91131f53-abbd-420f-a5c7-0ec905a86b31",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25299.8,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25261.850300000002,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25451.5988,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25552.798,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26058.794,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764321751814,
+      "status": "CLOSED",
+      "strategy": "NY_ORB",
+      "pnl": -5.017999999999811,
+      "entryReason": "NY_ORB Signal",
+      "floatingPnl": -5.017999999999811,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764584215336,
+      "closePrice": 25262.550000000003
+    },
+    {
+      "id": "68339684-4983-408a-9cf6-0e11100935e3",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25333.2,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25363.1115,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25485.1992,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25586.532,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26093.196,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764342080402,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": 3.8739999999999055,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": 3.8739999999999055,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764346894203,
+      "closePrice": 25363.65
+    },
+    {
+      "id": "99012667-0303-4ea2-8572-878716b5e3ed",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25366.8,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25328.7498,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25519.000799999998,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25620.468,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26127.804,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764346920772,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": -5.0439999999999054,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": -5.0439999999999054,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764347223762,
+      "closePrice": 25328.65
+    },
+    {
+      "id": "942f547f-0dd8-4f8f-8709-9f195327eac2",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25328.3,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25360.4142,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25480.2698,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25581.583,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26088.149,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764347271554,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": 4.16,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": 4.16,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764349290558,
+      "closePrice": 25360.8
+    },
+    {
+      "id": "b1edc5b2-edf8-42c4-9d4c-1661a190d0b2",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25389,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25350.916500000003,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25541.334,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25642.89,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26150.670000000002,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764349883447,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": -5.173999999999905,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": -5.173999999999905,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764351676063,
+      "closePrice": 25349.85
+    },
+    {
+      "id": "1a64e91a-063b-4cf8-88b3-61e47a0ba1f4",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25358.8,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25429.3452,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25510.9528,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25612.388,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26119.564,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764351990233,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": 9.126000000000095,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": 9.126000000000095,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764353204467,
+      "closePrice": 25429.65
+    },
+    {
+      "id": "876a3730-6465-4ef6-85bd-3de0ecf38488",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25436.1,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25397.94585,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25588.7166,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25690.461,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26199.183,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764353220654,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": -1.377999999999811,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": -1.377999999999811,
+      "closeReason": "MANUAL",
+      "closeTime": 1764366954498,
+      "closePrice": 25425.5
+    },
+    {
+      "id": "75bc7ace-d1d1-487d-8fd4-bc20c5a8e472",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25424.7,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25386.562950000003,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25577.2482,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25678.947,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26187.441000000003,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1764547200162,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": -4.978999999999906,
+      "entryReason": "AI_AGENT Signal",
+      "floatingPnl": -4.978999999999906,
+      "closeReason": "STOP_LOSS",
+      "closeTime": 1764547565261,
+      "closePrice": 25387.65
+    }
+  ],
+  "pushSubscriptions": [
+    {
+      "endpoint": "https://web.push.apple.com/QCXefeOslkECbWI22xpenDK8rUq_KoX-QovUygmxYZ2XR5kBP66Sf7ep0mqBaqIIXAv3zUYCbnWYW8BV6JWHzWczMBEf9vZ2SB1cgLErTFDT136lCLPMMoBGafs_1ptDT7W2lJ_SeQKn8v8BfG_8234grU3lw3XLMxaREj-kM1c",
+      "keys": {
+        "p256dh": "BDdJSWNu5F0Xqg-LnaoSdpBvHh9lUtcSr18cW1itmgBnQxCU94frh2-TdBVvANyjlGyugaqB7LsKHNSb1Djy5sw",
+        "auth": "55bQYxWmRghPDaKpaJwdlQ"
+      }
+    }
+  ],
   "assets": {
     "NAS100": {
       "activeStrategies": [
-        "NY_ORB"
+        "NY_ORB",
+        "AI_AGENT"
       ],
       "botActive": true
     }
