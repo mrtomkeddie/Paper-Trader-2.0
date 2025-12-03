@@ -277,6 +277,37 @@ function isWithinLondonSweepWindow(ts) {
   } catch { return false; }
 }
 
+function getMarketPhase(ts) {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(ts));
+    let hh = 0, mm = 0;
+    for (const p of parts) {
+      if (p.type === 'hour') hh = parseInt(p.value, 10);
+      else if (p.type === 'minute') mm = parseInt(p.value, 10);
+    }
+    const day = new Date(ts).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short' });
+    const isWeekend = day === 'Sat' || day === 'Sun';
+    const inLunch = (hh === 11 && mm >= 30) || (hh > 11 && hh < 15);
+    if (isWeekend) return 'CLOSED';
+    if (inLunch) return 'LUNCH PAUSE';
+    if (hh >= 7 && hh < 22) return 'OPEN';
+    return 'CLOSED';
+  } catch { return 'CLOSED'; }
+}
+
+function logSystemPulse() {
+  try {
+    const ts = Date.now();
+    const timeStr = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date(ts));
+    const phase = getMarketPhase(ts);
+    const price = (market['NAS100'] && market['NAS100'].mid) ? market['NAS100'].mid : (assets['NAS100'] ? assets['NAS100'].currentPrice : 0);
+    const priceStr = (typeof price === 'number' && isFinite(price) && price > 0) ? price.toFixed(2) : 'N/A';
+    console.log(`[SYSTEM PULSE] Status: ONLINE\nTime: ${timeStr}\nMarket Phase: ${phase}\nLast Price: ${priceStr}`);
+  } catch { }
+}
+
+setInterval(() => { try { logSystemPulse(); } catch { } }, 15 * 60 * 1000);
+
 // AI CACHE (To prevent spamming API)
 let aiState = {
   'NAS100': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' }
