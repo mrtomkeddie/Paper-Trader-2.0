@@ -1,10 +1,10 @@
 {
   "account": {
-    "balance": 501.1400000000003,
-    "equity": 501.1400000000003,
-    "dayPnL": 17.051999999999566,
-    "totalPnL": 1.140000000000323,
-    "winRate": 39.285714285714285
+    "balance": 501.464,
+    "equity": 501.464,
+    "dayPnL": 17.375999999999227,
+    "totalPnL": 1.4639999999999747,
+    "winRate": 41.37931034482759
   },
   "trades": [
     {
@@ -40,7 +40,8 @@
       "strategy": "TREND_FOLLOW",
       "pnl": 0,
       "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
-      "confidence": 85
+      "confidence": 85,
+      "floatingPnl": 0.48100000000009463
     },
     {
       "id": "18be73ee-5abf-4c67-8622-32f6188720db",
@@ -49,7 +50,7 @@
       "entryPrice": 25782.7,
       "initialSize": 0.12,
       "currentSize": 0.12,
-      "stopLoss": 25816.5576,
+      "stopLoss": 25819.3548,
       "tpLevels": [
         {
           "id": 1,
@@ -73,14 +74,14 @@
       "openTime": 1765396910402,
       "status": "CLOSED",
       "strategy": "TREND_FOLLOW",
-      "pnl": 4.0440000000000875,
+      "pnl": 4.367999999999738,
       "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
       "confidence": 85,
-      "floatingPnl": 4.0440000000000875,
+      "floatingPnl": 4.367999999999738,
       "closeReason": "STOP_LOSS",
       "outcomeReason": "Stop Loss: Price invalidated trade setup.",
-      "closeTime": 1765397941564,
-      "closePrice": 25816.9
+      "closeTime": 1765398158366,
+      "closePrice": 25819.75
     },
     {
       "id": "5e92bae3-5e24-416f-ace2-38515e8584e3",

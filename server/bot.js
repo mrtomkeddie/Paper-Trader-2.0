@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import { v4 as uuidv4 } from 'uuid';
@@ -912,9 +911,10 @@ function processTicks(symbol) {
        const exit = isBuy ? bid : ask;
        const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
        trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+       trade.floatingPnl = 0;
        closedAnyTrade = true;
        sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
-       notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
+      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
        continue;
     }
 
@@ -928,6 +928,7 @@ function processTicks(symbol) {
         console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
         const pnl = (price - trade.entryPrice) * trade.currentSize;
         trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+        trade.floatingPnl = 0;
         closedAnyTrade = true;
         sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
         notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
@@ -940,6 +941,7 @@ function processTicks(symbol) {
         console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
         const pnl = (trade.entryPrice - price) * trade.currentSize;
         trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+        trade.floatingPnl = 0;
         closedAnyTrade = true;
         sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
         notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
@@ -986,12 +988,14 @@ function processTicks(symbol) {
       const exit = isBuy ? bid : ask;
       const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
       trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+      trade.floatingPnl = 0;
       closedAnyTrade = true;
       sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
       notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
     }
   }
   for (const t of openTrades) {
+    if (t.status !== 'OPEN') continue;
     const isBuy = t.type === 'BUY';
     const exit = isBuy ? bid : ask;
     t.floatingPnl = (isBuy ? exit - t.entryPrice : t.entryPrice - exit) * t.currentSize;
@@ -1472,6 +1476,7 @@ app.post('/admin/close', (req, res) => {
         t.closePrice = exit;
         const pnl = (isBuy ? exit - t.entryPrice : t.entryPrice - exit) * t.currentSize;
         t.pnl += pnl; account.balance += pnl; closedPnL += pnl; closed++;
+        t.floatingPnl = 0;
         try { notifyAll('Trade Closed', `${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL ${pnl.toFixed(2)}`); } catch { }
         try { sendSms(`CLOSE ${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL ${pnl.toFixed(2)}`); } catch { }
       }
@@ -1518,6 +1523,7 @@ setInterval(() => {
           t.pnl += pnl;
           account.balance += pnl;
           closedPnL += pnl;
+          t.floatingPnl = 0;
           notifyAll('Trade Closed', `${symbol} ${t.type} @ ${exit.toFixed(2)} (WEEKEND_CLOSE) PnL ${pnl.toFixed(2)}`);
         }
       }
