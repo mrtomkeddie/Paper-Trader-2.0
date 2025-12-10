@@ -104,7 +104,8 @@ if (API_KEY) {
 
 // --- TYPES & CONFIG ---
 const ASSET_CONFIG = {
-  'NAS100': { startPrice: 18500, volatility: 0.0015, decimals: 1, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 }
+  'NAS100': { startPrice: 18500, volatility: 0.0015, decimals: 1, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 },
+  'XAU/USD': { startPrice: 2600, volatility: 0.002, decimals: 2, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 }
 };
 
 const INITIAL_BALANCE = 500;
@@ -255,9 +256,10 @@ let candlesM15 = {
 };
 
 // MARKET STATE (bid/ask/mid per symbol)
-const SPREAD_PCT = { 'NAS100': 0.0005 };
+const SPREAD_PCT = { 'NAS100': 0.0005, 'XAU/USD': 0.0003 };
 let market = {
-  'NAS100': { bid: ASSET_CONFIG['NAS100'].startPrice * (1 - SPREAD_PCT['NAS100'] / 2), ask: ASSET_CONFIG['NAS100'].startPrice * (1 + SPREAD_PCT['NAS100'] / 2), mid: ASSET_CONFIG['NAS100'].startPrice }
+  'NAS100': { bid: ASSET_CONFIG['NAS100'].startPrice * (1 - SPREAD_PCT['NAS100'] / 2), ask: ASSET_CONFIG['NAS100'].startPrice * (1 + SPREAD_PCT['NAS100'] / 2), mid: ASSET_CONFIG['NAS100'].startPrice },
+  'XAU/USD': { bid: ASSET_CONFIG['XAU/USD'].startPrice * (1 - 0.0003 / 2), ask: ASSET_CONFIG['XAU/USD'].startPrice * (1 + 0.0003 / 2), mid: ASSET_CONFIG['XAU/USD'].startPrice }
 };
 
 function updateMarketFromMid(symbol, mid) {
@@ -316,9 +318,10 @@ let aiState = {
   'NAS100': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' }
 };
 
-// INITIALIZE ASSETS WITH BOTH STRATEGIES ACTIVE BY DEFAULT
+// INITIALIZE ASSETS
 let assets = {
-  'NAS100': createAsset('NAS100', ['NY_ORB', 'AI_AGENT'])
+  'NAS100': createAsset('NAS100', ['NY_ORB', 'AI_AGENT', 'TREND_FOLLOW']),
+  'XAU/USD': createAsset('XAU/USD', ['LONDON_SWEEP'])
 };
 
 function createAsset(symbol, defaultStrategies) {
@@ -432,6 +435,57 @@ const calculateRSI = (prices, period = 14) => {
   if (losses === 0) return 100;
   const rs = gains / losses;
   return 100 - (100 / (1 + rs));
+};
+
+const calculateADX = (candles, period = 14) => {
+  if (candles.length < period * 2) return 25; // Not enough data
+  
+  // 1. Calculate TR, +DM, -DM for each candle
+  let tr = [], plusDm = [], minusDm = [];
+  
+  for (let i = 1; i < candles.length; i++) {
+    const curr = candles[i];
+    const prev = candles[i - 1];
+    
+    const hL = curr.high - curr.low;
+    const hCp = Math.abs(curr.high - prev.close);
+    const lCp = Math.abs(curr.low - prev.close);
+    tr.push(Math.max(hL, hCp, lCp));
+    
+    const upMove = curr.high - prev.high;
+    const downMove = prev.low - curr.low;
+    
+    if (upMove > downMove && upMove > 0) plusDm.push(upMove); else plusDm.push(0);
+    if (downMove > upMove && downMove > 0) minusDm.push(downMove); else minusDm.push(0);
+  }
+  
+  // 2. Smoothed averages (Wilder's Smoothing)
+  // Simplified: Simple Moving Average for first, then prev - (prev/n) + curr
+  // For simplicity/robustness here we use EMA approximation
+  const smooth = (data, p) => {
+    let s = data.slice(0, p).reduce((a,b) => a+b, 0) / p;
+    for (let i = p; i < data.length; i++) {
+      s = s * (1 - 1/p) + data[i] * (1/p); // Wilder's smoothing logic
+    }
+    return s;
+  };
+  
+  const atr = smooth(tr, period);
+  const sPlus = smooth(plusDm, period);
+  const sMinus = smooth(minusDm, period);
+  
+  if (atr === 0) return 0;
+  
+  const plusDi = (sPlus / atr) * 100;
+  const minusDi = (sMinus / atr) * 100;
+  
+  const dx = (Math.abs(plusDi - minusDi) / (plusDi + minusDi)) * 100;
+  
+  // ADX is smoothed DX
+  // We don't have historical DX here, so we return DX as approximation or 
+  // if we want to be strict we'd need more history. 
+  // For this bot, returning DX as "Volatility Strength" is sufficient proxy.
+  return dx; 
 };
 
 const calculateEMAFromSeries = (prices, period = 200) => {
@@ -780,12 +834,14 @@ function updateCandlesM15(symbol, price) {
 }
 
 // --- STRATEGY & TRADE LOGIC ---
-function executeTrade(symbol, type, price, strategy, risk, customReason = null, confidence = 0) {
+function executeTrade(symbol, type, price, strategy, risk, customReason = null, confidence = 0, customSL = null) {
   const isBuy = type === 'BUY';
 
   const { bid, ask } = market[symbol];
   const fillPrice = isBuy ? ask : bid;
-  const sl = isBuy ? fillPrice * (1 - 0.0015) : fillPrice * (1 + 0.0015);
+  let sl = isBuy ? fillPrice * (1 - 0.0015) : fillPrice * (1 + 0.0015);
+  if (customSL) sl = customSL;
+
   const tp1 = isBuy ? fillPrice * (1 + 0.006) : fillPrice * (1 - 0.006);
   const tp2 = isBuy ? fillPrice * (1 + 0.01) : fillPrice * (1 - 0.01);
   const tp3 = isBuy ? fillPrice * (1 + 0.03) : fillPrice * (1 - 0.03);
@@ -827,6 +883,19 @@ function processTicks(symbol) {
   // 1. Manage Trades (TP/SL + AI GUARDIAN + TRAILING)
   for (const trade of openTrades) {
     const isBuy = trade.type === 'BUY';
+
+    // SPECIAL: NY ORB HARD CLOSE (21:00 UTC)
+    if (trade.strategy === 'NY_ORB' && new Date().getUTCHours() >= 21) {
+       trade.status = 'CLOSED'; trade.closeReason = 'HARD_CLOSE'; trade.outcomeReason = "NY ORB Hard Close at 21:00 UTC";
+       trade.closeTime = Date.now(); trade.closePrice = price;
+       const exit = isBuy ? bid : ask;
+       const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
+       trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+       closedAnyTrade = true;
+       sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
+       notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
+       continue;
+    }
 
     // A. AI GUARDIAN (Panic Close)
     if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > 80) {
@@ -927,7 +996,7 @@ function processTicks(symbol) {
   if ((dow === 5 && hour >= 21) || dow === 6 || dow === 0) return;
 
   // A. TREND FOLLOW (24/7)
-  if (asset.activeStrategies.includes('TREND_FOLLOW') && symbol !== 'NAS100') {
+  if (asset.activeStrategies.includes('TREND_FOLLOW')) {
     const isTrendUp = asset.currentPrice > asset.ema200;
     const pullback = isTrendUp ? asset.currentPrice <= asset.ema : asset.currentPrice >= asset.ema;
     const confirm = isTrendUp ? asset.slope > 0.1 : asset.slope < -0.1;
@@ -952,25 +1021,48 @@ function processTicks(symbol) {
 
   // C. NY ORB (NAS100)
   if (asset.activeStrategies.includes('NY_ORB') && symbol === 'NAS100') {
-    const volExpansion = asset.bollinger.upper - asset.bollinger.lower > asset.currentPrice * 0.0012;
-    if (volExpansion && asset.currentPrice > asset.bollinger.upper) {
-      console.log(`[NY_ORB] ${symbol} BUY @ ${asset.currentPrice.toFixed(2)}`);
-      executeTrade(symbol, 'BUY', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE', 'NY ORB: Volatility expansion breakout above Bollinger Bands.', 88);
+    const mins = hour * 60 + nowUtc.getUTCMinutes();
+    const start = 14 * 60 + 30; // 14:30
+    const end = 15 * 60 + 30;   // 15:30
+    
+    if (mins >= start && mins <= end) {
+      const volExpansion = asset.bollinger.upper - asset.bollinger.lower > asset.currentPrice * 0.0012;
+      
+      // LONG Logic (Breakout)
+      if (volExpansion && asset.currentPrice > asset.bollinger.upper) {
+        console.log(`[NY_ORB] ${symbol} BUY @ ${asset.currentPrice.toFixed(2)}`);
+        executeTrade(symbol, 'BUY', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE', 'NY ORB: Volatility expansion breakout above Bollinger Bands.', 88);
+      }
+      
+      // SHORT Logic (Close below Lower Band)
+      const lastClosed = candlesM5[symbol].filter(c => c.isClosed).pop();
+      if (lastClosed && volExpansion && lastClosed.close < asset.bollinger.lower) {
+         // SL at Breakout Candle High
+         const slPrice = lastClosed.high;
+         console.log(`[NY_ORB] ${symbol} SELL @ ${asset.currentPrice.toFixed(2)}`);
+         executeTrade(symbol, 'SELL', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE', 'NY ORB: Close below Lower Bollinger Band.', 88, slPrice);
+      }
     }
   }
 
   // D. AI AGENT (Real Gemini)
-  const minConfidence = (symbol === 'NAS100' && hour >= 16 && hour < 17) ? 75 : 65;
-  if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > minConfidence) {
-    const sentiment = aiState[symbol].sentiment;
-    // If AI is Bullish and we are in Uptrend -> Buy
-    if (sentiment === 'BULLISH' && asset.trend === 'UP') {
-      executeTrade(symbol, 'BUY', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
-      // Reset state so we don't spam
-      aiState[symbol].confidence = 0;
-    } else if (sentiment === 'BEARISH' && asset.trend === 'DOWN') {
-      executeTrade(symbol, 'SELL', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
-      aiState[symbol].confidence = 0;
+  let minConfidence = 65;
+  if (symbol === 'NAS100') minConfidence = 85; 
+
+  // ADX Filter
+  const adx = calculateADX(candlesM5[symbol]);
+  if (adx >= 20) {
+    if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > minConfidence) {
+      const sentiment = aiState[symbol].sentiment;
+      // If AI is Bullish and we are in Uptrend -> Buy
+      if (sentiment === 'BULLISH' && asset.trend === 'UP') {
+        executeTrade(symbol, 'BUY', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
+        // Reset state so we don't spam
+        aiState[symbol].confidence = 0;
+      } else if (sentiment === 'BEARISH' && asset.trend === 'DOWN') {
+        executeTrade(symbol, 'SELL', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
+        aiState[symbol].confidence = 0;
+      }
     }
   }
 }
