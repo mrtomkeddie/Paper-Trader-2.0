@@ -105,7 +105,7 @@ if (API_KEY) {
 // --- TYPES & CONFIG ---
 const ASSET_CONFIG = {
   'NAS100': { startPrice: 18500, volatility: 0.0015, decimals: 1, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 },
-  'XAU/USD': { startPrice: 2600, volatility: 0.002, decimals: 2, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 }
+  'XAUUSD': { startPrice: 2600, volatility: 0.002, decimals: 2, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 }
 };
 
 const INITIAL_BALANCE = 500;
@@ -157,18 +157,26 @@ function loadState() {
         if (parsed && parsed.account && Array.isArray(parsed.trades)) {
           account = parsed.account;
           trades = parsed.trades;
+          // [FIX] Remap legacy symbols
+          if (Array.isArray(trades)) {
+            trades.forEach(t => { if (t.symbol === 'XAU/USD') t.symbol = 'XAUUSD'; });
+          }
           pushSubscriptions = Array.isArray(parsed.pushSubscriptions) ? parsed.pushSubscriptions : [];
 
           // Restore Asset Configuration
           if (parsed.assets && typeof assets !== 'undefined') {
-            for (const [sym, cfg] of Object.entries(parsed.assets)) {
+            for (const [key, cfg] of Object.entries(parsed.assets)) {
+              const sym = (key === 'XAU/USD') ? 'XAUUSD' : key;
               if (assets[sym]) {
-                if (Array.isArray(cfg.activeStrategies)) assets[sym].activeStrategies = cfg.activeStrategies;
+                if (Array.isArray(cfg.activeStrategies)) {
+                  assets[sym].activeStrategies = cfg.activeStrategies;
+                  // [FORCE] Ensure Trend Follow is on for Gold
+                  if (sym === 'XAUUSD' && !assets[sym].activeStrategies.includes('TREND_FOLLOW')) {
+                    assets[sym].activeStrategies.push('TREND_FOLLOW');
+                  }
+                }
                 if (typeof cfg.botActive === 'boolean') assets[sym].botActive = cfg.botActive;
               }
-            }
-            if (assets['NAS100']) {
-              assets['NAS100'].activeStrategies = (assets['NAS100'].activeStrategies || []).filter(s => s !== 'TREND_FOLLOW');
             }
           }
 
@@ -198,9 +206,6 @@ function loadState() {
               if (Array.isArray(cfg.activeStrategies)) assets[sym].activeStrategies = cfg.activeStrategies;
               if (typeof cfg.botActive === 'boolean') assets[sym].botActive = cfg.botActive;
             }
-          }
-          if (assets['NAS100']) {
-            assets['NAS100'].activeStrategies = (assets['NAS100'].activeStrategies || []).filter(s => s !== 'TREND_FOLLOW');
           }
         }
 
@@ -256,10 +261,10 @@ let candlesM15 = {
 };
 
 // MARKET STATE (bid/ask/mid per symbol)
-const SPREAD_PCT = { 'NAS100': 0.0005, 'XAU/USD': 0.0003 };
+const SPREAD_PCT = { 'NAS100': 0.0005, 'XAUUSD': 0.0003 };
 let market = {
   'NAS100': { bid: ASSET_CONFIG['NAS100'].startPrice * (1 - SPREAD_PCT['NAS100'] / 2), ask: ASSET_CONFIG['NAS100'].startPrice * (1 + SPREAD_PCT['NAS100'] / 2), mid: ASSET_CONFIG['NAS100'].startPrice },
-  'XAU/USD': { bid: ASSET_CONFIG['XAU/USD'].startPrice * (1 - 0.0003 / 2), ask: ASSET_CONFIG['XAU/USD'].startPrice * (1 + 0.0003 / 2), mid: ASSET_CONFIG['XAU/USD'].startPrice }
+  'XAUUSD': { bid: ASSET_CONFIG['XAUUSD'].startPrice * (1 - 0.0003 / 2), ask: ASSET_CONFIG['XAUUSD'].startPrice * (1 + 0.0003 / 2), mid: ASSET_CONFIG['XAUUSD'].startPrice }
 };
 
 function updateMarketFromMid(symbol, mid) {
@@ -321,7 +326,7 @@ let aiState = {
 // INITIALIZE ASSETS
 let assets = {
   'NAS100': createAsset('NAS100', ['NY_ORB', 'AI_AGENT', 'TREND_FOLLOW']),
-  'XAU/USD': createAsset('XAU/USD', ['LONDON_SWEEP'])
+  'XAUUSD': createAsset('XAUUSD', ['LONDON_SWEEP', 'TREND_FOLLOW'])
 };
 
 function createAsset(symbol, defaultStrategies) {
@@ -380,6 +385,7 @@ async function githubLoadState() {
     const mergedByKey = new Map();
     for (const t of trades) mergedByKey.set(keyForTrade(t), t);
     for (const t of arr) {
+      if (t.symbol === 'XAU/USD') t.symbol = 'XAUUSD'; // [FIX] Remap legacy
       const k = keyForTrade(t);
       if (!k) continue;
       const existing = mergedByKey.get(k);
@@ -594,7 +600,7 @@ function connectBinance() {
       const event = JSON.parse(data);
       const isGold = event.s === 'PAXGUSDT';
       const isNas = event.s === 'BTCUSDT';
-      const symbol = isGold ? 'XAU/USD' : isNas ? 'NAS100' : null;
+      const symbol = isGold ? 'XAUUSD' : isNas ? 'NAS100' : null;
       if (symbol && event.k) {
         const price = isNas ? parseFloat(event.k.c) / 5 : parseFloat(event.k.c);
         updateMarketFromMid(symbol, price);
@@ -628,7 +634,7 @@ let lastPriceTime = Date.now();
 
 function connectOanda() {
   const host = OANDA_ENV === 'live' ? 'stream-fxtrade.oanda.com' : 'stream-fxpractice.oanda.com';
-  const instruments = ['NAS100_USD'].join(',');
+  const instruments = ['NAS100_USD', 'XAU_USD'].join(',');
   const options = {
     hostname: host,
     path: `/v3/accounts/${OANDA_ACCOUNT_ID}/pricing/stream?instruments=${encodeURIComponent(instruments)}`,
@@ -655,7 +661,11 @@ function connectOanda() {
             const bid = parseFloat(evt.bids?.[0]?.price || evt.closeoutBid || '0');
             const ask = parseFloat(evt.asks?.[0]?.price || evt.closeoutAsk || '0');
             const mid = ask && bid ? (ask + bid) / 2 : (parseFloat(evt.price || '0'));
-            const symbol = inst === 'NAS100_USD' ? 'NAS100' : null;
+            
+            let symbol = null;
+            if (inst === 'NAS100_USD') symbol = 'NAS100';
+            else if (inst === 'XAU_USD') symbol = 'XAUUSD';
+            
             if (!symbol || !mid) continue;
             market[symbol] = { bid, ask, mid };
             const asset = assets[symbol];
@@ -997,15 +1007,20 @@ function processTicks(symbol) {
 
   // A. TREND FOLLOW (24/7)
   if (asset.activeStrategies.includes('TREND_FOLLOW')) {
-    const isTrendUp = asset.currentPrice > asset.ema200;
-    const pullback = isTrendUp ? asset.currentPrice <= asset.ema : asset.currentPrice >= asset.ema;
-    const confirm = isTrendUp ? asset.slope > 0.1 : asset.slope < -0.1;
-    if (isTrendUp && pullback && confirm) executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', 'Trend Follow: Price pullback to EMA confirmed by slope.', 85);
-    else if (!isTrendUp && pullback && confirm) executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', 'Trend Follow: Price pullback to EMA confirmed by slope.', 85);
+    // XAUUSD Time Restriction: Only trade after 12:00 UTC (Avoid London Sweep conflict)
+    const isXauRestricted = symbol === 'XAUUSD' && new Date().getUTCHours() < 12;
+
+    if (!isXauRestricted) {
+      const isTrendUp = asset.currentPrice > asset.ema200;
+      const pullback = isTrendUp ? asset.currentPrice <= asset.ema : asset.currentPrice >= asset.ema;
+      const confirm = isTrendUp ? asset.slope > 0.1 : asset.slope < -0.1;
+      if (isTrendUp && pullback && confirm) executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', 'Trend Follow: Price pullback to EMA confirmed by slope.', 85);
+      else if (!isTrendUp && pullback && confirm) executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', 'Trend Follow: Price pullback to EMA confirmed by slope.', 85);
+    }
   }
 
   // B. LONDON SWEEP (GOLD)
-  if (asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAU/USD') {
+  if (asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAUUSD') {
     const allow = isWithinLondonSweepWindow(Date.now());
     if (allow) {
       const candles = candlesM5[symbol];
@@ -1346,7 +1361,7 @@ app.post('/import/csv', (req, res) => {
       const t = Date.parse(s);
       return Number.isFinite(t) ? t : undefined;
     };
-    const symMap = (s) => { const u = (s || '').toString().toUpperCase().replace(/\s+/g, ''); if (u === 'XAUUSD' || u === 'XAU_USD' || u === 'GOLD') return 'XAU/USD'; if (u === 'NAS100' || u === 'NAS100_USD') return 'NAS100'; return s; };
+    const symMap = (s) => { const u = (s || '').toString().toUpperCase().replace(/\s+/g, ''); if (u === 'XAUUSD' || u === 'XAU_USD' || u === 'GOLD') return 'XAUUSD'; if (u === 'NAS100' || u === 'NAS100_USD') return 'NAS100'; return s; };
     const typeMap = (s) => { const u = (s || '').toString().toUpperCase(); if (u === 'LONG' || u === 'BUY') return 'BUY'; if (u === 'SHORT' || u === 'SELL') return 'SELL'; return 'BUY'; };
     const stratMap = (s) => { const u = (s || '').toString().toUpperCase(); if (u.includes('TREND')) return 'TREND_FOLLOW'; if (u.includes('ORB')) return 'NY_ORB'; if (u.includes('LONDON')) return 'LONDON_SWEEP'; if (u.includes('GEMINI') || u.includes('AI')) return 'AI_AGENT'; return 'MANUAL'; };
     const parsed = [];
@@ -1427,7 +1442,7 @@ app.post('/push/test', (req, res) => {
 
 app.post('/admin/close', (req, res) => {
   try {
-    const sp = (req.body?.symbol || req.query?.symbol || 'XAU/USD').toString();
+    const sp = (req.body?.symbol || req.query?.symbol || 'XAUUSD').toString();
     let closedPnL = 0; let closed = 0;
     const targets = sp === 'ALL' ? Array.from(new Set(trades.filter(t => t.status === 'OPEN').map(t => t.symbol))) : [sp];
     for (const symbol of targets) {
@@ -1473,7 +1488,7 @@ setInterval(() => {
     if (isFriday && isTime) {
       console.log('[SYSTEM] Weekend Close - Closing all positions');
       let closedPnL = 0;
-      for (const symbol of ['NAS100']) {
+      for (const symbol of ['NAS100', 'XAUUSD']) {
         const mkt = market[symbol];
         if (!mkt) continue;
         const { bid, ask, mid } = mkt;
@@ -1547,6 +1562,8 @@ async function cloudLoadState() {
     const data = await loadStateFromCloud();
     if (data) {
       const cloudTrades = Array.isArray(data.trades) ? data.trades : [];
+      // [FIX] Remap legacy symbols
+      cloudTrades.forEach(t => { if (t.symbol === 'XAU/USD') t.symbol = 'XAUUSD'; });
 
       const keyForTrade = (t) => {
         if (!t) return '';

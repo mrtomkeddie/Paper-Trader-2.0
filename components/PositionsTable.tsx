@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trade } from '../types';
 
 interface Props {
@@ -8,8 +8,49 @@ interface Props {
 }
 
 const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeId }) => {
-    const openTrades = trades.filter(t => t.status === 'OPEN').sort((a, b) => b.openTime - a.openTime);
-    const closedTrades = trades.filter(t => t.status !== 'OPEN').sort((a, b) => (b.closeTime || 0) - (a.closeTime || 0)).slice(0, 50);
+    const [assetFilter, setAssetFilter] = useState<string>('ALL');
+    const [strategyFilter, setStrategyFilter] = useState<string>('ALL');
+
+    const uniqueAssets = useMemo(() => Array.from(new Set(trades.map(t => t.symbol))).sort(), [trades]);
+    const uniqueStrategies = useMemo(() => Array.from(new Set(trades.map(t => t.strategy || 'MANUAL'))).sort(), [trades]);
+
+    const filteredTrades = useMemo(() => {
+        return trades.filter(t => {
+            const matchAsset = assetFilter === 'ALL' || t.symbol === assetFilter;
+            const matchStrategy = strategyFilter === 'ALL' || (t.strategy || 'MANUAL') === strategyFilter;
+            return matchAsset && matchStrategy;
+        });
+    }, [trades, assetFilter, strategyFilter]);
+
+    const openTrades = filteredTrades.filter(t => t.status === 'OPEN').sort((a, b) => b.openTime - a.openTime);
+    const closedTrades = filteredTrades.filter(t => t.status !== 'OPEN').sort((a, b) => (b.closeTime || 0) - (a.closeTime || 0)).slice(0, 50);
+
+    const renderFilterBar = () => (
+        <div className="flex gap-2 mb-4">
+             <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Asset</span>
+                <select 
+                    value={assetFilter} 
+                    onChange={(e) => setAssetFilter(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:text-black"
+                >
+                    <option value="ALL">All</option>
+                    {uniqueAssets.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+            </div>
+            <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+                <span className="text-[10px] font-bold text-gray-500 uppercase">Strategy</span>
+                <select 
+                    value={strategyFilter} 
+                    onChange={(e) => setStrategyFilter(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:text-black"
+                >
+                    <option value="ALL">All</option>
+                    {uniqueStrategies.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            </div>
+        </div>
+    );
 
     const renderDesktopTable = (data: Trade[], title: string) => (
         <div className="mb-6">
@@ -121,6 +162,8 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                 </span>
             </h3>
             
+            {renderFilterBar()}
+
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                 {/* Desktop View */}
                 <div className="hidden md:block">

@@ -69,6 +69,7 @@ function addTrades(sourceName, trades) {
     if (!trades) return;
     let newCount = 0;
     trades.forEach(t => {
+        if (t.symbol === 'XAU/USD') t.symbol = 'XAUUSD'; // [FIX] Remap legacy
         if (!allTrades.has(t.id)) {
             allTrades.set(t.id, t);
             newCount++;

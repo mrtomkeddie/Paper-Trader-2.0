@@ -30,6 +30,7 @@ async function run() {
   const merged = new Map();
   for (const t of Array.isArray(local?.trades) ? local.trades : []) merged.set(keyForTrade(t), t);
   for (const t of cloudTrades) {
+    if (t.symbol === 'XAU/USD') t.symbol = 'XAUUSD'; // [FIX] Remap legacy
     const k = keyForTrade(t);
     if (!k) continue;
     const existing = merged.get(k);

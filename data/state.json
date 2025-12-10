@@ -2,49 +2,10 @@
   "account": {
     "balance": 477.05000000000075,
     "equity": 477.05000000000075,
-    "dayPnL": -7.037999999999992,
-    "totalPnL": -22.94999999999924
+    "dayPnL": -7.037999999999994,
+    "totalPnL": -22.949999999999235
   },
   "trades": [
-    {
-      "id": "a84a9b6b-218e-456f-aa0b-cfe536b7b3a6",
-      "symbol": "NAS100",
-      "type": "BUY",
-      "entryPrice": 25633.8,
-      "initialSize": 0.13,
-      "currentSize": 0.13,
-      "stopLoss": 25666.308,
-      "tpLevels": [
-        {
-          "id": 1,
-          "price": 25787.6028,
-          "percentage": 0.4,
-          "hit": false
-        },
-        {
-          "id": 2,
-          "price": 25890.138,
-          "percentage": 0.4,
-          "hit": false
-        },
-        {
-          "id": 3,
-          "price": 26402.814,
-          "percentage": 0.2,
-          "hit": false
-        }
-      ],
-      "openTime": 1765363463453,
-      "status": "CLOSED",
-      "strategy": "NY_ORB",
-      "pnl": 4.186000000000095,
-      "entryReason": "NY_ORB Signal",
-      "floatingPnl": 4.186000000000095,
-      "closeReason": "STOP_LOSS",
-      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
-      "closeTime": 1765373537505,
-      "closePrice": 25667.25
-    },
     {
       "id": "79a19350-6f87-420d-b97e-52951bbd14ce",
       "symbol": "NAS100",
@@ -614,6 +575,45 @@
       "closeReason": "STOP_LOSS",
       "closeTime": 1765364435591,
       "closePrice": 25636.4
+    },
+    {
+      "id": "a84a9b6b-218e-456f-aa0b-cfe536b7b3a6",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25633.8,
+      "initialSize": 0.13,
+      "currentSize": 0.13,
+      "stopLoss": 25666.308,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25787.6028,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25890.138,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26402.814,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765363463453,
+      "status": "CLOSED",
+      "strategy": "NY_ORB",
+      "pnl": 4.186000000000095,
+      "entryReason": "NY_ORB Signal",
+      "floatingPnl": 4.186000000000095,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765373537505,
+      "closePrice": 25667.25
     }
   ],
   "pushSubscriptions": [
@@ -629,7 +629,15 @@
     "NAS100": {
       "activeStrategies": [
         "NY_ORB",
-        "AI_AGENT"
+        "AI_AGENT",
+        "TREND_FOLLOW"
+      ],
+      "botActive": true
+    },
+    "XAUUSD": {
+      "activeStrategies": [
+        "LONDON_SWEEP",
+        "TREND_FOLLOW"
       ],
       "botActive": true
     }

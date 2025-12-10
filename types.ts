@@ -1,6 +1,6 @@
 
 export enum AssetSymbol {
-  XAUUSD = 'XAU/USD',
+  XAUUSD = 'XAUUSD',
   NAS100 = 'NAS100'
 }
 
