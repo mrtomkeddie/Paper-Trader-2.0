@@ -18,29 +18,90 @@ const getStrategyLabel = (strategy: string) => {
     }
 };
 
-type FilterType = 'ALL' | 'NAS100' | 'GOLD' | 'GEMINI' | 'NY ORB' | 'TREND' | 'LONDON';
+type FilterType = 'ALL' | 'TODAY' | 'WEEK' | 'MONTH' | 'NAS100' | 'GOLD' | 'GEMINI' | 'NY ORB' | 'TREND' | 'LONDON';
 
 const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
-    const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
+    const [selectedFilters, setSelectedFilters] = useState<FilterType[]>(['ALL']);
+
+    const toggleFilter = (filter: FilterType) => {
+        if (filter === 'ALL') {
+            setSelectedFilters(['ALL']);
+            return;
+        }
+
+        setSelectedFilters(prev => {
+            let newFilters = prev.filter(f => f !== 'ALL');
+            
+            const timeFilters: FilterType[] = ['TODAY', 'WEEK', 'MONTH'];
+            
+            if (timeFilters.includes(filter)) {
+                // If clicking a time filter, remove other time filters first
+                newFilters = newFilters.filter(f => !timeFilters.includes(f));
+                
+                // If the clicked filter wasn't already selected, add it
+                // (If it was selected, it's effectively toggled off by the exclusion above and not adding it back)
+                if (!prev.includes(filter)) {
+                    newFilters.push(filter);
+                }
+            } else {
+                // Standard toggle for non-time filters
+                if (prev.includes(filter)) {
+                    newFilters = newFilters.filter(f => f !== filter);
+                } else {
+                    newFilters.push(filter);
+                }
+            }
+
+            return newFilters.length === 0 ? ['ALL'] : newFilters;
+        });
+    };
 
     const openTrades = trades.filter(t => t.status === 'OPEN').sort((a, b) => b.openTime - a.openTime);
     
     const allClosedTrades = trades.filter(t => t.status !== 'OPEN');
     
     const filteredClosedTrades = allClosedTrades.filter(t => {
-        if (activeFilter === 'ALL') return true;
-        
-        // Asset Filters
-        if (activeFilter === 'NAS100') return t.symbol === AssetSymbol.NAS100;
-        if (activeFilter === 'GOLD') return t.symbol === AssetSymbol.XAUUSD;
-        
-        // Strategy Filters
-        if (activeFilter === 'GEMINI') return t.strategy === StrategyType.AI_AGENT;
-        if (activeFilter === 'NY ORB') return t.strategy === StrategyType.NY_ORB;
-        if (activeFilter === 'TREND') return t.strategy === StrategyType.TREND_FOLLOW;
-        if (activeFilter === 'LONDON') return t.strategy === StrategyType.LONDON_SWEEP || t.strategy === StrategyType.LONDON_CONTINUATION;
-        
-        return true;
+        if (selectedFilters.includes('ALL')) return true;
+
+        // Group filters by type
+        const activeAssets = selectedFilters.filter(f => ['NAS100', 'GOLD'].includes(f));
+        const activeStrategies = selectedFilters.filter(f => !['NAS100', 'GOLD', 'TODAY', 'WEEK', 'MONTH'].includes(f));
+        const activeTime = selectedFilters.find(f => ['TODAY', 'WEEK', 'MONTH'].includes(f));
+
+        // Time Logic
+        let matchesTime = true;
+        if (activeTime) {
+            const now = new Date();
+            const closeTime = t.closeTime || 0;
+            
+            if (activeTime === 'TODAY') {
+                const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                matchesTime = closeTime >= startOfDay;
+            } else if (activeTime === 'WEEK') {
+                const oneWeekAgo = now.getTime() - (7 * 24 * 60 * 60 * 1000);
+                matchesTime = closeTime >= oneWeekAgo;
+            } else if (activeTime === 'MONTH') {
+                const oneMonthAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
+                matchesTime = closeTime >= oneMonthAgo;
+            }
+        }
+
+        // Asset Logic (OR within assets)
+        const matchesAsset = activeAssets.length === 0 || 
+            (activeAssets.includes('NAS100') && t.symbol === AssetSymbol.NAS100) ||
+            (activeAssets.includes('GOLD') && t.symbol === AssetSymbol.XAUUSD);
+
+        // Strategy Logic (OR within strategies)
+        const matchesStrategy = activeStrategies.length === 0 || activeStrategies.some(s => {
+            if (s === 'GEMINI') return t.strategy === StrategyType.AI_AGENT;
+            if (s === 'NY ORB') return t.strategy === StrategyType.NY_ORB;
+            if (s === 'TREND') return t.strategy === StrategyType.TREND_FOLLOW;
+            if (s === 'LONDON') return t.strategy === StrategyType.LONDON_SWEEP || t.strategy === StrategyType.LONDON_CONTINUATION;
+            return false;
+        });
+
+        // Combined Logic (Time AND Asset AND Strategy)
+        return matchesTime && matchesAsset && matchesStrategy;
     }).sort((a, b) => (b.closeTime || 0) - (a.closeTime || 0));
 
     const displayedTrades = filteredClosedTrades.slice(0, 20);
@@ -91,7 +152,7 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
         );
     };
 
-    const filters: FilterType[] = ['ALL', 'NAS100', 'GOLD', 'GEMINI', 'NY ORB', 'TREND', 'LONDON'];
+    const filters: FilterType[] = ['ALL', 'TODAY', 'WEEK', 'MONTH', 'NAS100', 'GOLD', 'GEMINI', 'NY ORB', 'TREND', 'LONDON'];
 
     return (
         <div className="px-4 pb-24">
@@ -100,8 +161,8 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
                 {filters.map((f) => (
                     <button 
                         key={f} 
-                        onClick={() => setActiveFilter(f)}
-                        className={`px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-colors ${activeFilter === f ? 'bg-white text-black' : 'bg-[#1C1C1E] text-gray-500 border border-white/5'}`}
+                        onClick={() => toggleFilter(f)}
+                        className={`px-4 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-colors ${selectedFilters.includes(f) ? 'bg-white text-black' : 'bg-[#1C1C1E] text-gray-500 border border-white/5'}`}
                     >
                         {f}
                     </button>
