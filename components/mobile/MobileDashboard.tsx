@@ -1,7 +1,7 @@
 import React from 'react';
 import { AssetData, AssetSymbol, StrategyType } from '../../types';
 import { Activity, Zap, TrendingUp, TrendingDown, Power, Clock } from 'lucide-react';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 
 interface Props {
     assets: Record<AssetSymbol, AssetData>;
@@ -70,6 +70,7 @@ const AssetCard: React.FC<{
                             strokeWidth={2}
                             fill={`url(#mobileChartColor-${asset.symbol})`} 
                         />
+                        <YAxis domain={['dataMin', 'dataMax']} hide />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
