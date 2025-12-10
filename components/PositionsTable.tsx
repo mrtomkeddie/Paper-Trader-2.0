@@ -57,7 +57,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                 <select 
                     value={assetFilter} 
                     onChange={(e) => setAssetFilter(e.target.value)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:text-black"
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:bg-[#13141b] [&>option]:text-white"
                 >
                     <option value="ALL">All</option>
                     {uniqueAssets.map(a => <option key={a} value={a}>{a}</option>)}
@@ -68,7 +68,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                 <select 
                     value={strategyFilter} 
                     onChange={(e) => setStrategyFilter(e.target.value)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:text-black"
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:bg-[#13141b] [&>option]:text-white"
                 >
                     <option value="ALL">All</option>
                     {uniqueStrategies.map(s => <option key={s} value={s}>{s}</option>)}
@@ -79,7 +79,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                 <select 
                     value={timeFilter} 
                     onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
-                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:text-black"
+                    className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:bg-[#13141b] [&>option]:text-white"
                 >
                     {(['TODAY', 'WEEK', 'MONTH', 'ALL'] as TimeFilter[]).map(t => (
                         <option key={t} value={t}>{t}</option>
