@@ -168,11 +168,24 @@ const TradeHistory: React.FC<Props> = ({ trades }) => {
             ))}
           </div>
         </div>
+        <div className="mb-3 px-2 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-ios-gray uppercase tracking-wider">Time</h3>
+          <div className="flex gap-2">
+            {(['TODAY', 'WEEK', 'MONTH', 'ALL'] as TimeFilter[]).map(opt => (
+              <button
+                key={opt}
+                onClick={() => setTimeFilter(opt)}
+                className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${timeFilter === opt ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <PerformanceSummary 
           trades={closedTrades} 
           filter={timeFilter}
-          onFilterChange={setTimeFilter}
         />
 
         {/* Active Trades Section */}

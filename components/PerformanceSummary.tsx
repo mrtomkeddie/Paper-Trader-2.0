@@ -6,10 +6,9 @@ import { Calendar, TrendingUp, Percent, BarChart3 } from 'lucide-react';
 interface Props {
   trades: Trade[];
   filter: TimeFilter;
-  onFilterChange: (filter: TimeFilter) => void;
 }
 
-const PerformanceSummary: React.FC<Props> = ({ trades, filter, onFilterChange }) => {
+const PerformanceSummary: React.FC<Props> = ({ trades, filter }) => {
   
   const stats = useMemo(() => {
     const now = Date.now();
@@ -58,18 +57,6 @@ const PerformanceSummary: React.FC<Props> = ({ trades, filter, onFilterChange })
                 <BarChart3 size={16} className="text-ios-blue" />
                 Performance
             </h3>
-            
-            <div className="flex bg-black/40 rounded-lg p-0.5">
-                {(['TODAY', 'WEEK', 'MONTH', 'ALL'] as TimeFilter[]).map(f => (
-                    <button
-                        key={f}
-                        onClick={() => onFilterChange(f)}
-                        className={`px-2.5 py-1 text-[10px] font-bold rounded-[6px] transition-all ${filter === f ? 'bg-[#636366] text-white shadow' : 'text-neutral-500 hover:text-neutral-300'}`}
-                    >
-                        {f}
-                    </button>
-                ))}
-            </div>
         </div>
 
         {/* Stats Grid */}
