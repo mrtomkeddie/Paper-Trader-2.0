@@ -94,11 +94,11 @@ const App: React.FC = () => {
             title={activeMobileTab === 'dashboard' ? 'INDICES DASHBOARD' : 'INDICES HISTORY'}
             account={account}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            activeAsset={activeSymbol}
-            onToggleAsset={(s) => {
+            activeAsset={activeMobileTab === 'dashboard' ? activeSymbol : undefined}
+            onToggleAsset={activeMobileTab === 'dashboard' ? (s) => {
               setActiveSymbol(s);
               setMobileSelectedTrade(null); // Clear selection when manually changing asset
-            }}
+            } : undefined}
         />
       </div>
 
