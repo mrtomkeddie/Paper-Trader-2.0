@@ -1,10 +1,10 @@
 {
   "account": {
-    "balance": 477.05000000000075,
-    "equity": 477.05000000000075,
-    "dayPnL": -7.037999999999994,
-    "totalPnL": -22.949999999999235,
-    "winRate": 37.5
+    "balance": 464.834,
+    "equity": 464.834,
+    "dayPnL": -19.25400000000078,
+    "totalPnL": -35.16600000000001,
+    "winRate": 35
   },
   "trades": [
     {
@@ -615,6 +615,206 @@
       "outcomeReason": "Stop Loss: Price invalidated trade setup.",
       "closeTime": 1765373537505,
       "closePrice": 25667.25
+    },
+    {
+      "id": "c7cbcbc0-ed31-493f-9bbd-b4a6f3d869ab",
+      "symbol": "NAS100",
+      "type": "SELL",
+      "entryPrice": 25592.7,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25631.089050000002,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25439.1438,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25336.773,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 24824.919,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765392088593,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": -4.68,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": -4.68,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765393214525,
+      "closePrice": 25630.050000000003
+    },
+    {
+      "id": "8f5e49cf-96c8-4668-8153-e946ec37c068",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25664.9,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25626.402650000004,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25818.8894,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25921.549000000003,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26434.847,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765393309547,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": -4.644000000000087,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": -4.644000000000087,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765393377210,
+      "closePrice": 25626.95
+    },
+    {
+      "id": "70e2299f-e50f-4599-bbfa-57b75fb2598d",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25635.2,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25689.6846,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25789.0112,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25891.552,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26404.256,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765393411177,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": 6.42,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": 6.42,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765393650531,
+      "closePrice": 25689.7
+    },
+    {
+      "id": "12c94ff6-1e5b-464d-9d24-cae75ea1125a",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25696.4,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25657.855400000004,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25850.578400000002,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25953.364,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26467.292,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765393651329,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": -4.656000000000349,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": -4.656000000000349,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765394569038,
+      "closePrice": 25658.25
+    },
+    {
+      "id": "6afb6ae6-71d4-40f5-b33d-53cc73f277e5",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25648.9,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25610.42665,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25802.793400000002,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25905.389000000003,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26418.367000000002,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765394705253,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": -4.656000000000349,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": -4.656000000000349,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765394886168,
+      "closePrice": 25610.75
     }
   ],
   "pushSubscriptions": [
