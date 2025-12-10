@@ -7,7 +7,7 @@ This document details the algorithmic strategies, execution triggers, and risk m
 All strategies share a unified risk management engine that handles Stop Losses, Take Profits, and Trailing Stops.
 
 ### Initial Risk Parameters
-- **Stop Loss (SL):** Set at **0.15%** distance from the entry price.
+- **Stop Loss (SL):** Set at **0.15%** distance from the entry price (unless strategy specifies a custom SL).
 - **Risk Per Trade:** Calculated dynamically to risk **1%** of the account balance based on the SL distance.
 
 ### Take Profit (TP) Levels
@@ -37,18 +37,21 @@ The "AI Guardian" feature actively monitors open trades:
 ### A. NY ORB (New York Opening Range Breakout)
 *Target Asset: NAS100*
 
-Designed to capture volatility expansion during the New York session.
+Designed to capture volatility expansion during the New York session open.
 
+- **Time Window:** **14:30 - 15:30 UTC** (New York Open).
+- **Hard Close:** All open NY ORB positions are forced closed at **21:00 UTC**.
 - **Trigger Conditions:**
     1.  **Volatility Expansion:** Bollinger Band width must exceed **0.12%** of the current price.
-    2.  **Breakout:** Price closes above the **Upper Bollinger Band**.
-- **Direction:** Currently configured for **Long (Buy)** setups only.
+    2.  **Long Trigger:** Price breaks above the **Upper Bollinger Band**.
+    3.  **Short Trigger:** Price closes below the **Lower Bollinger Band**.
+- **Stop Loss:**
+    - *Long:* Standard 0.15%.
+    - *Short:* High of the breakout candle.
 - **Risk Profile:** Aggressive.
 
-### B. London Sweep (Inactive)
+### B. London Sweep
 *Target Asset: XAU/USD (Gold)*
-
-**Note: This strategy is currently implemented in code but disabled because XAU/USD is not in the active asset list.**
 
 A mean-reversion strategy targeting liquidity sweeps during the London session.
 
@@ -60,7 +63,7 @@ A mean-reversion strategy targeting liquidity sweeps during the London session.
 - **Risk Profile:** Conservative.
 
 ### C. Trend Follow
-*Target Asset: All except NAS100*
+*Target Asset: NAS100, XAU/USD*
 
 A classic trend-following strategy that enters on pullbacks.
 
@@ -82,17 +85,15 @@ A classic trend-following strategy that enters on pullbacks.
 
 Uses Google's Gemini AI to analyze market structure and sentiment.
 
-- **Input Data:** The AI analyzes:
-    - Current Price vs 200 EMA (Trend).
-    - Higher Timeframe (M15) Trend.
-    - RSI (Momentum).
-    - Slope and Volatility.
+- **Input Data:** The AI analyzes Price vs 200 EMA, M15 Trend, RSI, Slope, and Volatility.
+- **Filters:**
+    - **Volatility:** **ADX (14)** must be **>= 20** to avoid chop.
 - **Execution Rules:**
     - **Buy:** AI Sentiment is **BULLISH** AND Asset is in an **Uptrend** (Price > 200 EMA).
     - **Sell:** AI Sentiment is **BEARISH** AND Asset is in a **Downtrend** (Price < 200 EMA).
 - **Confidence Thresholds:**
-    - **NAS100 (16:00-17:00 UTC):** Requires **>75%** confidence.
-    - **Other Times/Assets:** Requires **>65%** confidence.
+    - **NAS100:** Requires **>85%** confidence.
+    - **Other Assets:** Requires **>65%** confidence.
 
 ---
 
@@ -104,3 +105,4 @@ Uses Google's Gemini AI to analyze market structure and sentiment.
 - **Bollinger Bands:** Standard (20 SMA, 2 Std Dev). Used for volatility measuring in NY ORB.
 - **RSI (Relative Strength Index):** 14-period. Used by AI for momentum context.
 - **Slope:** Calculated over the last 10 closed M5 candles to determine immediate direction.
+- **ADX (Average Directional Index):** 14-period. Used to filter out low-volatility/choppy markets.
