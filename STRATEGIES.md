@@ -84,11 +84,13 @@ A classic trend-following strategy that enters on pullbacks.
 - **Risk Profile:** Aggressive.
 
 ### D. Gemini AI Agent
-*Target Asset: Configurable (Default: NAS100)*
+*Target Asset: Configurable (Default: NAS100, XAUUSD)*
 
 Uses Google's Gemini AI to analyze market structure and sentiment.
 
 - **Input Data:** The AI analyzes Price vs 200 EMA, M15 Trend, RSI, Slope, and Volatility.
+- **Time Restrictions:**
+    - **XAUUSD (Gold):** **Restricted to AFTER 12:00 UTC** to avoid conflict with the *London Sweep* strategy.
 - **Filters:**
     - **Volatility:** **ADX (14)** must be **>= 20** to avoid chop.
 - **Execution Rules:**
@@ -96,7 +98,7 @@ Uses Google's Gemini AI to analyze market structure and sentiment.
     - **Sell:** AI Sentiment is **BEARISH** AND Asset is in a **Downtrend** (Price < 200 EMA).
 - **Confidence Thresholds:**
     - **NAS100:** Requires **>85%** confidence.
-    - **Other Assets:** Requires **>65%** confidence.
+    - **Other Assets (including XAUUSD):** Requires **>65%** confidence.
 
 ---
 

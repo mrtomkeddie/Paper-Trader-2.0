@@ -637,7 +637,8 @@
     "XAUUSD": {
       "activeStrategies": [
         "LONDON_SWEEP",
-        "TREND_FOLLOW"
+        "TREND_FOLLOW",
+        "AI_AGENT"
       ],
       "botActive": true
     }

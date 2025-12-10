@@ -13,7 +13,7 @@ interface Props {
 
 const STRATEGY_CONFIG: Record<string, StrategyType[]> = {
     [AssetSymbol.NAS100]: [StrategyType.AI_AGENT, StrategyType.NY_ORB, StrategyType.TREND_FOLLOW],
-    [AssetSymbol.XAUUSD]: [StrategyType.LONDON_SWEEP],
+    [AssetSymbol.XAUUSD]: [StrategyType.AI_AGENT, StrategyType.LONDON_SWEEP, StrategyType.TREND_FOLLOW],
 };
 
 const AVAILABLE_STRATEGIES = [

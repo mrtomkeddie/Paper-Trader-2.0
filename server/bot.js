@@ -170,9 +170,14 @@ function loadState() {
               if (assets[sym]) {
                 if (Array.isArray(cfg.activeStrategies)) {
                   assets[sym].activeStrategies = cfg.activeStrategies;
-                  // [FORCE] Ensure Trend Follow is on for Gold
-                  if (sym === 'XAUUSD' && !assets[sym].activeStrategies.includes('TREND_FOLLOW')) {
-                    assets[sym].activeStrategies.push('TREND_FOLLOW');
+                  // [FORCE] Ensure Trend Follow and AI Agent are on for Gold
+                  if (sym === 'XAUUSD') {
+                    if (!assets[sym].activeStrategies.includes('TREND_FOLLOW')) {
+                      assets[sym].activeStrategies.push('TREND_FOLLOW');
+                    }
+                    if (!assets[sym].activeStrategies.includes('AI_AGENT')) {
+                      assets[sym].activeStrategies.push('AI_AGENT');
+                    }
                   }
                 }
                 if (typeof cfg.botActive === 'boolean') assets[sym].botActive = cfg.botActive;
@@ -326,7 +331,7 @@ let aiState = {
 // INITIALIZE ASSETS
 let assets = {
   'NAS100': createAsset('NAS100', ['NY_ORB', 'AI_AGENT', 'TREND_FOLLOW']),
-  'XAUUSD': createAsset('XAUUSD', ['LONDON_SWEEP', 'TREND_FOLLOW'])
+  'XAUUSD': createAsset('XAUUSD', ['LONDON_SWEEP', 'TREND_FOLLOW', 'AI_AGENT'])
 };
 
 function createAsset(symbol, defaultStrategies) {
@@ -1064,9 +1069,12 @@ function processTicks(symbol) {
   let minConfidence = 65;
   if (symbol === 'NAS100') minConfidence = 85; 
 
+  // XAUUSD Time Restriction: Only trade after 12:00 UTC (Avoid London Sweep conflict)
+  const isXauRestrictedAI = symbol === 'XAUUSD' && new Date().getUTCHours() < 12;
+
   // ADX Filter
   const adx = calculateADX(candlesM5[symbol]);
-  if (adx >= 20) {
+  if (adx >= 20 && !isXauRestrictedAI) {
     if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > minConfidence) {
       const sentiment = aiState[symbol].sentiment;
       // If AI is Bullish and we are in Uptrend -> Buy
