@@ -51,11 +51,11 @@ Designed to capture volatility expansion during the New York session open.
 - **Risk Profile:** Aggressive.
 
 ### B. London Sweep
-*Target Asset: XAU/USD (Gold)*
+*Target Asset: XAUUSD (Gold)*
 
 A mean-reversion strategy targeting liquidity sweeps during the London session.
 
-- **Time Window:** **07:45 - 10:30** (London Time).
+- **Time Window:** **07:45 - 10:30** (London Time / UTC).
 - **Trigger Conditions:**
     1.  **Liquidity Sweep:** Current M5 candle low drops below the lowest low of the previous 10 candles.
     2.  **Reclaim:** Price bounces back up (reclaims) at least **$0.50** above that lowest low level.
@@ -63,13 +63,16 @@ A mean-reversion strategy targeting liquidity sweeps during the London session.
 - **Risk Profile:** Conservative.
 
 ### C. Trend Follow
-*Target Asset: NAS100, XAU/USD*
+*Target Asset: NAS100, XAUUSD (Gold)*
 
 A classic trend-following strategy that enters on pullbacks.
 
 - **Trend Definition:**
     - **Uptrend:** Price is above the **200 EMA**.
     - **Downtrend:** Price is below the **200 EMA**.
+- **Time Restrictions:**
+    - **NAS100:** No specific time restriction.
+    - **XAUUSD (Gold):** **Restricted to AFTER 12:00 UTC** to avoid conflict with the *London Sweep* strategy.
 - **Trigger Conditions (Buy):**
     1.  Asset is in an **Uptrend**.
     2.  **Pullback:** Price dips to or below the **20 EMA**.
