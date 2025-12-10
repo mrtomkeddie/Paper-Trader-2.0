@@ -42,6 +42,16 @@ const MobileHeader: React.FC<Props> = ({ title, account, onOpenSettings, activeA
                 )}
             </div>
 
+            {/* Win Rate Pill */}
+            {typeof account.winRate === 'number' && (
+                <div className="mt-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 flex items-center gap-2">
+                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Win Rate</span>
+                     <span className={`text-xs font-bold ${account.winRate >= 50 ? 'text-green-400' : 'text-orange-400'}`}>
+                        {account.winRate.toFixed(1)}%
+                     </span>
+                </div>
+            )}
+
             {/* Asset Toggle */}
             {activeAsset && onToggleAsset && (
                 <div className="flex gap-2 mt-4 bg-[#1C1C1E] p-1 rounded-lg border border-white/5">

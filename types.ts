@@ -118,6 +118,7 @@ export interface AccountState {
   equity: number;
   dayPnL: number;
   totalPnL?: number;
+  winRate?: number;
 }
 
 export interface MarketContextType {

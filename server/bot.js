@@ -132,19 +132,25 @@ const STATE_FILE = path.join(DATA_DIR, 'state.json');
 function recalculateAccountState() {
   let realized = 0;
   let day = 0;
+  let wins = 0;
+  let closedCount = 0;
   const startOfDay = new Date().setHours(0, 0, 0, 0);
   for (const t of trades) {
     if (t.status === 'CLOSED') {
       realized += (t.pnl || 0);
       const time = t.closeTime || t.openTime || 0;
       if (time >= startOfDay) day += (t.pnl || 0);
+      
+      closedCount++;
+      if ((t.pnl || 0) > 0) wins++;
     }
   }
   account.balance = INITIAL_BALANCE + realized;
   account.equity = account.balance;
   account.totalPnL = realized;
   account.dayPnL = day;
-  console.log(`[SYSTEM] Recalculated: Bal £${account.balance.toFixed(2)}, Day £${account.dayPnL.toFixed(2)}`);
+  account.winRate = closedCount > 0 ? (wins / closedCount) * 100 : 0;
+  console.log(`[SYSTEM] Recalculated: Bal £${account.balance.toFixed(2)}, Day £${account.dayPnL.toFixed(2)}, WinRate ${account.winRate.toFixed(1)}%`);
   saveState();
 }
 
