@@ -68,6 +68,14 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
     // Use entryReason if viewing a past/active trade, otherwise live AI reason
     const reasonText = trade?.entryReason || asset.aiReason || "AI is analyzing market structure. Waiting for clear confirmation...";
     
+    const getFriendlyOutcome = (t: Trade) => {
+        if (t.closeReason === 'STOP_LOSS') {
+            if (t.pnl > 0) return "Closed by Trailing Stop. Although the final portion stopped out, partial profits were already banked.";
+            return "Stop Loss Hit: The market reversed. Trade closed to protect capital.";
+        }
+        return t.outcomeReason;
+    };
+
     return (
         <div className="bg-[#13141b] rounded-2xl p-4 md:p-6 border border-white/5 h-full flex flex-col relative overflow-hidden">
             {/* Background Active Trade Indicator (Only in Live View) */}
@@ -155,14 +163,14 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                     {reasonText}
                 </p>
                 
-                {trade?.outcomeReason && (
+                {trade && getFriendlyOutcome(trade) && (
                     <div className="mt-4 pt-3 border-t border-white/10">
                         <div className="flex items-center gap-2 mb-2">
                             <TrendingUp size={14} className={trade.pnl >= 0 ? "text-green-500" : "text-red-500"} />
                             <span className="text-xs font-bold text-gray-300 uppercase">Outcome Analysis</span>
                         </div>
                         <p className="text-xs text-gray-400 leading-relaxed">
-                            {trade.outcomeReason}
+                            {getFriendlyOutcome(trade)}
                         </p>
                     </div>
                 )}
