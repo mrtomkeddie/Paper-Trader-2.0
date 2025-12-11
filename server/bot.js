@@ -9,7 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import https from 'https';
 import { initFirebase, loadStateFromCloud, saveStateToCloud, clearCloudState } from './firebase.js';
-import { detectFairValueGap, detectOrderBlock } from './utils/technicalAnalysis.js';
+import { detectFairValueGap, detectOrderBlock, analyzeMarketStructure, getPreviousDayLevels } from './utils/technicalAnalysis.js';
 import webpush from 'web-push';
 
 // Load .env file from root
@@ -903,6 +903,14 @@ function processTicks(symbol) {
   const { bid, ask, mid } = market[symbol];
   const price = mid;
 
+  // --- NEW PRICE ACTION CALCS ---
+  const structure = analyzeMarketStructure(candlesM5[symbol], 48); // 4H Lookback
+  const pdLevels = getPreviousDayLevels(candlesM15[symbol]);
+  
+  // Attach to asset for visibility/AI
+  asset.structure = structure;
+  asset.pdLevels = pdLevels;
+
   // 1. Manage Trades (TP/SL + AI GUARDIAN + TRAILING)
   for (const trade of openTrades) {
     const isBuy = trade.type === 'BUY';
@@ -1110,10 +1118,33 @@ function processTicks(symbol) {
           if (adx < 25) {
               console.log(`[FILTER] Trend Signal skipped - ADX too low: ${adx.toFixed(1)}`);
           } else {
+              // 4. PRICE ACTION FILTERS (Premium/Discount)
+              const { positionPct } = structure; // 0.0 = Low, 1.0 = High
+              
               if (isTrendUp) {
-                  executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+                  // BUY: Avoid Extreme Premium (> 0.75)
+                  if (positionPct > 0.75) {
+                      console.log(`[FILTER] Trend Buy skipped - Price in Extreme Premium (${(positionPct * 100).toFixed(0)}% of Range)`);
+                  } else {
+                       // Log PDH/PDL Dist
+                       const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+                       const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+                       console.log(`[TREND] Evaluating BUY. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+                       
+                       executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+                  }
               } else {
-                  executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+                  // SELL: Avoid Extreme Discount (< 0.25)
+                  if (positionPct < 0.25) {
+                      console.log(`[FILTER] Trend Sell skipped - Price in Extreme Discount (${(positionPct * 100).toFixed(0)}% of Range)`);
+                  } else {
+                       // Log PDH/PDL Dist
+                       const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+                       const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+                       console.log(`[TREND] Evaluating SELL. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+
+                      executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+                  }
               }
           }
       }
@@ -1175,12 +1206,27 @@ function processTicks(symbol) {
       const sentiment = aiState[symbol].sentiment;
       // If AI is Bullish and we are in Uptrend -> Buy
       if (sentiment === 'BULLISH' && asset.trend === 'UP') {
-        executeTrade(symbol, 'BUY', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
-        // Reset state so we don't spam
-        aiState[symbol].confidence = 0;
+         // BLOCK BUY in Extreme Premium
+         const { positionPct } = structure;
+         if (positionPct > 0.75) {
+             console.log(`[FILTER] AI Buy blocked - Extreme Premium (${(positionPct * 100).toFixed(0)}%)`);
+         } else {
+             // Log Context
+             const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+             console.log(`[AI] Executing BUY. Dist to PDH: ${distPDH}`);
+             executeTrade(symbol, 'BUY', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
+             aiState[symbol].confidence = 0;
+         }
       } else if (sentiment === 'BEARISH' && asset.trend === 'DOWN') {
-        executeTrade(symbol, 'SELL', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
-        aiState[symbol].confidence = 0;
+         const { positionPct } = structure;
+         if (positionPct < 0.25) {
+             console.log(`[FILTER] AI Sell blocked - Extreme Discount (${(positionPct * 100).toFixed(0)}%)`);
+         } else {
+             const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+             console.log(`[AI] Executing SELL. Dist to PDL: ${distPDL}`);
+             executeTrade(symbol, 'SELL', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
+             aiState[symbol].confidence = 0;
+         }
       }
     }
   }

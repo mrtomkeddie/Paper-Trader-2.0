@@ -1,9 +1,9 @@
 {
   "account": {
-    "balance": 475.8413999999991,
-    "equity": 475.8413999999991,
-    "dayPnL": -25.622600000000894,
-    "totalPnL": -24.158600000000916,
+    "balance": 488.45339999999896,
+    "equity": 488.45339999999896,
+    "dayPnL": -13.01060000000107,
+    "totalPnL": -11.546600000001092,
     "winRate": 40
   },
   "trades": [
@@ -14,7 +14,7 @@
       "entryPrice": 25579.8,
       "initialSize": 0.12,
       "currentSize": 0.12,
-      "stopLoss": 25618.169700000002,
+      "stopLoss": 25474.348899999997,
       "tpLevels": [
         {
           "id": 1,
@@ -36,12 +36,16 @@
         }
       ],
       "openTime": 1765447039351,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "AI_AGENT",
-      "pnl": 0,
+      "pnl": 12.611999999999824,
       "entryReason": "The big picture trend on the 15-minute chart is clearly going down. The price is also moving down very strongly right now. This means we should look to sell when the price bounces up a little bit, to ride along with the big downward move.",
       "confidence": 90,
-      "floatingPnl": 1.0559999999999126
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765470621641,
+      "closePrice": 25474.2
     },
     {
       "id": "d7f1dec6-38c3-414f-b42b-0302e26d8057",

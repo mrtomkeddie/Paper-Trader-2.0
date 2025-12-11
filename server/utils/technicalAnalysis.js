@@ -115,3 +115,74 @@ export function detectOrderBlock(candles) {
 
     return { isDetected: false, type: null, top: 0, bottom: 0, candleIndex: -1 };
 }
+
+/**
+ * Analyzes Market Structure (Premium vs Discount).
+ * 
+ * @param {Array} candles - Array of candles
+ * @param {number} lookbackPeriod - Number of candles to look back (default 48 for 4 hours on M5)
+ * @returns {Object} { highest: number, lowest: number, equilibrium: number, zone: 'PREMIUM'|'DISCOUNT', positionPct: number }
+ */
+export function analyzeMarketStructure(candles, lookbackPeriod = 48) {
+    if (!candles || candles.length < lookbackPeriod) {
+        return { highest: 0, lowest: 0, equilibrium: 0, zone: 'NEUTRAL', positionPct: 0.5 };
+    }
+
+    const slice = candles.slice(-lookbackPeriod);
+    let highest = -Infinity;
+    let lowest = Infinity;
+
+    for (const c of slice) {
+        if (c.high > highest) highest = c.high;
+        if (c.low < lowest) lowest = c.low;
+    }
+
+    const equilibrium = (highest + lowest) / 2;
+    const currentPrice = candles[candles.length - 1].close;
+    
+    // Position Percentage (0 = Lowest, 1 = Highest)
+    const range = highest - lowest;
+    const positionPct = range === 0 ? 0.5 : (currentPrice - lowest) / range;
+
+    const zone = currentPrice > equilibrium ? 'PREMIUM' : 'DISCOUNT';
+
+    return { highest, lowest, equilibrium, zone, positionPct };
+}
+
+/**
+ * Gets Previous Day's High and Low (UTC).
+ * 
+ * @param {Array} m15Candles - Array of M15 candles
+ * @returns {Object} { pdh: number, pdl: number }
+ */
+export function getPreviousDayLevels(m15Candles) {
+    if (!m15Candles || m15Candles.length === 0) {
+        return { pdh: 0, pdl: 0 };
+    }
+
+    const now = new Date();
+    // Get "yesterday" in UTC
+    const yesterday = new Date(now);
+    yesterday.setUTCDate(now.getUTCDate() - 1);
+    yesterday.setUTCHours(0, 0, 0, 0);
+    const startOfYesterday = yesterday.getTime();
+    
+    const today = new Date(now);
+    today.setUTCHours(0, 0, 0, 0);
+    const startOfToday = today.getTime();
+
+    let pdh = -Infinity;
+    let pdl = Infinity;
+    let found = false;
+
+    for (const c of m15Candles) {
+        if (c.time >= startOfYesterday && c.time < startOfToday) {
+            if (c.high > pdh) pdh = c.high;
+            if (c.low < pdl) pdl = c.low;
+            found = true;
+        }
+    }
+
+    if (!found) return { pdh: 0, pdl: 0 };
+    return { pdh, pdl };
+}
