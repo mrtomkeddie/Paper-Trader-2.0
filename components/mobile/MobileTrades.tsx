@@ -138,13 +138,28 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end gap-0.5">
                         <div className={`text-sm font-bold font-mono ${isWin ? 'text-green-500' : 'text-red-500'}`}>
                             {isWin ? '+' : ''}{pnl.toFixed(2)}
                         </div>
-                        <div className="text-[10px] text-gray-500">
-                            {new Date(trade.closeTime || trade.openTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        <div className="text-[9px] text-gray-500 font-mono">
+                            O: {new Date(trade.openTime).toLocaleString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })}
                         </div>
+                        {trade.status === 'CLOSED' && trade.closeTime && (
+                            <div className="text-[9px] text-gray-500 font-mono">
+                                C: {new Date(trade.closeTime).toLocaleString('en-GB', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                            </div>
+                        )}
                     </div>
                     <ChevronRight size={14} className="text-gray-700" />
                 </div>
