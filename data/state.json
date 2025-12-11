@@ -1,10 +1,10 @@
 {
   "account": {
-    "balance": 482.7253999999995,
-    "equity": 482.7253999999995,
-    "dayPnL": -18.738600000000446,
-    "totalPnL": -17.27460000000047,
-    "winRate": 41.66666666666667
+    "balance": 477.37739999999945,
+    "equity": 477.37739999999945,
+    "dayPnL": -24.086600000000548,
+    "totalPnL": -22.62260000000057,
+    "winRate": 40.54054054054054
   },
   "trades": [
     {
@@ -1415,6 +1415,81 @@
       "outcomeReason": "Stop Loss: Price invalidated trade setup.",
       "closeTime": 1765434582078,
       "closePrice": 25452.5
+    },
+    {
+      "id": "583e7b38-9301-45b3-9c1b-34bd8820ab4e",
+      "symbol": "NAS100",
+      "type": "SELL",
+      "entryPrice": 25452.3,
+      "initialSize": 0.14,
+      "currentSize": 0.14,
+      "stopLoss": 25490.478450000002,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25299.586199999998,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25197.777,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 24688.731,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765434588297,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": -5.348000000000102,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765435317654,
+      "closePrice": 25489.15
+    },
+    {
+      "id": "7f1bf159-2d48-42c9-b14f-9c99f8b97dd6",
+      "symbol": "NAS100",
+      "type": "SELL",
+      "entryPrice": 25484.3,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25522.52645,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25331.3942,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25229.457,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 24719.770999999997,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765435358379,
+      "status": "OPEN",
+      "strategy": "TREND_FOLLOW",
+      "pnl": 0,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85
     }
   ],
   "pushSubscriptions": [
