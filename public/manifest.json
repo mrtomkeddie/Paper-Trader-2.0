@@ -3,14 +3,9 @@
   "name": "Paper Trader 2.0",
   "icons": [
     {
-      "src": "/pt2logo.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "/pt2logo.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "src": "/pt2appicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
     }
   ],
   "start_url": ".",
