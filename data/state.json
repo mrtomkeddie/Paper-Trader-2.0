@@ -1490,7 +1490,7 @@
       "pnl": 0,
       "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
       "confidence": 85,
-      "floatingPnl": 0.6599999999999999
+      "floatingPnl": -3.1799999999999997
     }
   ],
   "pushSubscriptions": [
