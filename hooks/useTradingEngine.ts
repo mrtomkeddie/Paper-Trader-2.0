@@ -10,16 +10,19 @@ export const useTradingEngine = () => {
   const isDev = (import.meta as any)?.env?.DEV;
   const [remoteUrl, setRemoteUrl] = useState(() => {
       if (typeof window !== 'undefined') {
-        if (isDev) return '/api';
-        const hostIsLocal = typeof window !== 'undefined' && window.location && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        // Check local storage first to allow overrides
         const raw = localStorage.getItem('remoteUrl');
         const saved = raw ? raw.trim().replace(/\/$/, '') : '';
         const hasProto = /^https?:\/\//i.test(saved);
-        if (hostIsLocal) return 'http://localhost:3001';
-        if (hasProto && saved) return saved;
+        const isLocalhost = saved.includes('localhost') || saved.includes('127.0.0.1');
+        
+        // Only accept saved URL if it is valid AND NOT localhost (to enforce production)
+        if (hasProto && saved && !isLocalhost) return saved;
+
+        // Force connection to Deployed/Remote Server by default
         return DEFAULT_REMOTE_URL;
       }
-      return isDev ? '/api' : DEFAULT_REMOTE_URL;
+      return DEFAULT_REMOTE_URL;
   });
 
   const [oandaConfig, setOandaConfig] = useState<OandaConfig>({ apiKey: '', accountId: '', environment: 'practice' });

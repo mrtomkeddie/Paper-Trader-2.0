@@ -921,32 +921,38 @@ function processTicks(symbol) {
 
     // A. AI GUARDIAN (Panic Close)
     if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > 80) {
-      const sentiment = aiState[symbol].sentiment;
-      // If Long and Sentiment is Bearish -> Close
-      if (isBuy && sentiment === 'BEARISH') {
-        trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BEARISH with high confidence.";
-        trade.closeTime = Date.now(); trade.closePrice = price;
-        console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
-        const pnl = (price - trade.entryPrice) * trade.currentSize;
-        trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
-        trade.floatingPnl = 0;
-        closedAnyTrade = true;
-        sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
-        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
-        continue; // Next trade
-      }
-      // If Short and Sentiment is Bullish -> Close
-      if (!isBuy && sentiment === 'BULLISH') {
-        trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BULLISH with high confidence.";
-        trade.closeTime = Date.now(); trade.closePrice = price;
-        console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
-        const pnl = (trade.entryPrice - price) * trade.currentSize;
-        trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
-        trade.floatingPnl = 0;
-        closedAnyTrade = true;
-        sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
-        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
-        continue;
+      // RULE: Only let AI Guardian close trades that were opened by the AI Agent.
+      // We do NOT want the AI interfering with mechanical strategies like London Sweep or NY ORB.
+      if (trade.strategy !== 'AI_AGENT') {
+        // Skip AI check for non-AI trades
+      } else {
+        const sentiment = aiState[symbol].sentiment;
+        // If Long and Sentiment is Bearish -> Close
+        if (isBuy && sentiment === 'BEARISH') {
+          trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BEARISH with high confidence.";
+          trade.closeTime = Date.now(); trade.closePrice = price;
+          console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
+          const pnl = (price - trade.entryPrice) * trade.currentSize;
+          trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+          trade.floatingPnl = 0;
+          closedAnyTrade = true;
+          sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+          notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+          continue; // Next trade
+        }
+        // If Short and Sentiment is Bullish -> Close
+        if (!isBuy && sentiment === 'BULLISH') {
+          trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BULLISH with high confidence.";
+          trade.closeTime = Date.now(); trade.closePrice = price;
+          console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
+          const pnl = (trade.entryPrice - price) * trade.currentSize;
+          trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+          trade.floatingPnl = 0;
+          closedAnyTrade = true;
+          sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+          notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+          continue;
+        }
       }
     }
 

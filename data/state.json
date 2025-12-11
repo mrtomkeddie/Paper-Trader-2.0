@@ -1,12 +1,48 @@
 {
   "account": {
-    "balance": 477.37739999999945,
-    "equity": 477.37739999999945,
-    "dayPnL": -24.086600000000548,
-    "totalPnL": -22.62260000000057,
-    "winRate": 40.54054054054054
+    "balance": 475.8413999999991,
+    "equity": 475.8413999999991,
+    "dayPnL": -25.622600000000894,
+    "totalPnL": -24.158600000000916,
+    "winRate": 40
   },
   "trades": [
+    {
+      "id": "bdf04769-4647-4431-97a2-0c85f7fc9390",
+      "symbol": "NAS100",
+      "type": "SELL",
+      "entryPrice": 25579.8,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25618.169700000002,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25426.3212,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25324.002,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 24812.406,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765447039351,
+      "status": "OPEN",
+      "strategy": "AI_AGENT",
+      "pnl": 0,
+      "entryReason": "The big picture trend on the 15-minute chart is clearly going down. The price is also moving down very strongly right now. This means we should look to sell when the price bounces up a little bit, to ride along with the big downward move.",
+      "confidence": 90,
+      "floatingPnl": 1.0559999999999126
+    },
     {
       "id": "d7f1dec6-38c3-414f-b42b-0302e26d8057",
       "symbol": "NAS100",
@@ -1485,12 +1521,96 @@
         }
       ],
       "openTime": 1765435358379,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "TREND_FOLLOW",
-      "pnl": 0,
+      "pnl": -4.704000000000087,
       "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
       "confidence": 85,
-      "floatingPnl": -3.1799999999999997
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765439853362,
+      "closePrice": 25522.25
+    },
+    {
+      "id": "19446210-74e0-4822-b83b-93538596d054",
+      "symbol": "NAS100",
+      "type": "SELL",
+      "entryPrice": 25463.3,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25501.49495,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25310.5202,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25208.666999999998,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 24699.400999999998,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765442748547,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": -4.764000000000087,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765443135196,
+      "closePrice": 25501.65
+    },
+    {
+      "id": "c89930a8-5e8b-45c7-979c-242d61a81d72",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25510,
+      "initialSize": 0.12,
+      "currentSize": 0.12,
+      "stopLoss": 25576.1982,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25663.06,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25765.1,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26275.3,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1765443155232,
+      "status": "CLOSED",
+      "strategy": "TREND_FOLLOW",
+      "pnl": 7.931999999999825,
+      "entryReason": "Trend Follow: Price pullback to EMA confirmed by slope.",
+      "confidence": 85,
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price invalidated trade setup.",
+      "closeTime": 1765447471371,
+      "closePrice": 25577.449999999997
     }
   ],
   "pushSubscriptions": [
@@ -1499,6 +1619,13 @@
       "keys": {
         "p256dh": "BDdJSWNu5F0Xqg-LnaoSdpBvHh9lUtcSr18cW1itmgBnQxCU94frh2-TdBVvANyjlGyugaqB7LsKHNSb1Djy5sw",
         "auth": "55bQYxWmRghPDaKpaJwdlQ"
+      }
+    },
+    {
+      "endpoint": "https://web.push.apple.com/QOHG5qBionVhoTUsC23MaYJ0PvjpAQ44p4wf7-HjeVpTtLukvlphSszYmyhOriOCp--YmpPGCV3K6lwKhEESLXz0bF1iXIOhNc4noxBgIOgrG3jjefOlBQ9PTFHdwYO4zc5nzOzat-a6DYKpltS8V5_2OReT4Y_-Y53HYPm8y0M",
+      "keys": {
+        "p256dh": "BHHQXqW0QpRcqmXIidv78g9BWCVbndL4HXeJqEL1DYe_RNv4slDALyyKvN3SNz0m7Vj38wg0S7zpqMSc6sqRpPo",
+        "auth": "5Kj1ngRmNxC7CEp43vcaeQ"
       }
     }
   ],

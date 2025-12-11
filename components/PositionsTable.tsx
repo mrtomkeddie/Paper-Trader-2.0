@@ -101,7 +101,8 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                             <th className="py-3 px-4">Entry</th>
                             <th className="py-3 px-4">Qty</th>
                             <th className="py-3 px-4">P&L</th>
-                            <th className="py-3 px-4">Time</th>
+                            <th className="py-3 px-4">Open Time</th>
+                            <th className="py-3 px-4">Close Time</th>
                         </tr>
                     </thead>
                     <tbody className="text-sm font-medium">
@@ -124,13 +125,22 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                                         {isProfit ? '+' : ''}{pnlVal.toFixed(2)}
                                     </td>
                                     <td className="py-3 px-4 text-gray-500 text-xs font-mono">
-                                        {new Date(trade.closeTime || trade.openTime).toLocaleString('en-GB', {
+                                        {new Date(trade.openTime).toLocaleString('en-GB', {
                                             day: '2-digit',
                                             month: '2-digit',
                                             year: '2-digit',
                                             hour: '2-digit',
                                             minute: '2-digit'
                                         })}
+                                    </td>
+                                    <td className="py-3 px-4 text-gray-500 text-xs font-mono">
+                                        {trade.status === 'CLOSED' && trade.closeTime ? new Date(trade.closeTime).toLocaleString('en-GB', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        }) : '-'}
                                     </td>
                                 </tr>
                             );
@@ -155,15 +165,26 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                 <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-white text-lg">{trade.symbol}</span>
-                        <span className="text-[10px] text-gray-500 font-mono">
-                            {new Date(trade.closeTime || trade.openTime).toLocaleString('en-GB', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            })}
-                        </span>
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-gray-500 font-mono">
+                                O: {new Date(trade.openTime).toLocaleString('en-GB', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
+                            </span>
+                            {trade.status === 'CLOSED' && trade.closeTime && (
+                                <span className="text-[10px] text-gray-500 font-mono">
+                                    C: {new Date(trade.closeTime).toLocaleString('en-GB', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${trade.type === 'BUY' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                         {trade.type}

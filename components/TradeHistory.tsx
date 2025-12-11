@@ -76,8 +76,11 @@ const TradeRow: React.FC<TradeRowProps> = ({ trade, onSelect }) => {
               {isProfit ? '+' : ''}{trade.pnl?.toFixed(2)}
             </div>
           )}
-          <div className="text-[10px] text-ios-gray mt-0.5">
-            {new Date(trade.status === 'CLOSED' ? (trade.closeTime || trade.openTime) : trade.openTime).toLocaleDateString([], {month: 'short', day: 'numeric'})} {new Date(trade.status === 'CLOSED' ? (trade.closeTime || trade.openTime) : trade.openTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+          <div className="text-[10px] text-ios-gray mt-0.5 flex flex-col items-end">
+            <div>Open: {new Date(trade.openTime).toLocaleDateString([], {month: 'short', day: 'numeric'})} {new Date(trade.openTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            {trade.status === 'CLOSED' && trade.closeTime && (
+                <div>Close: {new Date(trade.closeTime).toLocaleDateString([], {month: 'short', day: 'numeric'})} {new Date(trade.closeTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+            )}
           </div>
         </div>
         <ChevronRight size={16} className="text-white/20 group-hover:text-white/50 transition-colors" />

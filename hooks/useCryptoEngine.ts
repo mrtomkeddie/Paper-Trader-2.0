@@ -46,9 +46,7 @@ export const useCryptoEngine = () => {
     const saved = raw ? raw.trim().replace(/\/$/, '') : '';
     const hasProto = /^https?:\/\//i.test(saved);
     if (saved && hasProto) return saved;
-    const envUrl = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL;
-    if (envUrl) return String(envUrl).trim().replace(/\/$/, '');
-    if (isDev) return '/crypto';
+    // Default to production URL
     return CRYPTO_DEFAULT_REMOTE_URL.replace(/\/$/, '');
   });
   const [assets, setAssets] = useState<Record<string, CryptoAssetData>>({});
