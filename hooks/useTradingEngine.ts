@@ -7,7 +7,6 @@ export const useTradingEngine = () => {
   // Always default to Remote Server
   const brokerMode = BrokerMode.REMOTE_SERVER;
 
-  const isDev = (import.meta as any)?.env?.DEV;
   const [remoteUrl, setRemoteUrl] = useState(() => {
       if (typeof window !== 'undefined') {
         // Check local storage first to allow overrides
@@ -133,20 +132,12 @@ export const useTradingEngine = () => {
         const rawSaved = typeof window !== 'undefined' ? localStorage.getItem('remoteUrl') : null;
         const saved = rawSaved ? rawSaved.trim().replace(/\/$/, '') : null;
         const hasProto = saved ? /^https?:\/\//i.test(saved) : false;
-        
-        // Check if saved URL is localhost
-        const isSavedLocalhost = saved ? (saved.includes('localhost') || saved.includes('127.0.0.1')) : false;
+        const isLocalhost = saved ? (saved.includes('localhost') || saved.includes('127.0.0.1')) : false;
 
-        // Force Production: Ignore isDev and localhost logic to ensure we always connect to the deployed server
-        // We only respect saved URL if it's NOT localhost (e.g. if user manually pointed to another remote)
-        // Otherwise, revert to DEFAULT_REMOTE_URL (Production)
-        
         let preferred = DEFAULT_REMOTE_URL;
-        
-        if (hasProto && saved && !isSavedLocalhost) {
-            preferred = saved;
+        if (hasProto && saved && !isLocalhost) {
+          preferred = saved;
         }
-        
         if (typeof window !== 'undefined') localStorage.setItem('remoteUrl', preferred);
         setRemoteUrl(preferred);
       } catch {}

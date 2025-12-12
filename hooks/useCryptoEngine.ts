@@ -40,13 +40,13 @@ export interface CryptoTrade {
 export interface CryptoAccount { balance: number; equity: number; dayPnL: number; totalPnL?: number; }
 
 export const useCryptoEngine = () => {
-  const isDev = (typeof window !== 'undefined' && window.location && window.location.hostname === 'localhost') || ((import.meta as any)?.env?.DEV);
   const [remoteUrl, setRemoteUrl] = useState(() => {
-    const raw = (typeof window !== 'undefined') ? localStorage.getItem('cryptoRemoteUrl') : null;
-    const saved = raw ? raw.trim().replace(/\/$/, '') : '';
-    const hasProto = /^https?:\/\//i.test(saved);
-    if (saved && hasProto) return saved;
-    // Default to production URL
+    if (typeof window !== 'undefined') {
+      const raw = localStorage.getItem('cryptoRemoteUrl');
+      const saved = raw ? raw.trim().replace(/\/$/, '') : '';
+      const hasProto = /^https?:\/\//i.test(saved);
+      if (saved && hasProto) return saved;
+    }
     return CRYPTO_DEFAULT_REMOTE_URL.replace(/\/$/, '');
   });
   const [assets, setAssets] = useState<Record<string, CryptoAssetData>>({});

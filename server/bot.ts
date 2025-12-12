@@ -7,8 +7,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { WebSocket } from 'ws';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const STATE_FILE = path.join(__dirname, '../data/crypto_bot_state.json');
 
 type StrategyId = 'VWAP_MEAN_REV' | 'BTC_RANGE_RETEST' | 'AI_AGENT';
 type Side = 'BUY' | 'SELL';
@@ -53,20 +60,48 @@ interface SymbolState {
   activeStrategies: string[];
 }
 
-const account = { balance: 10000, equity: 10000, dayPnL: 0, totalPnL: 0 };
-const trades: Trade[] = [];
-const state: Record<string, SymbolState> = {};
-const aiState: Record<string, { lastCheck: number; sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL'; confidence: number }> = {};
+let account = { balance: 10000, equity: 10000, dayPnL: 0, totalPnL: 0 };
+let trades: Trade[] = [];
+let state: Record<string, SymbolState> = {};
+let aiState: Record<string, { lastCheck: number; sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL'; confidence: number }> = {};
 const API_KEY = process.env.API_KEY || process.env.GOOGLE_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GENAI_API_KEY || process.env.VITE_GEMINI_API_KEY || '';
 const aiClient = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 let webpushClient: any = null;
 let pushSubscriptions: any[] = [];
+
+function saveState() {
+  try {
+    const data = { account, trades, aiState, pushSubscriptions };
+    fs.writeFileSync(STATE_FILE, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.error('Failed to save state:', e);
+  }
+}
+
+function loadState() {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      const raw = fs.readFileSync(STATE_FILE, 'utf-8');
+      const data = JSON.parse(raw);
+      if (data.account) account = data.account;
+      if (data.trades) trades = data.trades;
+      if (data.aiState) aiState = data.aiState;
+      if (data.pushSubscriptions) pushSubscriptions = data.pushSubscriptions;
+      console.log('State loaded successfully.');
+    }
+  } catch (e) {
+    console.error('Failed to load state:', e);
+  }
+}
 
 for (const s of Object.keys(symbols)) {
   const defaults = s === 'BTCUSDT' ? ['VWAP', 'RANGE', 'AI_AGENT'] : ['VWAP', 'AI_AGENT'];
   state[s] = { closes15m: [], closes1h: [], sma20: 0, sma50: 0, rsi14: 50, vwap: { pv: 0, v: 0, vwap: 0 }, range: { high: null, low: null, frozen: false, brokeAbove: false, brokeBelow: false }, lastTick: undefined, uiTicks: [], botActive: true, activeStrategies: defaults };
   aiState[s] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
 }
+
+// Load state after initialization to override defaults where applicable
+loadState();
 
 function hasOpen(symbol: string, strategy: StrategyId) {
   return trades.some(t => t.symbol === symbol && t.strategy === strategy && t.status === 'OPEN');
@@ -77,38 +112,45 @@ function placeTrade(symbol: string, strategy: StrategyId, type: Side, entry: num
   if (size <= 0) return;
   const t: Trade = { id: uuidv4(), symbol, strategy, type, entryPrice: entry, initialSize: size, currentSize: size, stopLoss: sl, tp1, tp2, tp3, tp1Hit: false, tp2Hit: false, tp3Hit: false, openTime: Date.now(), pnl: 0, status: 'OPEN' };
   trades.unshift(t);
+  saveState();
   notifyAll('Trade Opened', `${symbol} ${type} @ ${entry.toFixed(2)} (${strategy})`);
 }
 
 function manageTrades(symbol: string, bid: number, ask: number, sma20: number, last1h?: OHLCV) {
   let closed = 0;
+  let stateChanged = false;
   for (const t of trades) {
     if (t.symbol !== symbol || t.status !== 'OPEN') continue;
     const isBuy = t.type === 'BUY';
     const exit = isBuy ? bid : ask;
-    if (state[symbol].activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > 80) {
-      const snt = aiState[symbol].sentiment;
-      if (isBuy && snt === 'BEARISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
-      if (!isBuy && snt === 'BULLISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
+    if (state[symbol].activeStrategies.includes('AI_AGENT')) {
+      const info = aiState[symbol] || { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
+      aiState[symbol] = info;
+      if (info.confidence > 80) {
+      const snt = info.sentiment;
+      if (isBuy && snt === 'BEARISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
+      if (!isBuy && snt === 'BULLISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
+      }
     }
-    if (isBuy && exit <= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
-    if (!isBuy && exit >= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; continue; }
+    if (isBuy && exit <= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
+    if (!isBuy && exit >= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
     if (!t.tp1Hit) {
       const hit = isBuy ? exit >= t.tp1 : exit <= t.tp1;
-      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp1 - t.entryPrice : t.entryPrice - t.tp1) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp1Hit = true; t.stopLoss = t.entryPrice; notifyAll('TP1 Hit', `${t.symbol} ${t.type} PnL ${pnl.toFixed(2)}`); }
+      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp1 - t.entryPrice : t.entryPrice - t.tp1) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp1Hit = true; t.stopLoss = t.entryPrice; notifyAll('TP1 Hit', `${t.symbol} ${t.type} PnL ${pnl.toFixed(2)}`); stateChanged = true; }
     }
     if (t.tp1Hit && !t.tp2Hit) {
       const hit = isBuy ? exit >= t.tp2 : exit <= t.tp2;
-      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp2 - t.entryPrice : t.entryPrice - t.tp2) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp2Hit = true; if (t.strategy === 'VWAP_MEAN_REV' || t.strategy === 'AI_AGENT') { if (isBuy) t.stopLoss = Math.max(t.stopLoss, sma20 * 0.999); else t.stopLoss = Math.min(t.stopLoss, sma20 * 1.001); } else if (t.strategy === 'BTC_RANGE_RETEST' && last1h) { if (isBuy) t.stopLoss = Math.max(t.stopLoss, last1h.low * 0.999); else t.stopLoss = Math.min(t.stopLoss, last1h.high * 1.001); } notifyAll('TP2 Hit', `${t.symbol} ${t.type} PnL ${pnl.toFixed(2)}`); }
+      if (hit) { const qty = t.initialSize * 0.4; const pnl = (isBuy ? t.tp2 - t.entryPrice : t.entryPrice - t.tp2) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp2Hit = true; if (t.strategy === 'VWAP_MEAN_REV' || t.strategy === 'AI_AGENT') { if (isBuy) t.stopLoss = Math.max(t.stopLoss, sma20 * 0.999); else t.stopLoss = Math.min(t.stopLoss, sma20 * 1.001); } else if (t.strategy === 'BTC_RANGE_RETEST' && last1h) { if (isBuy) t.stopLoss = Math.max(t.stopLoss, last1h.low * 0.999); else t.stopLoss = Math.min(t.stopLoss, last1h.high * 1.001); } notifyAll('TP2 Hit', `${t.symbol} ${t.type} PnL ${pnl.toFixed(2)}`); stateChanged = true; }
     }
     if (t.tp2Hit && !t.tp3Hit) {
       const hit = isBuy ? exit >= t.tp3 : exit <= t.tp3;
-      if (hit) { const qty = t.initialSize * 0.2; const pnl = (isBuy ? t.tp3 - t.entryPrice : t.entryPrice - t.tp3) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp3Hit = true; t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; notifyAll('Trade Closed', `${t.symbol} ${t.type} Final PnL ${pnl.toFixed(2)}`); }
+      if (hit) { const qty = t.initialSize * 0.2; const pnl = (isBuy ? t.tp3 - t.entryPrice : t.entryPrice - t.tp3) * qty; t.pnl += pnl; account.balance += pnl; closed += pnl; t.currentSize -= qty; t.tp3Hit = true; t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; notifyAll('Trade Closed', `${t.symbol} ${t.type} Final PnL ${pnl.toFixed(2)}`); stateChanged = true; }
     }
   }
   account.equity = account.balance;
   account.dayPnL += closed;
   account.totalPnL += closed;
+  if (stateChanged || closed !== 0) saveState();
 }
 
 function evaluateVWAPMeanReversion(symbol: string) {
@@ -310,6 +352,7 @@ app.post('/push/subscribe', express.json(), (req, res) => {
     if (!sub || !sub.endpoint) return res.status(400).end();
     const exists = pushSubscriptions.find(s => s.endpoint === sub.endpoint);
     if (!exists) pushSubscriptions.push(sub);
+    saveState();
     res.sendStatus(201);
   } catch { res.sendStatus(500); }
 });
@@ -329,6 +372,16 @@ app.post('/strategy/:symbol', express.json(), (req, res) => {
   if (idx >= 0) list.splice(idx, 1); else list.push(strat);
   state[s].activeStrategies = [...list];
   res.json({ activeStrategies: state[s].activeStrategies });
+});
+app.post('/restart', (req, res) => {
+  try {
+    console.log('Restarting bot...');
+    saveState();
+    res.json({ success: true, message: 'Bot restarting...' });
+    setTimeout(() => process.exit(0), 500);
+  } catch (e) {
+    res.status(500).json({ success: false, error: String(e) });
+  }
 });
 const port = Number(process.env.PORT || 3002);
 const server = app.listen(port, () => {
@@ -351,6 +404,9 @@ app.get('/ai_status', (req, res) => {
 
 async function consultGemini(symbol: string) {
   const now = Date.now();
+  if (!aiState[symbol]) {
+    aiState[symbol] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
+  }
   if (now - aiState[symbol].lastCheck < 5 * 60 * 1000) return;
   aiState[symbol].lastCheck = now;
   if (!aiClient) return;
@@ -382,6 +438,7 @@ async function consultGemini(symbol: string) {
     const snt = String(obj.sentiment || 'NEUTRAL').toUpperCase() as 'BULLISH' | 'BEARISH' | 'NEUTRAL';
     const conf = typeof obj.confidence === 'number' ? obj.confidence : 0;
     aiState[symbol] = { lastCheck: now, sentiment: snt, confidence: conf };
+    saveState();
   } catch { }
 }
 
@@ -390,7 +447,8 @@ function evaluateAIAgent(symbol: string) {
   if (!st.botActive || !st.activeStrategies.includes('AI_AGENT')) return;
   const hasAnyOpen = trades.some(t => t.symbol === symbol && t.status === 'OPEN');
   if (hasAnyOpen) return;
-  const info = aiState[symbol];
+  const info = aiState[symbol] || { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
+  aiState[symbol] = info;
   if (info.confidence < 70) return;
   const price = st.last15m ? st.last15m.close : 0;
   const isUp = price > st.sma50;

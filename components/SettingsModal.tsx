@@ -46,6 +46,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
   const [cryptoSample, setCryptoSample] = useState<string>('');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [rebootStatus, setRebootStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   if (!isOpen) return null;
 
@@ -69,6 +70,24 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
       setCryptoUrl(clean);
       if (onSetCryptoRemote) onSetCryptoRemote(clean);
     } catch { }
+  };
+
+  const handleRestartCrypto = async () => {
+    try {
+      setRebootStatus('loading');
+      const base = (cryptoUrl || CRYPTO_DEFAULT_REMOTE_URL).replace(/\/$/, "");
+      const res = await fetch(`${base}/restart`, { method: 'POST' });
+      if (res.ok) {
+        setRebootStatus('success');
+        setTimeout(() => setRebootStatus('idle'), 3000);
+      } else {
+        setRebootStatus('error');
+        setTimeout(() => setRebootStatus('idle'), 3000);
+      }
+    } catch {
+      setRebootStatus('error');
+      setTimeout(() => setRebootStatus('idle'), 3000);
+    }
   };
 
   const enablePush = async () => {
@@ -204,7 +223,7 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
 
             {showAdvanced && (
               <div className="mt-3 space-y-2 animate-fade-in">
-                <label className="text-[10px] text-ios-gray ml-1">Custom Server URL</label>
+                <label className="text-[10px] text-ios-gray ml-1">Custom Server URL (Indices)</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -218,6 +237,34 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
                   >
                     Set
                   </button>
+                </div>
+
+                <label className="text-[10px] text-ios-gray ml-1 mt-2 block">Crypto Bot URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={cryptoUrl}
+                    onChange={(e) => setCryptoUrl(e.target.value)}
+                    className="flex-1 bg-black/50 border border-white/5 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-ios-blue"
+                  />
+                  <button
+                    onClick={() => handleConnectCrypto(cryptoUrl)}
+                    className="bg-white/5 px-4 py-2 rounded-xl text-xs font-bold hover:bg-white/10"
+                  >
+                    Set
+                  </button>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/5">
+                   <button
+                    onClick={handleRestartCrypto}
+                    disabled={rebootStatus === 'loading'}
+                    className={`w-full font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border ${rebootStatus === 'error' ? 'border-ios-red/30 bg-ios-red/10 text-ios-red' : rebootStatus === 'success' ? 'border-ios-green/30 bg-ios-green/10 text-ios-green' : 'border-white/5 bg-white/5 text-white hover:bg-white/10'}`}
+                  >
+                    {rebootStatus === 'loading' ? <Loader2 size={16} className="animate-spin" /> : <Terminal size={16} />}
+                    {rebootStatus === 'loading' ? 'Rebooting Bot...' : rebootStatus === 'success' ? 'Reboot Signal Sent' : rebootStatus === 'error' ? 'Reboot Failed' : 'Reboot Crypto Bot'}
+                  </button>
+                  <p className="text-[10px] text-ios-gray mt-1 text-center">Use this if the bot appears frozen.</p>
                 </div>
 
               </div>

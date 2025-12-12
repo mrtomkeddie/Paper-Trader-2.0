@@ -333,7 +333,8 @@ setInterval(() => { try { logSystemPulse(); } catch { } }, 15 * 60 * 1000);
 
 // AI CACHE (To prevent spamming API)
 let aiState = {
-  'NAS100': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' }
+  'NAS100': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' },
+  'XAUUSD': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' }
 };
 
 // INITIALIZE ASSETS
@@ -526,14 +527,17 @@ const calculateEMAFromSeries = (prices, period = 200) => {
 
 // --- REAL AI INTEGRATION ---
 async function consultGemini(symbol, asset) {
-  // 1. Check Rate Limit (Max once every 5 mins per asset)
   const now = Date.now();
+
+  if (!aiState[symbol]) {
+    aiState[symbol] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' };
+  }
+
   if (now - aiState[symbol].lastCheck < 5 * 60 * 1000) {
-    return null; // Too soon, use cached decision
+    return null;
   }
 
   if (!aiClient) {
-    // Fallback to Simulator if no API Key
     aiState[symbol].lastCheck = now;
     return null;
   }
@@ -930,7 +934,11 @@ function processTicks(symbol) {
     }
 
     // A. AI GUARDIAN (Panic Close)
-    if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > 80) {
+    if (asset.activeStrategies.includes('AI_AGENT')) {
+      if (!aiState[symbol]) {
+        aiState[symbol] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' };
+      }
+      if (aiState[symbol].confidence > 80) {
       // RULE: Only let AI Guardian close trades that were opened by the AI Agent.
       // We do NOT want the AI interfering with mechanical strategies like London Sweep or NY ORB.
       if (trade.strategy !== 'AI_AGENT') {
