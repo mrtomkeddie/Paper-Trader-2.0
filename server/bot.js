@@ -1058,6 +1058,18 @@ function processTicks(symbol) {
     const isXauRestricted = symbol === 'XAUUSD' && utcHour < 12;
 
     if (!isNasRestricted && !isXauRestricted) {
+      // Idle Guard: if no trades for this symbol today, slightly relax filters
+      const now = new Date();
+      const startOfDayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)).getTime();
+      const tradesToday = trades.filter(t => t.symbol === symbol && typeof t.openTime === 'number' && t.openTime >= startOfDayUtc);
+      const idleGuardActive = tradesToday.length === 0;
+      const adxThreshold = idleGuardActive ? 20 : 25;
+      const premiumLimit = idleGuardActive ? 0.80 : 0.75;
+      const discountLimit = idleGuardActive ? 0.20 : 0.25;
+      if (idleGuardActive) {
+        console.log(`[GUARD] ${symbol} Idle day — relaxing filters (ADX>${adxThreshold}, premium>${(premiumLimit*100).toFixed(0)}%, discount<${(discountLimit*100).toFixed(0)}%)`);
+      }
+
       const isTrendUp = asset.currentPrice > asset.ema200;
       const pullback = isTrendUp ? asset.currentPrice <= asset.ema : asset.currentPrice >= asset.ema;
       const confirm = isTrendUp ? asset.slope > 0.1 : asset.slope < -0.1;
@@ -1123,7 +1135,7 @@ function processTicks(symbol) {
           // Requirement: ADX must be > 25 to enter a Trend Trade.
           const adx = calculateADX(candlesM5[symbol] || [], 14);
           
-          if (adx < 25) {
+          if (adx < adxThreshold) {
               console.log(`[FILTER] Trend Signal skipped - ADX too low: ${adx.toFixed(1)}`);
           } else {
               // 4. PRICE ACTION FILTERS (Premium/Discount)
@@ -1131,7 +1143,7 @@ function processTicks(symbol) {
               
               if (isTrendUp) {
                   // BUY: Avoid Extreme Premium (> 0.75)
-                  if (positionPct > 0.75) {
+                  if (positionPct > premiumLimit) {
                       console.log(`[FILTER] Trend Buy skipped - Price in Extreme Premium (${(positionPct * 100).toFixed(0)}% of Range)`);
                   } else {
                        // Log PDH/PDL Dist
@@ -1143,7 +1155,7 @@ function processTicks(symbol) {
                   }
               } else {
                   // SELL: Avoid Extreme Discount (< 0.25)
-                  if (positionPct < 0.25) {
+                  if (positionPct < discountLimit) {
                       console.log(`[FILTER] Trend Sell skipped - Price in Extreme Discount (${(positionPct * 100).toFixed(0)}% of Range)`);
                   } else {
                        // Log PDH/PDL Dist
@@ -1357,6 +1369,37 @@ app.post('/cloud/clear', async (req, res) => {
 });
 
 app.get('/health', (req, res) => res.send('OK'));
+app.get('/diagnostics/:symbol', (req, res) => {
+  try {
+    const symbol = (req.params.symbol || '').toString().toUpperCase();
+    const asset = assets[symbol];
+    if (!asset) return res.status(404).json({ error: 'symbol_not_found' });
+    const utcHour = new Date().getUTCHours();
+    const isNasRestricted = symbol === 'NAS100' && (utcHour < 8 || utcHour >= 21);
+    const isXauRestricted = symbol === 'XAUUSD' && utcHour < 12;
+    const structure = analyzeMarketStructure(candlesM5[symbol], 48);
+    const adxTF = calculateADX(candlesM5[symbol] || [], 14);
+    const now = new Date();
+    const startOfDayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0)).getTime();
+    const tradesToday = trades.filter(t => t.symbol === symbol && typeof t.openTime === 'number' && t.openTime >= startOfDayUtc).length;
+    const openTrades = trades.filter(t => t.symbol === symbol && t.status === 'OPEN').length;
+    res.json({
+      symbol,
+      botActive: asset.botActive,
+      activeStrategies: asset.activeStrategies,
+      utcHour,
+      restrictions: { isNasRestricted, isXauRestricted },
+      candles: { m5: candlesM5[symbol]?.length || 0, m15: candlesM15[symbol]?.length || 0 },
+      trend: { primary: asset.trend, htf: asset.htfTrend },
+      adxTrendFollow: Number(adxTF.toFixed(2)),
+      positionPct: Number((structure.positionPct || 0).toFixed(3)),
+      tradesToday,
+      openTrades
+    });
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'error' });
+  }
+});
 app.get('/crypto/state', async (req, res) => {
   try {
     const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/state?ts=${Date.now()}`;
