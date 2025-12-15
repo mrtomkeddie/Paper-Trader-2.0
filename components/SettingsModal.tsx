@@ -72,10 +72,10 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
     } catch { }
   };
 
-  const handleRestartCrypto = async () => {
+  const handleRestartIndices = async () => {
     try {
       setRebootStatus('loading');
-      const base = (cryptoUrl || CRYPTO_DEFAULT_REMOTE_URL).replace(/\/$/, "");
+      const base = (remoteUrl || DEFAULT_REMOTE_URL).replace(/\/$/, "");
       const res = await fetch(`${base}/restart`, { method: 'POST' });
       if (res.ok) {
         setRebootStatus('success');
@@ -257,12 +257,12 @@ const SettingsModal: React.FC<Props> = ({ isOpen, onClose, oandaConfig, onSave, 
 
                 <div className="mt-4 pt-4 border-t border-white/5">
                    <button
-                    onClick={handleRestartCrypto}
+                    onClick={handleRestartIndices}
                     disabled={rebootStatus === 'loading'}
                     className={`w-full font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 border ${rebootStatus === 'error' ? 'border-ios-red/30 bg-ios-red/10 text-ios-red' : rebootStatus === 'success' ? 'border-ios-green/30 bg-ios-green/10 text-ios-green' : 'border-white/5 bg-white/5 text-white hover:bg-white/10'}`}
                   >
                     {rebootStatus === 'loading' ? <Loader2 size={16} className="animate-spin" /> : <Terminal size={16} />}
-                    {rebootStatus === 'loading' ? 'Rebooting Bot...' : rebootStatus === 'success' ? 'Reboot Signal Sent' : rebootStatus === 'error' ? 'Reboot Failed' : 'Reboot Crypto Bot'}
+                    {rebootStatus === 'loading' ? 'Restarting Bot...' : rebootStatus === 'success' ? 'Restart Signal Sent' : rebootStatus === 'error' ? 'Restart Failed' : 'Restart Indices Bot'}
                   </button>
                   <p className="text-[10px] text-ios-gray mt-1 text-center">Use this if the bot appears frozen.</p>
                 </div>

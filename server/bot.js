@@ -1631,6 +1631,16 @@ app.post('/admin/close', (req, res) => {
   }
 });
 
+app.post('/restart', (req, res) => {
+  try {
+    saveState();
+    res.json({ success: true, message: 'Bot restarting...' });
+    setTimeout(() => { try { process.exit(0); } catch {} }, 500);
+  } catch (e) {
+    res.status(500).json({ success: false, error: e?.message || 'error' });
+  }
+});
+
 // Start Server
 app.listen(PORT, '0.0.0.0', () => console.log(`Scheduler running on port ${PORT}`));
 
