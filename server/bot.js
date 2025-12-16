@@ -756,6 +756,7 @@ function connectOanda() {
 
 // OANDA Watchdog: Force reconnect if stream is silent > 60s or Stale > 5m
 setInterval(() => {
+  if (!USE_OANDA) return;
   const now = Date.now();
 
   // 1. Silent Stream (No Data at all)
@@ -780,7 +781,11 @@ setInterval(() => {
 }, 10000);
 
 function connectLiveFeed() {
-  connectOanda();
+  if (USE_OANDA) {
+    connectOanda();
+  } else {
+    connectBinance();
+  }
 }
 
 connectLiveFeed();
@@ -1444,6 +1449,7 @@ app.get('/diagnostics/:symbol', (req, res) => {
       symbol,
       botActive: asset.botActive,
       activeStrategies: asset.activeStrategies,
+      lastSkipReason: asset.lastSkipReason || null,
       utcHour,
       restrictions: { isNasRestricted, isXauRestricted },
       candles: { m5: candlesM5[symbol]?.length || 0, m15: candlesM15[symbol]?.length || 0 },
