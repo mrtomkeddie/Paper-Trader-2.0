@@ -1113,8 +1113,10 @@ function processTicks(symbol) {
         }
 
         const isTrendUp = asset.currentPrice > asset.ema200;
-        const pullback = isTrendUp ? asset.currentPrice <= asset.ema : asset.currentPrice >= asset.ema;
-        const confirm = isTrendUp ? asset.slope > 0.1 : asset.slope < -0.1;
+        const emaProximity = Math.abs(asset.currentPrice - asset.ema) / (asset.ema || 1);
+        const nearEma = emaProximity <= (idleGuardActive ? 0.002 : 0.001);
+        const pullback = isTrendUp ? (asset.currentPrice <= asset.ema || nearEma) : (asset.currentPrice >= asset.ema || nearEma);
+        const confirm = isTrendUp ? asset.slope > (idleGuardActive ? 0.05 : 0.1) : asset.slope < (idleGuardActive ? -0.05 : -0.1);
 
         // FVG Check
         let fvgReason = '';
@@ -1179,6 +1181,7 @@ function processTicks(symbol) {
 
           if (adx < adxThreshold) {
             console.log(`[FILTER] Trend Signal skipped - ADX too low: ${adx.toFixed(1)}`);
+            try { asset.lastSkipReason = `ADX ${adx.toFixed(1)} < ${adxThreshold}`; } catch {}
           } else {
             // 4. PRICE ACTION FILTERS (Premium/Discount)
             const { positionPct } = structure; // 0.0 = Low, 1.0 = High
@@ -1187,11 +1190,12 @@ function processTicks(symbol) {
               // BUY: Avoid Extreme Premium (> 0.75)
               if (positionPct > premiumLimit) {
                 console.log(`[FILTER] Trend Buy skipped - Price in Extreme Premium (${(positionPct * 100).toFixed(0)}% of Range)`);
+                try { asset.lastSkipReason = `Premium ${(positionPct * 100).toFixed(0)}% > ${(premiumLimit * 100).toFixed(0)}%`; } catch {}
               } else {
-                // Log PDH/PDL Dist
-                const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
-                const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
-                console.log(`[TREND] Evaluating BUY. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+                 // Log PDH/PDL Dist
+                 const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+                 const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+                 console.log(`[TREND] Evaluating BUY. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
 
                 executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
               }
@@ -1199,11 +1203,12 @@ function processTicks(symbol) {
               // SELL: Avoid Extreme Discount (< 0.25)
               if (positionPct < discountLimit) {
                 console.log(`[FILTER] Trend Sell skipped - Price in Extreme Discount (${(positionPct * 100).toFixed(0)}% of Range)`);
+                try { asset.lastSkipReason = `Discount ${(positionPct * 100).toFixed(0)}% < ${(discountLimit * 100).toFixed(0)}%`; } catch {}
               } else {
-                // Log PDH/PDL Dist
-                const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
-                const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
-                console.log(`[TREND] Evaluating SELL. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+                 // Log PDH/PDL Dist
+                 const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+                 const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+                 console.log(`[TREND] Evaluating SELL. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
 
                 executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
               }
