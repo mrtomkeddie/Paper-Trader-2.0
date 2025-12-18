@@ -116,8 +116,22 @@ if (API_KEY) {
 
 // --- TYPES & CONFIG ---
 const ASSET_CONFIG = {
-  'NAS100': { startPrice: 18500, volatility: 0.0015, decimals: 1, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 },
-  'XAUUSD': { startPrice: 2600, volatility: 0.002, decimals: 2, lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01 }
+  'NAS100': { 
+    startPrice: 18500, volatility: 0.0015, decimals: 1, 
+    lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01,
+    pointSize: 1, valuePerPointPerLot: 1 
+  },
+  'XAUUSD': { 
+    startPrice: 2600, volatility: 0.002, decimals: 2, 
+    lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01,
+    pointSize: 0.01, valuePerPointPerLot: 1 
+  }
+};
+
+const RISK_CONFIG = {
+  MAX_DAILY_LOSS_PCT: 0.03,
+  MAX_CONSEC_LOSSES_PER_SYMBOL: 3,
+  MAX_TOTAL_OPEN_RISK_PCT: 0.02
 };
 
 const INITIAL_BALANCE = 500;
@@ -137,6 +151,89 @@ let pushSubscriptions = [];
 
 const sseClients = new Set();
 
+// --- RISK & POSITION SIZING HELPERS ---
+function calculatePositionSize({ balance, riskPct, entryPrice, stopPrice, symbol }) {
+  const cfg = ASSET_CONFIG[symbol];
+  if (!cfg) return 0;
+  
+  const riskAmount = balance * riskPct;
+  // Default to 1 if missing to avoid division by zero
+  const pointSize = cfg.pointSize || 1; 
+  const valuePerPointPerLot = cfg.valuePerPointPerLot || 1;
+
+  const stopDistancePoints = Math.abs(entryPrice - stopPrice) / pointSize;
+  if (stopDistancePoints <= 0) return 0;
+
+  const lossPerLot = stopDistancePoints * valuePerPointPerLot;
+  const rawSize = riskAmount / lossPerLot;
+
+  let size = Math.max(cfg.minLot, Math.min(rawSize, cfg.maxLot));
+  size = Math.round(size / cfg.lotStep) * cfg.lotStep;
+  
+  // Ensure we don't round down to 0 if minLot is small
+  if (size < cfg.minLot) size = cfg.minLot;
+
+  console.log(`[SIZE] ${symbol} Bal:${balance.toFixed(0)} RiskPct:${riskPct} RiskAmt:${riskAmount.toFixed(2)} Dist:${stopDistancePoints.toFixed(1)}pts Size:${size}`);
+  return size;
+}
+
+function checkRiskLimits(symbol, newTradeRiskPct) {
+  // 1. Daily Loss Limit
+  const maxDailyLoss = INITIAL_BALANCE * RISK_CONFIG.MAX_DAILY_LOSS_PCT;
+  if (account.dayPnL <= -maxDailyLoss) {
+    return { allowed: false, reason: `Daily Loss Limit Hit (PnL ${account.dayPnL.toFixed(2)} <= -${maxDailyLoss.toFixed(2)})` };
+  }
+
+  // 2. Consecutive Losses
+  let consecutiveLosses = 0;
+  const closedTrades = trades.filter(t => t.symbol === symbol && t.status === 'CLOSED').sort((a, b) => (b.closeTime || 0) - (a.closeTime || 0));
+  for (const t of closedTrades) {
+    if ((t.pnl || 0) < 0) consecutiveLosses++;
+    else break;
+  }
+  if (consecutiveLosses >= RISK_CONFIG.MAX_CONSEC_LOSSES_PER_SYMBOL) {
+    return { allowed: false, reason: `Max Consecutive Losses (${consecutiveLosses}) Hit` };
+  }
+
+  // 3. Total Open Risk
+  let currentOpenRiskPct = 0;
+  for (const t of trades) {
+    if (t.status === 'OPEN') {
+      const cfg = ASSET_CONFIG[t.symbol];
+      const pointSize = cfg?.pointSize || 1;
+      const valuePerPointPerLot = cfg?.valuePerPointPerLot || 1;
+      const dist = Math.abs(t.entryPrice - t.stopLoss) / pointSize;
+      const riskAmt = dist * valuePerPointPerLot * t.currentSize;
+      currentOpenRiskPct += (riskAmt / account.balance);
+    }
+  }
+  
+  if (currentOpenRiskPct + newTradeRiskPct > RISK_CONFIG.MAX_TOTAL_OPEN_RISK_PCT) {
+    return { allowed: false, reason: `Max Open Risk Exceeded (${(currentOpenRiskPct*100).toFixed(2)}% + ${(newTradeRiskPct*100).toFixed(2)}% > ${(RISK_CONFIG.MAX_TOTAL_OPEN_RISK_PCT*100).toFixed(2)}%)` };
+  }
+
+  return { allowed: true };
+}
+
+function determineRegime(symbol, adx, slope, bbWidth) {
+  // Thresholds
+  const TREND_ADX = 25;
+  const RANGE_ADX = 20;
+  const SLOPE_MIN = 0.05; 
+  const SLOPE_MAX = 0.02; 
+  const BB_WIDTH_MAX = 0.003; 
+  
+  const absSlope = Math.abs(slope);
+
+  if (adx >= TREND_ADX && absSlope >= SLOPE_MIN) {
+    return 'TREND';
+  } else if (adx <= RANGE_ADX && absSlope <= SLOPE_MAX && bbWidth <= BB_WIDTH_MAX) {
+    return 'RANGE'; 
+  }
+  
+  return 'NO_TRADE'; 
+}
+
 // --- PERSISTENCE ---
 const DATA_DIR = path.join(process.cwd(), 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
@@ -146,7 +243,8 @@ function recalculateAccountState() {
   let day = 0;
   let wins = 0;
   let closedCount = 0;
-  const startOfDay = new Date().setHours(0, 0, 0, 0);
+  // Use UTC Midnight for Daily PnL Reset
+  const startOfDay = getStartOfDayUtcMs(); 
   for (const t of trades) {
     if (t.status === 'CLOSED') {
       realized += (t.pnl || 0);
@@ -969,8 +1067,22 @@ function updateCandlesM15(symbol, price) {
 }
 
 // --- STRATEGY & TRADE LOGIC ---
-function executeTrade(symbol, type, price, strategy, risk, customReason = null, confidence = 0, customSL = null) {
+function executeTrade(symbol, type, price, strategy, riskProfile, customReason = null, confidence = 0, customSL = null) {
   const isBuy = type === 'BUY';
+
+  // 1. Determine Risk % based on Guard Stage
+  let effectiveRiskPct = RISK_PER_TRADE;
+  const asset = assets[symbol];
+  if (asset && asset.guardStage === 3) {
+      effectiveRiskPct = 0.005; // 0.5% (Stage 3 Safe Mode)
+  }
+
+  // 2. Hard Risk Limits Check
+  const limitCheck = checkRiskLimits(symbol, effectiveRiskPct);
+  if (!limitCheck.allowed) {
+      console.log(`[RISK BLOCKED] ${symbol} ${type}: ${limitCheck.reason}`);
+      return null;
+  }
 
   const { bid, ask } = market[symbol];
   const fillPrice = isBuy ? ask : bid;
@@ -981,13 +1093,19 @@ function executeTrade(symbol, type, price, strategy, risk, customReason = null, 
   const tp2 = isBuy ? fillPrice * (1 + 0.01) : fillPrice * (1 - 0.01);
   const tp3 = isBuy ? fillPrice * (1 + 0.03) : fillPrice * (1 - 0.03);
 
-  const cfg = ASSET_CONFIG[symbol] || { minLot: 0.01, maxLot: 100, lotStep: 0.01 };
-  const monetaryRisk = Math.abs(account.balance) * RISK_PER_TRADE;
-  const slDistance = Math.abs(fillPrice - sl);
-  const rawLotSize = slDistance > 0 ? (monetaryRisk / (slDistance * (cfg.valuePerPoint || 1))) : cfg.minLot;
-  let lotSize = Math.max(cfg.minLot, Math.min(rawLotSize, cfg.maxLot));
-  lotSize = Math.round(lotSize / cfg.lotStep) * cfg.lotStep;
-  lotSize = Math.max(cfg.minLot, Math.min(lotSize, cfg.maxLot));
+  // 3. Position Sizing
+  let lotSize = calculatePositionSize({
+      balance: account.balance,
+      riskPct: effectiveRiskPct,
+      entryPrice: fillPrice,
+      stopPrice: sl,
+      symbol
+  });
+
+  if (lotSize <= 0) {
+       console.log(`[RISK BLOCKED] ${symbol} Calculated Lot Size is 0`);
+       return null;
+  }
 
   const trade = {
     id: uuidv4(), symbol, type, entryPrice: fillPrice, initialSize: lotSize, currentSize: lotSize,
@@ -1036,11 +1154,15 @@ function getGuardConfig(symbol, nowMs = Date.now()) {
   const maxTradesPerDay = 5;
   const cooldownMs = 20 * 60 * 1000;
 
-  const adxThreshold = stage >= 3 ? 15 : stage === 2 ? 18 : stage === 1 ? 20 : 25;
-  const emaProximityMax = stage >= 3 ? 0.004 : stage === 2 ? 0.003 : stage === 1 ? 0.002 : 0.001;
-  const slopeAbsMin = stage >= 3 ? 0.02 : stage === 2 ? 0.03 : stage === 1 ? 0.05 : 0.1;
-  const premiumLimit = stage >= 3 ? 0.9 : stage === 2 ? 0.85 : stage === 1 ? 0.8 : 0.75;
-  const discountLimit = stage >= 3 ? 0.1 : stage === 2 ? 0.15 : stage === 1 ? 0.2 : 0.25;
+  // SAFE GUARD STAGE 3:
+  // User Requirement: "Remove loosen entry criteria".
+  // We revert Stage 3 thresholds to Stage 0 (Standard) levels.
+  // Stage 3 now only triggers Risk Reduction (handled in executeTrade).
+  const adxThreshold = stage >= 3 ? 25 : stage === 2 ? 18 : stage === 1 ? 20 : 25;
+  const emaProximityMax = stage >= 3 ? 0.001 : stage === 2 ? 0.003 : stage === 1 ? 0.002 : 0.001;
+  const slopeAbsMin = stage >= 3 ? 0.1 : stage === 2 ? 0.03 : stage === 1 ? 0.05 : 0.1;
+  const premiumLimit = stage >= 3 ? 0.75 : stage === 2 ? 0.85 : stage === 1 ? 0.8 : 0.75;
+  const discountLimit = stage >= 3 ? 0.25 : stage === 2 ? 0.15 : stage === 1 ? 0.2 : 0.25;
 
   return {
     startOfDayUtc,
@@ -1086,6 +1208,16 @@ function processTicks(symbol) {
   asset.structure = structure;
   asset.pdLevels = pdLevels;
 
+  // --- REGIME DETECTION ---
+  const adx = calculateADX(candlesM5[symbol] || [], 14);
+  const bbWidth = asset.bollinger ? (asset.bollinger.upper - asset.bollinger.lower) / asset.bollinger.middle : 0;
+  const regime = determineRegime(symbol, adx, asset.slope, bbWidth);
+  
+  if (asset.regime !== regime) {
+      console.log(`[REGIME] ${symbol} changed from ${asset.regime} to ${regime} (ADX:${adx.toFixed(1)} Slope:${asset.slope.toFixed(4)} BBW:${bbWidth.toFixed(4)})`);
+      asset.regime = regime;
+  }
+
   // 1. Manage Trades (TP/SL + AI GUARDIAN + TRAILING)
   for (const trade of openTrades) {
     const isBuy = trade.type === 'BUY';
@@ -1110,14 +1242,11 @@ function processTicks(symbol) {
         aiState[symbol] = { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' };
       }
       if (aiState[symbol].confidence > 80) {
-        // RULE: Only let AI Guardian close trades that were opened by the AI Agent.
-        // We do NOT want the AI interfering with mechanical strategies like London Sweep or NY ORB.
-        if (trade.strategy !== 'AI_AGENT') {
-          // Skip AI check for non-AI trades
-        } else {
-          const sentiment = aiState[symbol].sentiment;
-          // If Long and Sentiment is Bearish -> Close
-          if (isBuy && sentiment === 'BEARISH') {
+        // RULE: Only let AI Guardian close trades that were opened by the AI Agent OR if explicitly enabled for all.
+        // For now, we allow it to guard all trades if confidence is super high.
+        const sentiment = aiState[symbol].sentiment;
+        // If Long and Sentiment is Bearish -> Close
+        if (isBuy && sentiment === 'BEARISH') {
             trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BEARISH with high confidence.";
             trade.closeTime = Date.now(); trade.closePrice = price;
             console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
@@ -1128,9 +1257,9 @@ function processTicks(symbol) {
             sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
             notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
             continue; // Next trade
-          }
-          // If Short and Sentiment is Bullish -> Close
-          if (!isBuy && sentiment === 'BULLISH') {
+        }
+        // If Short and Sentiment is Bullish -> Close
+        if (!isBuy && sentiment === 'BULLISH') {
             trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BULLISH with high confidence.";
             trade.closeTime = Date.now(); trade.closePrice = price;
             console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
@@ -1141,55 +1270,71 @@ function processTicks(symbol) {
             sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
             notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
             continue;
-          }
         }
       }
     }
 
-    // B. TRAILING STOP
-      // If profit > 0.2%, move SL to Breakeven + Trail
-      const currentProfitPct = isBuy ? (bid - trade.entryPrice) / trade.entryPrice : (trade.entryPrice - ask) / trade.entryPrice;
-      if (currentProfitPct > 0.002) {
-        if (isBuy) {
-          const newSL = bid * 0.999;
-          if (newSL > trade.stopLoss) trade.stopLoss = newSL;
-        } else {
-          const newSL = ask * 1.001;
-          if (newSL < trade.stopLoss) trade.stopLoss = newSL;
-        }
-      }
-
-      // C. STANDARD TP CHECKS
-      for (const level of trade.tpLevels) {
+    // B. TRADE MANAGEMENT (TP1->BE, TP2->Trail)
+    const currentPrice = isBuy ? bid : ask;
+    
+    // Check TP Hits
+    for (const level of trade.tpLevels) {
         if (!level.hit) {
-          const hit = isBuy ? bid >= level.price : ask <= level.price;
-          if (hit) {
-            const closeAmt = trade.initialSize * level.percentage;
-            const exit = isBuy ? bid : ask;
-            const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * closeAmt;
-            trade.currentSize -= closeAmt;
-            trade.pnl += pnl;
-            level.hit = true;
-            account.balance += pnl;
-            closedPnL += pnl;
-            if (level.id === 1) trade.stopLoss = trade.entryPrice; // Breakeven
-            trade.outcomeReason = `Take Profit: Level ${level.id} hit. Locked in profit.`;
-          }
+            const hit = isBuy ? currentPrice >= level.price : currentPrice <= level.price;
+            if (hit) {
+                const closeAmt = trade.initialSize * level.percentage;
+                const pnl = (isBuy ? currentPrice - trade.entryPrice : trade.entryPrice - currentPrice) * closeAmt;
+                trade.currentSize -= closeAmt;
+                trade.pnl += pnl;
+                level.hit = true;
+                account.balance += pnl;
+                closedPnL += pnl;
+                trade.outcomeReason = `Take Profit: Level ${level.id} hit. Locked in profit.`;
+                
+                // MANAGEMENT RULES
+                if (level.id === 1) {
+                    // TP1 Hit -> Move SL to Break Even
+                    trade.stopLoss = trade.entryPrice;
+                    console.log(`[MGMT] ${symbol} TP1 Hit. SL moved to BE: ${trade.stopLoss}`);
+                } else if (level.id === 2) {
+                    // TP2 Hit -> Start Trailing
+                    // We flag this trade as 'trailing'
+                    trade.isTrailing = true;
+                    console.log(`[MGMT] ${symbol} TP2 Hit. Trailing Stop Activated.`);
+                }
+            }
         }
-      }
+    }
 
-      // D. STANDARD SL CHECK
-      if (isBuy ? bid <= trade.stopLoss : ask >= trade.stopLoss) {
-        trade.status = 'CLOSED'; trade.closeReason = 'STOP_LOSS'; trade.outcomeReason = "Stop Loss: Price invalidated trade setup.";
+    // Trailing Stop Logic (Active after TP2)
+    if (trade.isTrailing) {
+        const trailDist = asset.currentPrice * 0.005; // 0.5% Trail
+        if (isBuy) {
+            const potentialSL = currentPrice - trailDist;
+            if (potentialSL > trade.stopLoss) {
+                trade.stopLoss = potentialSL;
+                // console.log(`[TRAIL] ${symbol} Buy SL moved to ${trade.stopLoss.toFixed(2)}`);
+            }
+        } else {
+            const potentialSL = currentPrice + trailDist;
+            if (potentialSL < trade.stopLoss) {
+                trade.stopLoss = potentialSL;
+                // console.log(`[TRAIL] ${symbol} Sell SL moved to ${trade.stopLoss.toFixed(2)}`);
+            }
+        }
+    }
+
+    // C. STOP LOSS CHECK
+    if (isBuy ? currentPrice <= trade.stopLoss : currentPrice >= trade.stopLoss) {
+        trade.status = 'CLOSED'; trade.closeReason = 'STOP_LOSS'; trade.outcomeReason = "Stop Loss: Price hit SL.";
         trade.closeTime = Date.now(); trade.closePrice = price;
-        const exit = isBuy ? bid : ask;
-        const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
+        const pnl = (isBuy ? currentPrice - trade.entryPrice : trade.entryPrice - currentPrice) * trade.currentSize;
         trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
         trade.floatingPnl = 0;
         closedAnyTrade = true;
-        sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
-        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
-      }
+        sendSms(`CLOSE ${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
+        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
+    }
   }
 
   for (const t of openTrades) {
@@ -1223,7 +1368,10 @@ function processTicks(symbol) {
 
   // A. TREND FOLLOW (24/7)
   if (asset.activeStrategies.includes('TREND_FOLLOW')) {
-    const utcHour = new Date().getUTCHours();
+    if (asset.regime !== 'TREND') {
+      setSkipReason(asset, `Regime ${asset.regime} != TREND`);
+    } else {
+      const utcHour = new Date().getUTCHours();
 
       // 1. NAS100 TIME FILTER (08:00 - 21:00 UTC)
       // Restrict 'NAS100' trades to ONLY execute between 08:00 UTC and 21:00 UTC.
@@ -1338,10 +1486,12 @@ function processTicks(symbol) {
         }
       }
     }
+    } // End of Regime Check
   }
 
     // B. LONDON SWEEP (GOLD)
     if (asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAUUSD') {
+      if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
       const allow = isWithinLondonSweepWindow(Date.now());
       if (allow) {
         const candles = candlesM5[symbol];
@@ -1357,6 +1507,9 @@ function processTicks(symbol) {
 
     // C. NY ORB (NAS100)
     if (asset.activeStrategies.includes('NY_ORB') && symbol === 'NAS100') {
+      if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
+      const nowUtc = new Date();
+      const hour = nowUtc.getUTCHours();
       const mins = hour * 60 + nowUtc.getUTCMinutes();
       const start = 14 * 60 + 30; // 14:30
       const end = 15 * 60 + 30;   // 15:30
@@ -1394,27 +1547,9 @@ function processTicks(symbol) {
     if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
       setSkipReason(asset, 'Lunch pause');
     } else if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > minConfidence) {
-      const sentiment = aiState[symbol].sentiment;
-      const { positionPct } = structure;
-      if (sentiment === 'BULLISH' && asset.trend === 'UP') {
-        if (positionPct > guard.premiumLimit) {
-          setSkipReason(asset, `Premium ${(positionPct * 100).toFixed(0)}% > ${(guard.premiumLimit * 100).toFixed(0)}%`);
-        } else {
-          executeTrade(symbol, 'BUY', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
-          aiState[symbol].confidence = 0;
-          setSkipReason(asset, null);
-        }
-      } else if (sentiment === 'BEARISH' && asset.trend === 'DOWN') {
-        if (positionPct < guard.discountLimit) {
-          setSkipReason(asset, `Discount ${(positionPct * 100).toFixed(0)}% < ${(guard.discountLimit * 100).toFixed(0)}%`);
-        } else {
-          executeTrade(symbol, 'SELL', asset.currentPrice, 'AI_AGENT', 'SMART', aiState[symbol].reason, aiState[symbol].confidence);
-          aiState[symbol].confidence = 0;
-          setSkipReason(asset, null);
-        }
-      } else {
-        setSkipReason(asset, 'AI not aligned with trend');
-      }
+      // AI AGENT IS CONFIRM-ONLY (No Standalone Trades)
+      setSkipReason(asset, `AI Confidence ${aiState[symbol].confidence}% (Confirm Only)`);
+      // We do NOT executeTrade here. AI only acts as a Guardian (veto) or confirmation for other strategies.
     }
   } else {
     if (isXauRestrictedAI) setSkipReason(asset, 'XAUUSD AI time restriction');
@@ -1422,41 +1557,46 @@ function processTicks(symbol) {
   }
 
   if (asset.activeStrategies.includes('MEAN_REVERT')) {
-    const stage = guard.stage;
-    const dev = stage >= 3 ? 0.0018 : stage === 2 ? 0.0022 : stage === 1 ? 0.0028 : 0.0032;
-    const rsiLow = stage >= 3 ? 48 : stage === 2 ? 45 : stage === 1 ? 42 : 38;
-    const rsiHigh = stage >= 3 ? 52 : stage === 2 ? 55 : stage === 1 ? 58 : 62;
-    const extremeLow = stage >= 3 ? 0.40 : stage === 2 ? 0.35 : stage === 1 ? 0.30 : 0.25;
-    const extremeHigh = 1 - extremeLow;
-
-    const rel = (asset.currentPrice - asset.ema) / (asset.ema || asset.currentPrice || 1);
-    const { positionPct } = structure;
-    const localCandles = candlesM5[symbol] || [];
-    const closed = localCandles.filter(c => c.isClosed);
-    const last10 = closed.slice(-10);
-    const low = last10.length ? Math.min(...last10.map(c => c.low)) : asset.currentPrice;
-    const high = last10.length ? Math.max(...last10.map(c => c.high)) : asset.currentPrice;
-
-    const canBuy = rel <= -dev && asset.rsi <= rsiLow && positionPct <= extremeLow;
-    const canSell = rel >= dev && asset.rsi >= rsiHigh && positionPct >= extremeHigh;
-
-    const mrAdxMax = 40;
-    if (adx > mrAdxMax) {
-      setSkipReason(asset, `ADX ${adx.toFixed(1)} > ${mrAdxMax}`);
-    } else if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
-      setSkipReason(asset, 'Lunch pause');
-    } else if (canBuy) {
-      const sl = Math.min(low, asset.currentPrice) * (1 - 0.0006);
-      executeTrade(symbol, 'BUY', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Oversold dip below EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
-      setSkipReason(asset, null);
-    } else if (canSell) {
-      const sl = Math.max(high, asset.currentPrice) * (1 + 0.0006);
-      executeTrade(symbol, 'SELL', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Overbought rally above EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
-      setSkipReason(asset, null);
+    if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
+    if (asset.regime !== 'RANGE') {
+      setSkipReason(asset, `Regime ${asset.regime} != RANGE`);
     } else {
-      setSkipReason(asset, 'No setup');
+      const stage = guard.stage;
+      const dev = stage >= 3 ? 0.0018 : stage === 2 ? 0.0022 : stage === 1 ? 0.0028 : 0.0032;
+      const rsiLow = stage >= 3 ? 48 : stage === 2 ? 45 : stage === 1 ? 42 : 38;
+      const rsiHigh = stage >= 3 ? 52 : stage === 2 ? 55 : stage === 1 ? 58 : 62;
+      const extremeLow = stage >= 3 ? 0.40 : stage === 2 ? 0.35 : stage === 1 ? 0.30 : 0.25;
+      const extremeHigh = 1 - extremeLow;
+
+      const rel = (asset.currentPrice - asset.ema) / (asset.ema || asset.currentPrice || 1);
+      const { positionPct } = structure;
+      const localCandles = candlesM5[symbol] || [];
+      const closed = localCandles.filter(c => c.isClosed);
+      const last10 = closed.slice(-10);
+      const low = last10.length ? Math.min(...last10.map(c => c.low)) : asset.currentPrice;
+      const high = last10.length ? Math.max(...last10.map(c => c.high)) : asset.currentPrice;
+
+      const canBuy = rel <= -dev && asset.rsi <= rsiLow && positionPct <= extremeLow;
+      const canSell = rel >= dev && asset.rsi >= rsiHigh && positionPct >= extremeHigh;
+
+      const mrAdxMax = 40;
+      if (adx > mrAdxMax) {
+        setSkipReason(asset, `ADX ${adx.toFixed(1)} > ${mrAdxMax}`);
+      } else if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
+        setSkipReason(asset, 'Lunch pause');
+      } else if (canBuy) {
+        const sl = Math.min(low, asset.currentPrice) * (1 - 0.0006);
+        executeTrade(symbol, 'BUY', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Oversold dip below EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
+        setSkipReason(asset, null);
+      } else if (canSell) {
+        const sl = Math.max(high, asset.currentPrice) * (1 + 0.0006);
+        executeTrade(symbol, 'SELL', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Overbought rally above EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
+        setSkipReason(asset, null);
+      } else {
+        setSkipReason(asset, 'No setup');
+      }
     }
-}
+  }
 
 }
 
