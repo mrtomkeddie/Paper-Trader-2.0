@@ -151,37 +151,76 @@ let pushSubscriptions = [];
 
 const sseClients = new Set();
 
+// --- GBP & FX HELPERS ---
+const fxRates = {}; // { 'GBP_USD': { mid: 1.25, time: ... } }
+const aiState = {
+  'NAS100': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' },
+  'XAUUSD': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' }
+};
+
+function getFxRate(pair) {
+  const now = Date.now();
+  const MAX_AGE = 60000; 
+  if (pair === 'USDGBP') {
+    if (fxRates['USD_GBP']?.mid && (now - fxRates['USD_GBP'].time < MAX_AGE)) return fxRates['USD_GBP'].mid;
+    if (fxRates['GBP_USD']?.mid && (now - fxRates['GBP_USD'].time < MAX_AGE)) return 1 / fxRates['GBP_USD'].mid;
+  }
+  if (pair === 'GBPUSD') {
+    if (fxRates['GBP_USD']?.mid && (now - fxRates['GBP_USD'].time < MAX_AGE)) return fxRates['GBP_USD'].mid;
+  }
+  return null;
+}
+
+function calcPnlUSD(symbol, entryPrice, exitPrice, sizeLots, isBuy) {
+  const cfg = ASSET_CONFIG[symbol];
+  const pointSize = cfg?.pointSize || 1;
+  const vpp = cfg?.valuePerPointPerLot || 1;
+  const priceDiff = isBuy ? (exitPrice - entryPrice) : (entryPrice - exitPrice);
+  const points = priceDiff / pointSize;
+  return points * vpp * sizeLots;
+}
+
 // --- RISK & POSITION SIZING HELPERS ---
 function calculatePositionSize({ balance, riskPct, entryPrice, stopPrice, symbol }) {
   const cfg = ASSET_CONFIG[symbol];
   if (!cfg) return 0;
-  
-  const riskAmount = balance * riskPct;
-  // Default to 1 if missing to avoid division by zero
+
+  // 1. Get FX Rate (USDGBP)
+  const usdToGbp = getFxRate('USDGBP');
+  if (!usdToGbp) {
+    console.warn(`[SIZE] Blocked: Missing USDGBP FX rate`);
+    return 0;
+  }
+
+  const riskAmountGBP = balance * riskPct;
   const pointSize = cfg.pointSize || 1; 
-  const valuePerPointPerLot = cfg.valuePerPointPerLot || 1;
+  const valuePerPointPerLotUSD = cfg.valuePerPointPerLot || 1;
 
   const stopDistancePoints = Math.abs(entryPrice - stopPrice) / pointSize;
   if (stopDistancePoints <= 0) return 0;
 
-  const lossPerLot = stopDistancePoints * valuePerPointPerLot;
-  const rawSize = riskAmount / lossPerLot;
+  // Loss per lot in USD -> GBP
+  const lossPerLotUSD = stopDistancePoints * valuePerPointPerLotUSD;
+  const lossPerLotGBP = lossPerLotUSD * usdToGbp;
+
+  if (lossPerLotGBP <= 0) return 0;
+
+  const rawSize = riskAmountGBP / lossPerLotGBP;
 
   let size = Math.max(cfg.minLot, Math.min(rawSize, cfg.maxLot));
   size = Math.round(size / cfg.lotStep) * cfg.lotStep;
   
-  // Ensure we don't round down to 0 if minLot is small
   if (size < cfg.minLot) size = cfg.minLot;
 
-  console.log(`[SIZE] ${symbol} Bal:${balance.toFixed(0)} RiskPct:${riskPct} RiskAmt:${riskAmount.toFixed(2)} Dist:${stopDistancePoints.toFixed(1)}pts Size:${size}`);
+  console.log(`[SIZE] ${symbol} Bal:£${balance.toFixed(0)} Risk:${(riskPct*100).toFixed(1)}% (£${riskAmountGBP.toFixed(2)}) Dist:${stopDistancePoints.toFixed(1)}pts Loss/Lot:$${lossPerLotUSD.toFixed(2)} FX:${usdToGbp.toFixed(4)} Loss/Lot:£${lossPerLotGBP.toFixed(2)} -> Size:${size}`);
   return size;
 }
 
 function checkRiskLimits(symbol, newTradeRiskPct) {
-  // 1. Daily Loss Limit
-  const maxDailyLoss = INITIAL_BALANCE * RISK_CONFIG.MAX_DAILY_LOSS_PCT;
+  // 1. Daily Loss Limit (use current balance)
+  const maxDailyLoss = account.balance * RISK_CONFIG.MAX_DAILY_LOSS_PCT;
   if (account.dayPnL <= -maxDailyLoss) {
-    return { allowed: false, reason: `Daily Loss Limit Hit (PnL ${account.dayPnL.toFixed(2)} <= -${maxDailyLoss.toFixed(2)})` };
+    return { allowed: false, reason: `Daily Loss Limit Hit (PnL £${account.dayPnL.toFixed(2)} <= -£${maxDailyLoss.toFixed(2)})` };
   }
 
   // 2. Consecutive Losses
@@ -195,16 +234,29 @@ function checkRiskLimits(symbol, newTradeRiskPct) {
     return { allowed: false, reason: `Max Consecutive Losses (${consecutiveLosses}) Hit` };
   }
 
-  // 3. Total Open Risk
+  // 3. Total Open Risk (GBP)
   let currentOpenRiskPct = 0;
+  const usdToGbp = getFxRate('USDGBP'); // If null, we might skip or block? Let's block to be safe.
+  
+  if (!usdToGbp && trades.some(t => t.status === 'OPEN')) {
+     return { allowed: false, reason: `Risk Check Failed: Missing FX Rate` };
+  }
+  
+  // Use fallback if no trades open? No, if no trades open risk is 0.
+  // If trades open, we need FX.
+  const fx = usdToGbp || 0.8; // Fallback only for existing risk check if desperate, but better to be strict? 
+  // User said "block opening trades". So if no FX, we return false.
+  if (!usdToGbp) return { allowed: false, reason: 'Missing FX Rate for Risk Calc' };
+
   for (const t of trades) {
     if (t.status === 'OPEN') {
-      const cfg = ASSET_CONFIG[t.symbol];
-      const pointSize = cfg?.pointSize || 1;
-      const valuePerPointPerLot = cfg?.valuePerPointPerLot || 1;
-      const dist = Math.abs(t.entryPrice - t.stopLoss) / pointSize;
-      const riskAmt = dist * valuePerPointPerLot * t.currentSize;
-      currentOpenRiskPct += (riskAmt / account.balance);
+      const pnlUSD = calcPnlUSD(t.symbol, t.entryPrice, t.stopLoss, t.currentSize, t.type === 'BUY'); 
+      // Wait, calcPnlUSD returns PnL (profit/loss). For risk, we want the LOSS amount if SL is hit.
+      // If we are LONG, SL is below entry. calcPnlUSD(entry, SL) -> (SL - entry) is negative.
+      // We want absolute risk amount.
+      const potentialLossUSD = Math.abs(pnlUSD); 
+      const potentialLossGBP = potentialLossUSD * fx;
+      currentOpenRiskPct += (potentialLossGBP / account.balance);
     }
   }
   
@@ -454,10 +506,7 @@ function logSystemPulse() {
 setInterval(() => { try { logSystemPulse(); } catch { } }, 15 * 60 * 1000);
 
 // AI CACHE (To prevent spamming API)
-let aiState = {
-  'NAS100': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' },
-  'XAUUSD': { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0, reason: '' }
-};
+// aiState is defined globally at the top
 
 // INITIALIZE ASSETS
 let assets = {
@@ -801,7 +850,8 @@ let feedWatchdogLastReconnectMs = 0;
 
 function connectOanda() {
   const host = OANDA_ENV === 'live' ? 'stream-fxtrade.oanda.com' : 'stream-fxpractice.oanda.com';
-  const instruments = ['NAS100_USD', 'XAU_USD'].join(',');
+  // Subscribe to GBP_USD for FX rates
+  const instruments = ['NAS100_USD', 'XAU_USD', 'GBP_USD'].join(',');
   const options = {
     hostname: host,
     path: `/v3/accounts/${OANDA_ACCOUNT_ID}/pricing/stream?instruments=${encodeURIComponent(instruments)}`,
@@ -828,6 +878,12 @@ function connectOanda() {
             const bid = parseFloat(evt.bids?.[0]?.price || evt.closeoutBid || '0');
             const ask = parseFloat(evt.asks?.[0]?.price || evt.closeoutAsk || '0');
             const mid = ask && bid ? (ask + bid) / 2 : (parseFloat(evt.price || '0'));
+
+            // Handle FX Rates
+            if (inst === 'GBP_USD') {
+              fxRates['GBP_USD'] = { mid, time: Date.now() };
+              continue;
+            }
 
             let symbol = null;
             if (inst === 'NAS100_USD') symbol = 'NAS100';
@@ -1200,6 +1256,15 @@ function processTicks(symbol) {
   const { bid, ask, mid } = market[symbol];
   const price = mid;
 
+  // --- FX RATE FOR PNL ---
+  let usdToGbp = getFxRate('USDGBP');
+  if (!usdToGbp) {
+     // Try stale
+     if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
+     else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
+     else usdToGbp = 0.8; // Ultimate fallback
+  }
+
   // --- NEW PRICE ACTION CALCS ---
   const structure = analyzeMarketStructure(candlesM5[symbol], 48); // 4H Lookback
   const pdLevels = getPreviousDayLevels(candlesM15[symbol]);
@@ -1227,12 +1292,15 @@ function processTicks(symbol) {
       trade.status = 'CLOSED'; trade.closeReason = 'HARD_CLOSE'; trade.outcomeReason = "NY ORB Hard Close at 21:00 UTC";
       trade.closeTime = Date.now(); trade.closePrice = price;
       const exit = isBuy ? bid : ask;
-      const pnl = (isBuy ? exit - trade.entryPrice : trade.entryPrice - exit) * trade.currentSize;
-      trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+      
+      const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, exit, trade.currentSize, isBuy);
+      const pnlGBP = pnlUSD * usdToGbp;
+      
+      trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
       trade.floatingPnl = 0;
       closedAnyTrade = true;
-      sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
-      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL ${pnl.toFixed(2)}`);
+      sendSms(`CLOSE ${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL £${pnlGBP.toFixed(2)}`);
+      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${exit.toFixed(2)} (HARD_CLOSE) PnL £${pnlGBP.toFixed(2)}`);
       continue;
     }
 
@@ -1250,12 +1318,15 @@ function processTicks(symbol) {
             trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BEARISH with high confidence.";
             trade.closeTime = Date.now(); trade.closePrice = price;
             console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
-            const pnl = (price - trade.entryPrice) * trade.currentSize;
-            trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+            
+            const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, price, trade.currentSize, isBuy);
+            const pnlGBP = pnlUSD * usdToGbp;
+
+            trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
             trade.floatingPnl = 0;
             closedAnyTrade = true;
-            sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
-            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+            sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
+            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
             continue; // Next trade
         }
         // If Short and Sentiment is Bullish -> Close
@@ -1263,12 +1334,15 @@ function processTicks(symbol) {
             trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BULLISH with high confidence.";
             trade.closeTime = Date.now(); trade.closePrice = price;
             console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
-            const pnl = (trade.entryPrice - price) * trade.currentSize;
-            trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+            
+            const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, price, trade.currentSize, isBuy);
+            const pnlGBP = pnlUSD * usdToGbp;
+
+            trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
             trade.floatingPnl = 0;
             closedAnyTrade = true;
-            sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
-            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL ${pnl.toFixed(2)}`);
+            sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
+            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
             continue;
         }
       }
@@ -1283,12 +1357,15 @@ function processTicks(symbol) {
             const hit = isBuy ? currentPrice >= level.price : currentPrice <= level.price;
             if (hit) {
                 const closeAmt = trade.initialSize * level.percentage;
-                const pnl = (isBuy ? currentPrice - trade.entryPrice : trade.entryPrice - currentPrice) * closeAmt;
+                
+                const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPrice, closeAmt, isBuy);
+                const pnlGBP = pnlUSD * usdToGbp;
+
                 trade.currentSize -= closeAmt;
-                trade.pnl += pnl;
+                trade.pnl += pnlGBP;
                 level.hit = true;
-                account.balance += pnl;
-                closedPnL += pnl;
+                account.balance += pnlGBP;
+                closedPnL += pnlGBP;
                 trade.outcomeReason = `Take Profit: Level ${level.id} hit. Locked in profit.`;
                 
                 // MANAGEMENT RULES
@@ -1328,12 +1405,15 @@ function processTicks(symbol) {
     if (isBuy ? currentPrice <= trade.stopLoss : currentPrice >= trade.stopLoss) {
         trade.status = 'CLOSED'; trade.closeReason = 'STOP_LOSS'; trade.outcomeReason = "Stop Loss: Price hit SL.";
         trade.closeTime = Date.now(); trade.closePrice = price;
-        const pnl = (isBuy ? currentPrice - trade.entryPrice : trade.entryPrice - currentPrice) * trade.currentSize;
-        trade.pnl += pnl; account.balance += pnl; closedPnL += pnl;
+        
+        const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPrice, trade.currentSize, isBuy);
+        const pnlGBP = pnlUSD * usdToGbp;
+
+        trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
         trade.floatingPnl = 0;
         closedAnyTrade = true;
-        sendSms(`CLOSE ${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
-        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL ${pnl.toFixed(2)}`);
+        sendSms(`CLOSE ${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
+        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
     }
   }
 
@@ -1341,10 +1421,19 @@ function processTicks(symbol) {
     if (t.status !== 'OPEN') continue;
     const isBuy = t.type === 'BUY';
     const exit = isBuy ? bid : ask;
-    t.floatingPnl = (isBuy ? exit - t.entryPrice : t.entryPrice - exit) * t.currentSize;
+    
+    const pnlUSD = calcPnlUSD(symbol, t.entryPrice, exit, t.currentSize, isBuy);
+    t.floatingPnl = pnlUSD * usdToGbp;
   }
-  account.dayPnL += closedPnL;
-  account.totalPnL += closedPnL;
+  
+  // Recalculate Day PnL cleanly
+  const startOfDay = getStartOfDayUtcMs();
+  account.dayPnL = trades.reduce((acc, t) => {
+      if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
+      return acc;
+  }, 0);
+  
+  account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
   account.equity = account.balance;
   if (closedAnyTrade || closedPnL !== 0) saveState();
 
@@ -2007,6 +2096,15 @@ app.post('/admin/close', (req, res) => {
     const sp = (req.body?.symbol || req.query?.symbol || 'XAUUSD').toString();
     let closedPnL = 0; let closed = 0;
     const targets = sp === 'ALL' ? Array.from(new Set(trades.filter(t => t.status === 'OPEN').map(t => t.symbol))) : [sp];
+    
+    // Get FX
+    let usdToGbp = getFxRate('USDGBP');
+    if (!usdToGbp) {
+       if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
+       else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
+       else usdToGbp = 0.8; 
+    }
+
     for (const symbol of targets) {
       const mkt = market[symbol] || {};
       const bid = mkt.bid; const ask = mkt.ask;
@@ -2018,14 +2116,27 @@ app.post('/admin/close', (req, res) => {
         t.closeReason = 'MANUAL';
         t.closeTime = Date.now();
         t.closePrice = exit;
-        const pnl = (isBuy ? exit - t.entryPrice : t.entryPrice - exit) * t.currentSize;
-        t.pnl += pnl; account.balance += pnl; closedPnL += pnl; closed++;
+        
+        const pnlUSD = calcPnlUSD(symbol, t.entryPrice, exit, t.currentSize, isBuy);
+        const pnlGBP = pnlUSD * usdToGbp;
+        
+        t.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP; closed++;
         t.floatingPnl = 0;
-        try { notifyAll('Trade Closed', `${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL ${pnl.toFixed(2)}`); } catch { }
-        try { sendSms(`CLOSE ${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL ${pnl.toFixed(2)}`); } catch { }
+        try { notifyAll('Trade Closed', `${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL £${pnlGBP.toFixed(2)}`); } catch { }
+        try { sendSms(`CLOSE ${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL £${pnlGBP.toFixed(2)}`); } catch { }
       }
     }
-    if (closedPnL !== 0) { account.dayPnL += closedPnL; account.totalPnL += closedPnL; account.equity = account.balance; }
+    
+    // Clean Recalc
+    if (closed > 0) {
+      const startOfDay = getStartOfDayUtcMs();
+      account.dayPnL = trades.reduce((acc, t) => {
+          if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
+          return acc;
+      }, 0);
+      account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
+      account.equity = account.balance;
+    }
     saveState();
     res.json({ closed, closedPnL });
   } catch (e) {
@@ -2042,6 +2153,98 @@ app.post('/restart', (req, res) => {
     res.status(500).json({ success: false, error: e?.message || 'error' });
   }
 });
+
+// --- SELF TEST ---
+if (process.argv.includes('--selftest')) {
+  console.log('\n--- GBP SELF-TEST ---');
+  // Mock FX
+  fxRates['GBP_USD'] = { mid: 1.25, time: Date.now() };
+  fxRates['USD_GBP'] = { mid: 0.80, time: Date.now() };
+  
+  // Mock Account
+  account.balance = 1000; // £1000
+  
+  const testCases = [
+    { symbol: 'NAS100', entry: 17000, stop: 16950, riskPct: 0.01 }, // 50 pts
+    { symbol: 'XAUUSD', entry: 2000.00, stop: 1998.00, riskPct: 0.01 } // 200 pts ($2.00)
+  ];
+  
+  for (const tc of testCases) {
+     console.log(`\nTesting ${tc.symbol}...`);
+     const size = calculatePositionSize({
+       balance: account.balance,
+       riskPct: tc.riskPct,
+       entryPrice: tc.entry,
+       stopPrice: tc.stop,
+       symbol: tc.symbol
+     });
+     
+     // Verify PnL math
+     const pnlUSD = calcPnlUSD(tc.symbol, tc.entry, tc.stop, size, true); // Long hit SL
+     const pnlGBP = pnlUSD * 0.80;
+     console.log(`[VERIFY] Size:${size} LossUSD:$${Math.abs(pnlUSD).toFixed(2)} LossGBP:£${Math.abs(pnlGBP).toFixed(2)} TargetRisk:£${(account.balance*tc.riskPct).toFixed(2)}`);
+  }
+  process.exit(0);
+}
+
+// --- CHECKLIST VERIFICATION HELPERS ---
+if (process.argv.includes('--test-risk')) {
+  console.log('\n--- RISK LOGIC VERIFICATION ---');
+  // Reset state
+  trades = [];
+  account.balance = 1000;
+  fxRates['USDGBP'] = { mid: 0.8, time: Date.now() }; // Mock FX
+  fxRates['USD_GBP'] = { mid: 0.8, time: Date.now() };
+
+  console.log('[TEST] Adding 3 consecutive losses for NAS100...');
+  const now = Date.now();
+  trades.push({ symbol: 'NAS100', status: 'CLOSED', pnl: -50, closeTime: now - 10000 });
+  trades.push({ symbol: 'NAS100', status: 'CLOSED', pnl: -20, closeTime: now - 5000 });
+  trades.push({ symbol: 'NAS100', status: 'CLOSED', pnl: -10, closeTime: now - 1000 });
+
+  console.log('[TEST] Attempting to open new NAS100 trade...');
+  const check = checkRiskLimits('NAS100', 0.01);
+  if (!check.allowed && check.reason.includes('Consecutive Losses')) {
+    console.log(`[PASS] Blocked correctly: ${check.reason}`);
+  } else {
+    console.error(`[FAIL] Should have blocked. Result: ${JSON.stringify(check)}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
+
+if (process.argv.includes('--test-micro')) {
+  console.log('\n--- MICRO POSITION MATH VERIFICATION ---');
+  // Mock FX
+  fxRates['USDGBP'] = { mid: 0.8, time: Date.now() };
+  fxRates['USD_GBP'] = { mid: 0.8, time: Date.now() };
+  
+  // Test Case: XAUUSD 0.01 Lot
+  // 1 pip move ($0.01 price change) -> $0.01 USD -> £0.008 GBP
+  // 100 pip move ($1.00 price change) -> $1.00 USD -> £0.80 GBP
+  const symbol = 'XAUUSD';
+  const entry = 2000.00;
+  const exit = 2001.00; // +$1.00 move
+  const size = 0.01;
+  
+  const pnlUSD = calcPnlUSD(symbol, entry, exit, size, true);
+  const pnlGBP = pnlUSD * 0.80;
+  
+  console.log(`Symbol: ${symbol}`);
+  console.log(`Size: ${size} lots`);
+  console.log(`Move: $${entry.toFixed(2)} -> $${exit.toFixed(2)} (+$1.00)`);
+  console.log(`Expected USD PnL: $1.00`);
+  console.log(`Calculated USD PnL: $${pnlUSD.toFixed(2)}`);
+  console.log(`Calculated GBP PnL: £${pnlGBP.toFixed(2)} (Assumed rate 0.80)`);
+  
+  if (Math.abs(pnlUSD - 1.00) < 0.001) {
+    console.log('[PASS] Micro position math is correct.');
+  } else {
+    console.error(`[FAIL] Math incorrect. Expected $1.00, got $${pnlUSD.toFixed(2)}`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 // Start Server
 app.listen(PORT, '0.0.0.0', () => console.log(`Scheduler running on port ${PORT}`));
@@ -2061,6 +2264,16 @@ setInterval(() => {
     if (isFriday && isTime) {
       console.log('[SYSTEM] Weekend Close - Closing all positions');
       let closedPnL = 0;
+      let closed = 0;
+      
+      // Get FX
+      let usdToGbp = getFxRate('USDGBP');
+      if (!usdToGbp) {
+         if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
+         else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
+         else usdToGbp = 0.8; 
+      }
+      
       for (const symbol of ['NAS100', 'XAUUSD']) {
         const mkt = market[symbol];
         if (!mkt) continue;
@@ -2073,17 +2286,27 @@ setInterval(() => {
           t.closeReason = 'MANUAL';
           t.closeTime = Date.now();
           t.closePrice = exit;
-          const pnl = (isBuy ? exit - t.entryPrice : t.entryPrice - exit) * t.currentSize;
-          t.pnl += pnl;
-          account.balance += pnl;
-          closedPnL += pnl;
+          
+          const pnlUSD = calcPnlUSD(symbol, t.entryPrice, exit, t.currentSize, isBuy);
+          const pnlGBP = pnlUSD * usdToGbp;
+          
+          t.pnl += pnlGBP;
+          account.balance += pnlGBP;
+          closedPnL += pnlGBP;
+          closed++;
           t.floatingPnl = 0;
-          notifyAll('Trade Closed', `${symbol} ${t.type} @ ${exit.toFixed(2)} (WEEKEND_CLOSE) PnL ${pnl.toFixed(2)}`);
+          notifyAll('Trade Closed', `${symbol} ${t.type} @ ${exit.toFixed(2)} (WEEKEND_CLOSE) PnL £${pnlGBP.toFixed(2)}`);
         }
       }
-      if (closedPnL !== 0) {
-        account.dayPnL += closedPnL;
-        account.totalPnL += closedPnL;
+      
+      // Clean Recalc
+      if (closed > 0) {
+        const startOfDay = getStartOfDayUtcMs();
+        account.dayPnL = trades.reduce((acc, t) => {
+            if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
+            return acc;
+        }, 0);
+        account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
         account.equity = account.balance;
       }
       saveState();
