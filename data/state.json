@@ -1,9 +1,9 @@
 {
   "account": {
-    "balance": 441.1253999999983,
-    "equity": 441.1253999999983,
-    "dayPnL": 0,
-    "totalPnL": -58.874600000001706,
+    "balance": 436.1442091840687,
+    "equity": 436.1442091840687,
+    "dayPnL": -4.981190815929621,
+    "totalPnL": -63.85579081593133,
     "winRate": 37.735849056603776
   },
   "trades": [
@@ -40,7 +40,8 @@
       "strategy": "AI_AGENT",
       "pnl": 0,
       "entryReason": "AI Agent: The big trend on the 15-minute chart is clearly going up. The price has dipped a little bit, which is a great time to look for opportunities to buy and go with the main upward flow.",
-      "confidence": 88
+      "confidence": 88,
+      "floatingPnl": -1.5714471026444046
     },
     {
       "id": "0bff4229-c0dd-48a0-a736-ce26f215ae48",
@@ -71,12 +72,16 @@
         }
       ],
       "openTime": 1767627129971,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "AI_AGENT",
-      "pnl": 0,
+      "pnl": -4.981190815929621,
       "entryReason": "AI Agent: The market's main direction is clearly going up. Even if it's taking a little break right now, we prefer to buy when it pulls back because the overall path is still upwards.",
       "confidence": 85,
-      "floatingPnl": -0.9337552523734564
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price hit SL.",
+      "closeTime": 1767627498529,
+      "closePrice": 4439.085
     },
     {
       "id": "bdf04769-4647-4431-97a2-0c85f7fc9390",
