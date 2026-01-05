@@ -726,6 +726,8 @@ async function consultGemini(symbol, asset) {
     return null;
   }
 
+  if (assets[symbol].isThinking) return null;
+
   if (!aiClient) {
     aiState[symbol].lastCheck = now;
     return null;
@@ -1089,6 +1091,11 @@ function updateCandles(symbol, price) {
 
     currentCandles.push({ open: price, high: price, low: price, close: price, time: now, isClosed: false });
     if (currentCandles.length > 200) currentCandles.shift();
+  }
+  
+  // [OPTIMIZATION] If AI has never been checked, check it now (don't wait for candle close)
+  if (aiState[symbol] && aiState[symbol].lastCheck === 0) {
+      consultGemini(symbol, assets[symbol]);
   }
 }
 
@@ -1635,7 +1642,7 @@ function processTicks(symbol) {
   if (adx >= aiAdxMin && !isXauRestrictedAI) {
     if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
       setSkipReason(asset, 'Lunch pause');
-    } else if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence > minConfidence) {
+    } else if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence >= minConfidence) {
       // AI AGENT EXECUTION
       const sentiment = aiState[symbol].sentiment;
       const reason = aiState[symbol].reason;

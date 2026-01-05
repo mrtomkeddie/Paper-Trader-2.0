@@ -8,6 +8,77 @@
   },
   "trades": [
     {
+      "id": "04fd5a82-963f-4763-a07c-428e64ea2a75",
+      "symbol": "NAS100",
+      "type": "BUY",
+      "entryPrice": 25524.7,
+      "initialSize": 0.08,
+      "currentSize": 0.08,
+      "stopLoss": 25486.41295,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 25677.8482,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 25779.947,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 26290.441000000003,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1767627132449,
+      "status": "OPEN",
+      "strategy": "AI_AGENT",
+      "pnl": 0,
+      "entryReason": "AI Agent: The big trend on the 15-minute chart is clearly going up. The price has dipped a little bit, which is a great time to look for opportunities to buy and go with the main upward flow.",
+      "confidence": 88
+    },
+    {
+      "id": "0bff4229-c0dd-48a0-a736-ce26f215ae48",
+      "symbol": "XAUUSD",
+      "type": "BUY",
+      "entryPrice": 4445.42,
+      "initialSize": 0.01,
+      "currentSize": 0.01,
+      "stopLoss": 4438.75187,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 4472.09252,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 4489.8742,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 4578.7826000000005,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1767627129971,
+      "status": "OPEN",
+      "strategy": "AI_AGENT",
+      "pnl": 0,
+      "entryReason": "AI Agent: The market's main direction is clearly going up. Even if it's taking a little break right now, we prefer to buy when it pulls back because the overall path is still upwards.",
+      "confidence": 85,
+      "floatingPnl": -0.9337552523734564
+    },
+    {
       "id": "bdf04769-4647-4431-97a2-0c85f7fc9390",
       "symbol": "NAS100",
       "type": "SELL",
