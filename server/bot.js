@@ -1311,6 +1311,32 @@ function processTicks(symbol) {
       continue;
     }
 
+    const nowMs = Date.now();
+    const ageMs = nowMs - Number(trade.openTime || nowMs);
+    const maxHoldMs = trade.strategy === 'AI_AGENT' ? (24 * 60 * 60 * 1000) : (48 * 60 * 60 * 1000);
+    if (ageMs > maxHoldMs) {
+      const exit = isBuy
+        ? (bid != null ? bid : (price != null ? price : trade.entryPrice))
+        : (ask != null ? ask : (price != null ? price : trade.entryPrice));
+      trade.status = 'CLOSED';
+      trade.closeReason = 'TIME_EXIT';
+      trade.outcomeReason = 'Max hold time reached.';
+      trade.closeTime = nowMs;
+      trade.closePrice = exit;
+
+      const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, exit, trade.currentSize, isBuy);
+      const pnlGBP = pnlUSD * usdToGbp;
+
+      trade.pnl += pnlGBP;
+      account.balance += pnlGBP;
+      closedPnL += pnlGBP;
+      trade.floatingPnl = 0;
+      closedAnyTrade = true;
+      sendSms(`CLOSE ${symbol} ${trade.type} @ ${Number(exit).toFixed(2)} (TIME_EXIT) PnL £${pnlGBP.toFixed(2)}`);
+      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${Number(exit).toFixed(2)} (TIME_EXIT) PnL £${pnlGBP.toFixed(2)}`);
+      continue;
+    }
+
     // A. AI GUARDIAN (Panic Close)
     if (asset.activeStrategies.includes('AI_AGENT')) {
       if (!aiState[symbol]) {

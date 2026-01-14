@@ -1,12 +1,47 @@
 {
   "account": {
-    "balance": 436.1442091840687,
-    "equity": 436.1442091840687,
-    "dayPnL": 0,
-    "totalPnL": -63.85579081593133,
+    "balance": 474.88025347081776,
+    "equity": 474.88025347081776,
+    "dayPnL": 38.73604428674908,
+    "totalPnL": -25.119746529182258,
     "winRate": 37.03703703703704
   },
   "trades": [
+    {
+      "id": "c82d6b64-1f19-40c4-9f6a-e6e9c04a14f7",
+      "symbol": "XAUUSD",
+      "type": "BUY",
+      "entryPrice": 4635.41,
+      "initialSize": 0.01,
+      "currentSize": 0.01,
+      "stopLoss": 4628.4568850000005,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 4663.22246,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 4681.7641,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 4774.4723,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1768386592511,
+      "status": "OPEN",
+      "strategy": "AI_AGENT",
+      "pnl": 0,
+      "entryReason": "AI Agent: The main trend on the 15-minute chart is going up, so we prefer to look for chances to buy. Price is currently just hanging out in the middle (RSI at 50), not moving strongly up or down, which means it's pausing within the bigger uptrend. We'll wait for a good moment to jump in and buy.",
+      "confidence": 65
+    },
     {
       "id": "c865bac0-4336-4c34-82fb-f17f2f444eef",
       "symbol": "XAUUSD",
@@ -36,11 +71,16 @@
         }
       ],
       "openTime": 1768216472738,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "AI_AGENT",
-      "pnl": 0,
+      "pnl": 32.345674425516705,
       "entryReason": "AI Agent: The main trend on the bigger chart (M15) is clearly going up, which means we prefer to buy. Even though the price is resting right now, the overall direction is still strongly up, making it a good time to look for buying opportunities.",
-      "confidence": 85
+      "confidence": 85,
+      "closeReason": "TIME_EXIT",
+      "outcomeReason": "Max hold time reached.",
+      "closeTime": 1768386581723,
+      "closePrice": 4634.99,
+      "floatingPnl": 0
     },
     {
       "id": "04fd5a82-963f-4763-a07c-428e64ea2a75",
@@ -71,12 +111,16 @@
         }
       ],
       "openTime": 1767627132449,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "AI_AGENT",
-      "pnl": 0,
+      "pnl": 6.390369861232375,
       "entryReason": "AI Agent: The big trend on the 15-minute chart is clearly going up. The price has dipped a little bit, which is a great time to look for opportunities to buy and go with the main upward flow.",
       "confidence": 88,
-      "floatingPnl": 3.402448664516589
+      "floatingPnl": 0,
+      "closeReason": "TIME_EXIT",
+      "outcomeReason": "Max hold time reached.",
+      "closeTime": 1768386581737,
+      "closePrice": 25632.2
     },
     {
       "id": "0bff4229-c0dd-48a0-a736-ce26f215ae48",
