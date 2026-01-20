@@ -116,15 +116,15 @@ if (API_KEY) {
 
 // --- TYPES & CONFIG ---
 const ASSET_CONFIG = {
-  'NAS100': { 
-    startPrice: 18500, volatility: 0.0015, decimals: 1, 
+  'NAS100': {
+    startPrice: 18500, volatility: 0.0015, decimals: 1,
     lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01,
-    pointSize: 1, valuePerPointPerLot: 1 
+    pointSize: 1, valuePerPointPerLot: 1
   },
-  'XAUUSD': { 
-    startPrice: 2600, volatility: 0.002, decimals: 2, 
+  'XAUUSD': {
+    startPrice: 2600, volatility: 0.002, decimals: 2,
     lotSize: 1, valuePerPoint: 1, minLot: 0.01, maxLot: 100, lotStep: 0.01,
-    pointSize: 0.01, valuePerPointPerLot: 1 
+    pointSize: 0.01, valuePerPointPerLot: 1
   }
 };
 
@@ -160,7 +160,8 @@ const aiState = {
 
 function getFxRate(pair) {
   const now = Date.now();
-  const MAX_AGE = 60000; 
+  // Relaxed from 60s to 1h to prevent "soft-locks" during brief data gaps
+  const MAX_AGE = 60 * 60 * 1000;
   if (pair === 'USDGBP') {
     if (fxRates['USD_GBP']?.mid && (now - fxRates['USD_GBP'].time < MAX_AGE)) return fxRates['USD_GBP'].mid;
     if (fxRates['GBP_USD']?.mid && (now - fxRates['GBP_USD'].time < MAX_AGE)) return 1 / fxRates['GBP_USD'].mid;
@@ -193,7 +194,7 @@ function calculatePositionSize({ balance, riskPct, entryPrice, stopPrice, symbol
   }
 
   const riskAmountGBP = balance * riskPct;
-  const pointSize = cfg.pointSize || 1; 
+  const pointSize = cfg.pointSize || 1;
   const valuePerPointPerLotUSD = cfg.valuePerPointPerLot || 1;
 
   const stopDistancePoints = Math.abs(entryPrice - stopPrice) / pointSize;
@@ -209,10 +210,10 @@ function calculatePositionSize({ balance, riskPct, entryPrice, stopPrice, symbol
 
   let size = Math.max(cfg.minLot, Math.min(rawSize, cfg.maxLot));
   size = Math.round(size / cfg.lotStep) * cfg.lotStep;
-  
+
   if (size < cfg.minLot) size = cfg.minLot;
 
-  console.log(`[SIZE] ${symbol} Bal:£${balance.toFixed(0)} Risk:${(riskPct*100).toFixed(1)}% (£${riskAmountGBP.toFixed(2)}) Dist:${stopDistancePoints.toFixed(1)}pts Loss/Lot:$${lossPerLotUSD.toFixed(2)} FX:${usdToGbp.toFixed(4)} Loss/Lot:£${lossPerLotGBP.toFixed(2)} -> Size:${size}`);
+  console.log(`[SIZE] ${symbol} Bal:£${balance.toFixed(0)} Risk:${(riskPct * 100).toFixed(1)}% (£${riskAmountGBP.toFixed(2)}) Dist:${stopDistancePoints.toFixed(1)}pts Loss/Lot:$${lossPerLotUSD.toFixed(2)} FX:${usdToGbp.toFixed(4)} Loss/Lot:£${lossPerLotGBP.toFixed(2)} -> Size:${size}`);
   return size;
 }
 
@@ -237,11 +238,11 @@ function checkRiskLimits(symbol, newTradeRiskPct) {
   // 3. Total Open Risk (GBP)
   let currentOpenRiskPct = 0;
   const usdToGbp = getFxRate('USDGBP'); // If null, we might skip or block? Let's block to be safe.
-  
+
   if (!usdToGbp && trades.some(t => t.status === 'OPEN')) {
-     return { allowed: false, reason: `Risk Check Failed: Missing FX Rate` };
+    return { allowed: false, reason: `Risk Check Failed: Missing FX Rate` };
   }
-  
+
   // Use fallback if no trades open? No, if no trades open risk is 0.
   // If trades open, we need FX.
   const fx = usdToGbp || 0.8; // Fallback only for existing risk check if desperate, but better to be strict? 
@@ -250,18 +251,18 @@ function checkRiskLimits(symbol, newTradeRiskPct) {
 
   for (const t of trades) {
     if (t.status === 'OPEN') {
-      const pnlUSD = calcPnlUSD(t.symbol, t.entryPrice, t.stopLoss, t.currentSize, t.type === 'BUY'); 
+      const pnlUSD = calcPnlUSD(t.symbol, t.entryPrice, t.stopLoss, t.currentSize, t.type === 'BUY');
       // Wait, calcPnlUSD returns PnL (profit/loss). For risk, we want the LOSS amount if SL is hit.
       // If we are LONG, SL is below entry. calcPnlUSD(entry, SL) -> (SL - entry) is negative.
       // We want absolute risk amount.
-      const potentialLossUSD = Math.abs(pnlUSD); 
+      const potentialLossUSD = Math.abs(pnlUSD);
       const potentialLossGBP = potentialLossUSD * fx;
       currentOpenRiskPct += (potentialLossGBP / account.balance);
     }
   }
-  
+
   if (currentOpenRiskPct + newTradeRiskPct > RISK_CONFIG.MAX_TOTAL_OPEN_RISK_PCT) {
-    return { allowed: false, reason: `Max Open Risk Exceeded (${(currentOpenRiskPct*100).toFixed(2)}% + ${(newTradeRiskPct*100).toFixed(2)}% > ${(RISK_CONFIG.MAX_TOTAL_OPEN_RISK_PCT*100).toFixed(2)}%)` };
+    return { allowed: false, reason: `Max Open Risk Exceeded (${(currentOpenRiskPct * 100).toFixed(2)}% + ${(newTradeRiskPct * 100).toFixed(2)}% > ${(RISK_CONFIG.MAX_TOTAL_OPEN_RISK_PCT * 100).toFixed(2)}%)` };
   }
 
   return { allowed: true };
@@ -271,19 +272,19 @@ function determineRegime(symbol, adx, slope, bbWidth) {
   // Thresholds
   const TREND_ADX = 25;
   const RANGE_ADX = 20;
-  const SLOPE_MIN = 0.05; 
-  const SLOPE_MAX = 0.02; 
-  const BB_WIDTH_MAX = 0.003; 
-  
+  const SLOPE_MIN = 0.05;
+  const SLOPE_MAX = 0.02;
+  const BB_WIDTH_MAX = 0.003;
+
   const absSlope = Math.abs(slope);
 
   if (adx >= TREND_ADX && absSlope >= SLOPE_MIN) {
     return 'TREND';
   } else if (adx <= RANGE_ADX && absSlope <= SLOPE_MAX && bbWidth <= BB_WIDTH_MAX) {
-    return 'RANGE'; 
+    return 'RANGE';
   }
-  
-  return 'NO_TRADE'; 
+
+  return 'NO_TRADE';
 }
 
 // --- PERSISTENCE ---
@@ -296,7 +297,7 @@ function recalculateAccountState() {
   let wins = 0;
   let closedCount = 0;
   // Use UTC Midnight for Daily PnL Reset
-  const startOfDay = getStartOfDayUtcMs(); 
+  const startOfDay = getStartOfDayUtcMs();
   for (const t of trades) {
     if (t.status === 'CLOSED') {
       realized += (t.pnl || 0);
@@ -834,7 +835,9 @@ function connectBinance() {
         updateCandlesM15(symbol, asset.currentPrice);
         processTicks(symbol);
       }
-    } catch { }
+    } catch (err) {
+      console.warn('[FEED] Binance message parsing error:', err.message);
+    }
   });
   ws.on('close', () => { setTimeout(connectLiveFeed, 5000); });
   ws.on('error', () => { try { ws.close(); } catch { } });
@@ -914,7 +917,9 @@ function connectOanda() {
             updateCandlesM15(symbol, asset.currentPrice);
             processTicks(symbol);
           }
-        } catch { }
+        } catch (err) {
+          console.warn('[FEED] OANDA line parsing error:', err.message);
+        }
       }
     });
     res.on('end', () => { setTimeout(connectLiveFeed, 5000); });
@@ -1092,10 +1097,10 @@ function updateCandles(symbol, price) {
     currentCandles.push({ open: price, high: price, low: price, close: price, time: now, isClosed: false });
     if (currentCandles.length > 200) currentCandles.shift();
   }
-  
+
   // [OPTIMIZATION] If AI has never been checked, check it now (don't wait for candle close)
   if (aiState[symbol] && aiState[symbol].lastCheck === 0) {
-      consultGemini(symbol, assets[symbol]);
+    consultGemini(symbol, assets[symbol]);
   }
 }
 
@@ -1137,14 +1142,14 @@ function executeTrade(symbol, type, price, strategy, riskProfile, customReason =
   let effectiveRiskPct = RISK_PER_TRADE;
   const asset = assets[symbol];
   if (asset && asset.guardStage === 3) {
-      effectiveRiskPct = 0.005; // 0.5% (Stage 3 Safe Mode)
+    effectiveRiskPct = 0.005; // 0.5% (Stage 3 Safe Mode)
   }
 
   // 2. Hard Risk Limits Check
   const limitCheck = checkRiskLimits(symbol, effectiveRiskPct);
   if (!limitCheck.allowed) {
-      console.log(`[RISK BLOCKED] ${symbol} ${type}: ${limitCheck.reason}`);
-      return null;
+    console.log(`[RISK BLOCKED] ${symbol} ${type}: ${limitCheck.reason}`);
+    return null;
   }
 
   const { bid, ask } = market[symbol];
@@ -1158,16 +1163,16 @@ function executeTrade(symbol, type, price, strategy, riskProfile, customReason =
 
   // 3. Position Sizing
   let lotSize = calculatePositionSize({
-      balance: account.balance,
-      riskPct: effectiveRiskPct,
-      entryPrice: fillPrice,
-      stopPrice: sl,
-      symbol
+    balance: account.balance,
+    riskPct: effectiveRiskPct,
+    entryPrice: fillPrice,
+    stopPrice: sl,
+    symbol
   });
 
   if (lotSize <= 0) {
-       console.log(`[RISK BLOCKED] ${symbol} Calculated Lot Size is 0`);
-       return null;
+    console.log(`[RISK BLOCKED] ${symbol} Calculated Lot Size is 0`);
+    return null;
   }
 
   const trade = {
@@ -1266,10 +1271,10 @@ function processTicks(symbol) {
   // --- FX RATE FOR PNL ---
   let usdToGbp = getFxRate('USDGBP');
   if (!usdToGbp) {
-     // Try stale
-     if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
-     else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
-     else usdToGbp = 0.8; // Ultimate fallback
+    // Try stale
+    if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
+    else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
+    else usdToGbp = 0.8; // Ultimate fallback
   }
 
   // --- NEW PRICE ACTION CALCS ---
@@ -1284,10 +1289,10 @@ function processTicks(symbol) {
   const adx = calculateADX(candlesM5[symbol] || [], 14);
   const bbWidth = asset.bollinger ? (asset.bollinger.upper - asset.bollinger.lower) / asset.bollinger.middle : 0;
   const regime = determineRegime(symbol, adx, asset.slope, bbWidth);
-  
+
   if (asset.regime !== regime) {
-      console.log(`[REGIME] ${symbol} changed from ${asset.regime} to ${regime} (ADX:${adx.toFixed(1)} Slope:${asset.slope.toFixed(4)} BBW:${bbWidth.toFixed(4)})`);
-      asset.regime = regime;
+    console.log(`[REGIME] ${symbol} changed from ${asset.regime} to ${regime} (ADX:${adx.toFixed(1)} Slope:${asset.slope.toFixed(4)} BBW:${bbWidth.toFixed(4)})`);
+    asset.regime = regime;
   }
 
   // 1. Manage Trades (TP/SL + AI GUARDIAN + TRAILING)
@@ -1299,10 +1304,10 @@ function processTicks(symbol) {
       trade.status = 'CLOSED'; trade.closeReason = 'HARD_CLOSE'; trade.outcomeReason = "NY ORB Hard Close at 21:00 UTC";
       trade.closeTime = Date.now(); trade.closePrice = price;
       const exit = isBuy ? bid : ask;
-      
+
       const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, exit, trade.currentSize, isBuy);
       const pnlGBP = pnlUSD * usdToGbp;
-      
+
       trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
       trade.floatingPnl = 0;
       closedAnyTrade = true;
@@ -1348,105 +1353,109 @@ function processTicks(symbol) {
         const sentiment = aiState[symbol].sentiment;
         // If Long and Sentiment is Bearish -> Close
         if (isBuy && sentiment === 'BEARISH') {
-            trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BEARISH with high confidence.";
-            trade.closeTime = Date.now(); trade.closePrice = price;
-            console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
-            
-            const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, price, trade.currentSize, isBuy);
-            const pnlGBP = pnlUSD * usdToGbp;
+          trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BEARISH with high confidence.";
+          trade.closeTime = Date.now(); trade.closePrice = price;
+          console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bearish Sentiment`);
 
-            trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
-            trade.floatingPnl = 0;
-            closedAnyTrade = true;
-            sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
-            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
-            continue; // Next trade
+          if (!market[symbol]) {
+            console.warn(`[AI GUARDIAN] Aborting close - no market data for ${symbol}`);
+            continue;
+          }
+          const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, price, trade.currentSize, isBuy);
+          const pnlGBP = pnlUSD * usdToGbp;
+
+          trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
+          trade.floatingPnl = 0;
+          closedAnyTrade = true;
+          sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
+          notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
+          continue; // Next trade
         }
         // If Short and Sentiment is Bullish -> Close
         if (!isBuy && sentiment === 'BULLISH') {
-            trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BULLISH with high confidence.";
-            trade.closeTime = Date.now(); trade.closePrice = price;
-            console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
-            
-            const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, price, trade.currentSize, isBuy);
-            const pnlGBP = pnlUSD * usdToGbp;
+          trade.status = 'CLOSED'; trade.closeReason = 'AI_GUARDIAN'; trade.outcomeReason = "AI Guardian Intervention: Sentiment shifted BULLISH with high confidence.";
+          trade.closeTime = Date.now(); trade.closePrice = price;
+          console.log(`[AI GUARDIAN] Panic Closed ${symbol} Trade due to Strong Bullish Sentiment`);
 
-            trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
-            trade.floatingPnl = 0;
-            closedAnyTrade = true;
-            sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
-            notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
-            continue;
+          const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, price, trade.currentSize, isBuy);
+          const pnlGBP = pnlUSD * usdToGbp;
+
+          trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
+          trade.floatingPnl = 0;
+          closedAnyTrade = true;
+          sendSms(`CLOSE ${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
+          notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${price.toFixed(2)} (AI_GUARDIAN) PnL £${pnlGBP.toFixed(2)}`);
+          continue;
         }
       }
     }
 
     // B. TRADE MANAGEMENT (TP1->BE, TP2->Trail)
     const currentPrice = isBuy ? bid : ask;
-    
+
     // Check TP Hits
     for (const level of trade.tpLevels) {
-        if (!level.hit) {
-            const hit = isBuy ? currentPrice >= level.price : currentPrice <= level.price;
-            if (hit) {
-                const closeAmt = trade.initialSize * level.percentage;
-                
-                const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPrice, closeAmt, isBuy);
-                const pnlGBP = pnlUSD * usdToGbp;
+      if (!level.hit) {
+        const hit = isBuy ? currentPrice >= level.price : currentPrice <= level.price;
+        if (hit) {
+          const closeAmt = trade.initialSize * level.percentage;
 
-                trade.currentSize -= closeAmt;
-                trade.pnl += pnlGBP;
-                level.hit = true;
-                account.balance += pnlGBP;
-                closedPnL += pnlGBP;
-                trade.outcomeReason = `Take Profit: Level ${level.id} hit. Locked in profit.`;
-                
-                // MANAGEMENT RULES
-                if (level.id === 1) {
-                    // TP1 Hit -> Move SL to Break Even
-                    trade.stopLoss = trade.entryPrice;
-                    console.log(`[MGMT] ${symbol} TP1 Hit. SL moved to BE: ${trade.stopLoss}`);
-                } else if (level.id === 2) {
-                    // TP2 Hit -> Start Trailing
-                    // We flag this trade as 'trailing'
-                    trade.isTrailing = true;
-                    console.log(`[MGMT] ${symbol} TP2 Hit. Trailing Stop Activated.`);
-                }
-            }
+          const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPrice, closeAmt, isBuy);
+          const pnlGBP = pnlUSD * usdToGbp;
+
+          trade.currentSize -= closeAmt;
+          trade.pnl += pnlGBP;
+          level.hit = true;
+          account.balance += pnlGBP;
+          closedPnL += pnlGBP;
+          trade.outcomeReason = `Take Profit: Level ${level.id} hit. Locked in profit.`;
+
+          // MANAGEMENT RULES
+          if (level.id === 1) {
+            // TP1 Hit -> Move SL to Break Even
+            trade.stopLoss = trade.entryPrice;
+            console.log(`[MGMT] ${symbol} TP1 Hit. SL moved to BE: ${trade.stopLoss}`);
+          } else if (level.id === 2) {
+            // TP2 Hit -> Start Trailing
+            // We flag this trade as 'trailing'
+            trade.isTrailing = true;
+            console.log(`[MGMT] ${symbol} TP2 Hit. Trailing Stop Activated.`);
+          }
         }
+      }
     }
 
     // Trailing Stop Logic (Active after TP2)
     if (trade.isTrailing) {
-        const trailDist = asset.currentPrice * 0.005; // 0.5% Trail
-        if (isBuy) {
-            const potentialSL = currentPrice - trailDist;
-            if (potentialSL > trade.stopLoss) {
-                trade.stopLoss = potentialSL;
-                // console.log(`[TRAIL] ${symbol} Buy SL moved to ${trade.stopLoss.toFixed(2)}`);
-            }
-        } else {
-            const potentialSL = currentPrice + trailDist;
-            if (potentialSL < trade.stopLoss) {
-                trade.stopLoss = potentialSL;
-                // console.log(`[TRAIL] ${symbol} Sell SL moved to ${trade.stopLoss.toFixed(2)}`);
-            }
+      const trailDist = asset.currentPrice * 0.005; // 0.5% Trail
+      if (isBuy) {
+        const potentialSL = currentPrice - trailDist;
+        if (potentialSL > trade.stopLoss) {
+          trade.stopLoss = potentialSL;
+          // console.log(`[TRAIL] ${symbol} Buy SL moved to ${trade.stopLoss.toFixed(2)}`);
         }
+      } else {
+        const potentialSL = currentPrice + trailDist;
+        if (potentialSL < trade.stopLoss) {
+          trade.stopLoss = potentialSL;
+          // console.log(`[TRAIL] ${symbol} Sell SL moved to ${trade.stopLoss.toFixed(2)}`);
+        }
+      }
     }
 
     // C. STOP LOSS CHECK
     if (isBuy ? currentPrice <= trade.stopLoss : currentPrice >= trade.stopLoss) {
-        trade.status = 'CLOSED'; trade.closeReason = 'STOP_LOSS'; trade.outcomeReason = "Stop Loss: Price hit SL.";
-        trade.closeTime = Date.now(); trade.closePrice = price;
-        
-        const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPrice, trade.currentSize, isBuy);
-        const pnlGBP = pnlUSD * usdToGbp;
+      trade.status = 'CLOSED'; trade.closeReason = 'STOP_LOSS'; trade.outcomeReason = "Stop Loss: Price hit SL.";
+      trade.closeTime = Date.now(); trade.closePrice = price;
 
-        trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
-        trade.floatingPnl = 0;
-        closedAnyTrade = true;
-        sendSms(`CLOSE ${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
-        notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
+      const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPrice, trade.currentSize, isBuy);
+      const pnlGBP = pnlUSD * usdToGbp;
+
+      trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
+      trade.floatingPnl = 0;
+      closedAnyTrade = true;
+      sendSms(`CLOSE ${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
+      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
     }
   }
 
@@ -1454,18 +1463,18 @@ function processTicks(symbol) {
     if (t.status !== 'OPEN') continue;
     const isBuy = t.type === 'BUY';
     const exit = isBuy ? bid : ask;
-    
+
     const pnlUSD = calcPnlUSD(symbol, t.entryPrice, exit, t.currentSize, isBuy);
     t.floatingPnl = pnlUSD * usdToGbp;
   }
-  
+
   // Recalculate Day PnL cleanly
   const startOfDay = getStartOfDayUtcMs();
   account.dayPnL = trades.reduce((acc, t) => {
-      if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
-      return acc;
+    if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
+    return acc;
   }, 0);
-  
+
   account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
   account.equity = account.balance;
   if (closedAnyTrade || closedPnL !== 0) saveState();
@@ -1503,113 +1512,113 @@ function processTicks(symbol) {
       // Avoid London Sweep conflict
       const isXauRestricted = symbol === 'XAUUSD' && utcHour < 12;
 
-    if (!isNasRestricted && !isXauRestricted) {
-      if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
-        setSkipReason(asset, 'Lunch pause');
-      } else {
-        const isTrendUp = asset.currentPrice > asset.ema200;
-        const emaProximity = Math.abs(asset.currentPrice - asset.ema) / (asset.ema || 1);
-        const nearEma = emaProximity <= guard.emaProximityMax;
-        const pullback = isTrendUp ? (asset.currentPrice <= asset.ema || nearEma) : (asset.currentPrice >= asset.ema || nearEma);
-        const confirm = isTrendUp ? asset.slope > guard.slopeAbsMin : asset.slope < -guard.slopeAbsMin;
-
-        // FVG Check
-        let fvgReason = '';
-        let fvgConfidenceBoost = 0;
-        const candles = candlesM5[symbol];
-        if (candles && candles.length >= 20) {
-          // 1. FVG Detection (Last 3 closed candles)
-          const closedCandles = candles.slice(-4, -1);
-          const fvg = detectFairValueGap(closedCandles);
-
-          if (fvg.isDetected) {
-            console.log(`[FVG] ${symbol} ${fvg.type.toUpperCase()} FVG Detected: ${fvg.gapBottom.toFixed(2)} - ${fvg.gapTop.toFixed(2)}`);
-
-            if (isTrendUp && fvg.type === 'bullish') {
-              fvgReason += ' + Bullish FVG confirmed';
-              fvgConfidenceBoost += 5;
-            } else if (!isTrendUp && fvg.type === 'bearish') {
-              fvgReason += ' + Bearish FVG confirmed';
-              fvgConfidenceBoost += 5;
-            }
-          }
-
-          // 2. Order Block Detection (Scan history)
-          // We pass the last 50 candles to find a recent valid OB
-          const historyCandles = candles.slice(-50);
-          const ob = detectOrderBlock(historyCandles);
-
-          if (ob.isDetected) {
-            // Check if we are "testing" the OB
-            // Bullish OB Test: Price is near/inside the OB zone [Low, High]
-            // Bearish OB Test: Price is near/inside the OB zone [Low, High]
-            const price = asset.currentPrice;
-
-            if (ob.type === 'bullish') {
-              // If Price is above OB Low and relatively close to OB High (retesting support)
-              // Or literally inside it.
-              if (price >= ob.bottom && price <= ob.top * 1.002) {
-                console.log(`[OB] ${symbol} Testing BULLISH OB @ ${ob.bottom.toFixed(2)} - ${ob.top.toFixed(2)}`);
-                if (isTrendUp) {
-                  fvgReason += ' + Testing Bullish Order Block';
-                  fvgConfidenceBoost += 10;
-                }
-              }
-            } else if (ob.type === 'bearish') {
-              // If Price is below OB High and close to OB Low (retesting resistance)
-              if (price <= ob.top && price >= ob.bottom * 0.998) {
-                console.log(`[OB] ${symbol} Testing BEARISH OB @ ${ob.bottom.toFixed(2)} - ${ob.top.toFixed(2)}`);
-                if (!isTrendUp) {
-                  fvgReason += ' + Testing Bearish Order Block';
-                  fvgConfidenceBoost += 10;
-                }
-              }
-            }
-          }
-        }
-
-        // EXECUTION LOGIC with ADX FILTER
-        if (pullback && confirm) {
-          // 3. ADX VOLATILITY FILTER
-          // Requirement: ADX must be > 25 to enter a Trend Trade.
-        const adx = calculateADX(candlesM5[symbol] || [], 14);
-
-        if (adx < guard.adxThreshold) {
-          setSkipReason(asset, `ADX ${adx.toFixed(1)} < ${guard.adxThreshold}`);
+      if (!isNasRestricted && !isXauRestricted) {
+        if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
+          setSkipReason(asset, 'Lunch pause');
         } else {
-          // 4. PRICE ACTION FILTERS (Premium/Discount)
-          const { positionPct } = structure; // 0.0 = Low, 1.0 = High
+          const isTrendUp = asset.currentPrice > asset.ema200;
+          const emaProximity = Math.abs(asset.currentPrice - asset.ema) / (asset.ema || 1);
+          const nearEma = emaProximity <= guard.emaProximityMax;
+          const pullback = isTrendUp ? (asset.currentPrice <= asset.ema || nearEma) : (asset.currentPrice >= asset.ema || nearEma);
+          const confirm = isTrendUp ? asset.slope > guard.slopeAbsMin : asset.slope < -guard.slopeAbsMin;
 
-          if (isTrendUp) {
-            // BUY: Avoid Extreme Premium (> 0.75)
-            if (positionPct > guard.premiumLimit) {
-              setSkipReason(asset, `Premium ${(positionPct * 100).toFixed(0)}% > ${(guard.premiumLimit * 100).toFixed(0)}%`);
-            } else {
-                 // Log PDH/PDL Dist
-                 const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
-                 const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
-                 console.log(`[TREND] Evaluating BUY. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+          // FVG Check
+          let fvgReason = '';
+          let fvgConfidenceBoost = 0;
+          const candles = candlesM5[symbol];
+          if (candles && candles.length >= 20) {
+            // 1. FVG Detection (Last 3 closed candles)
+            const closedCandles = candles.slice(-4, -1);
+            const fvg = detectFairValueGap(closedCandles);
 
-              executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+            if (fvg.isDetected) {
+              console.log(`[FVG] ${symbol} ${fvg.type.toUpperCase()} FVG Detected: ${fvg.gapBottom.toFixed(2)} - ${fvg.gapTop.toFixed(2)}`);
+
+              if (isTrendUp && fvg.type === 'bullish') {
+                fvgReason += ' + Bullish FVG confirmed';
+                fvgConfidenceBoost += 5;
+              } else if (!isTrendUp && fvg.type === 'bearish') {
+                fvgReason += ' + Bearish FVG confirmed';
+                fvgConfidenceBoost += 5;
+              }
             }
-          } else {
-            // SELL: Avoid Extreme Discount (< 0.25)
-            if (positionPct < guard.discountLimit) {
-              setSkipReason(asset, `Discount ${(positionPct * 100).toFixed(0)}% < ${(guard.discountLimit * 100).toFixed(0)}%`);
-            } else {
-                 // Log PDH/PDL Dist
-                 const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
-                 const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
-                 console.log(`[TREND] Evaluating SELL. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
 
-              executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+            // 2. Order Block Detection (Scan history)
+            // We pass the last 50 candles to find a recent valid OB
+            const historyCandles = candles.slice(-50);
+            const ob = detectOrderBlock(historyCandles);
+
+            if (ob.isDetected) {
+              // Check if we are "testing" the OB
+              // Bullish OB Test: Price is near/inside the OB zone [Low, High]
+              // Bearish OB Test: Price is near/inside the OB zone [Low, High]
+              const price = asset.currentPrice;
+
+              if (ob.type === 'bullish') {
+                // If Price is above OB Low and relatively close to OB High (retesting support)
+                // Or literally inside it.
+                if (price >= ob.bottom && price <= ob.top * 1.002) {
+                  console.log(`[OB] ${symbol} Testing BULLISH OB @ ${ob.bottom.toFixed(2)} - ${ob.top.toFixed(2)}`);
+                  if (isTrendUp) {
+                    fvgReason += ' + Testing Bullish Order Block';
+                    fvgConfidenceBoost += 10;
+                  }
+                }
+              } else if (ob.type === 'bearish') {
+                // If Price is below OB High and close to OB Low (retesting resistance)
+                if (price <= ob.top && price >= ob.bottom * 0.998) {
+                  console.log(`[OB] ${symbol} Testing BEARISH OB @ ${ob.bottom.toFixed(2)} - ${ob.top.toFixed(2)}`);
+                  if (!isTrendUp) {
+                    fvgReason += ' + Testing Bearish Order Block';
+                    fvgConfidenceBoost += 10;
+                  }
+                }
+              }
+            }
+          }
+
+          // EXECUTION LOGIC with ADX FILTER
+          if (pullback && confirm) {
+            // 3. ADX VOLATILITY FILTER
+            // Requirement: ADX must be > 25 to enter a Trend Trade.
+            const adx = calculateADX(candlesM5[symbol] || [], 14);
+
+            if (adx < guard.adxThreshold) {
+              setSkipReason(asset, `ADX ${adx.toFixed(1)} < ${guard.adxThreshold}`);
+            } else {
+              // 4. PRICE ACTION FILTERS (Premium/Discount)
+              const { positionPct } = structure; // 0.0 = Low, 1.0 = High
+
+              if (isTrendUp) {
+                // BUY: Avoid Extreme Premium (> 0.75)
+                if (positionPct > guard.premiumLimit) {
+                  setSkipReason(asset, `Premium ${(positionPct * 100).toFixed(0)}% > ${(guard.premiumLimit * 100).toFixed(0)}%`);
+                } else {
+                  // Log PDH/PDL Dist
+                  const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+                  const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+                  console.log(`[TREND] Evaluating BUY. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+
+                  executeTrade(symbol, 'BUY', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+                }
+              } else {
+                // SELL: Avoid Extreme Discount (< 0.25)
+                if (positionPct < guard.discountLimit) {
+                  setSkipReason(asset, `Discount ${(positionPct * 100).toFixed(0)}% < ${(guard.discountLimit * 100).toFixed(0)}%`);
+                } else {
+                  // Log PDH/PDL Dist
+                  const distPDH = pdLevels.pdh ? (pdLevels.pdh - price).toFixed(1) : 'N/A';
+                  const distPDL = pdLevels.pdl ? (price - pdLevels.pdl).toFixed(1) : 'N/A';
+                  console.log(`[TREND] Evaluating SELL. Dist to PDH: ${distPDH}, PDL: ${distPDL}`);
+
+                  executeTrade(symbol, 'SELL', asset.currentPrice, 'TREND_FOLLOW', 'AGGRESSIVE', `Trend Follow: Price pullback to EMA confirmed by slope${fvgReason}.`, 85 + fvgConfidenceBoost);
+                }
+              }
             }
           }
         }
-      }
+      } // End of Regime Check
     }
-    } // End of Regime Check
-  }
 
     // B. LONDON SWEEP (GOLD)
     if (asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAUUSD') {
@@ -1656,16 +1665,16 @@ function processTicks(symbol) {
       }
     }
 
-  // D. AI AGENT (Real Gemini)
-  let minConfidence = 65;
-  if (symbol === 'NAS100') minConfidence = 85;
+    // D. AI AGENT (Real Gemini)
+    let minConfidence = 65;
+    if (symbol === 'NAS100') minConfidence = 85;
 
     // XAUUSD Time Restriction: Only trade after 09:00 UTC (Avoid London open volatility)
     const isXauRestrictedAI = symbol === 'XAUUSD' && new Date().getUTCHours() < 9;
 
     const aiAdxMin = Math.min(20, guard.adxThreshold);
     const adx = calculateADX(candlesM5[symbol]);
-  
+
     if (adx >= aiAdxMin && !isXauRestrictedAI) {
       if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
         setSkipReason(asset, 'Lunch pause');
@@ -1673,7 +1682,7 @@ function processTicks(symbol) {
         // AI AGENT EXECUTION
         const sentiment = aiState[symbol].sentiment;
         const reason = aiState[symbol].reason;
-        
+
         if (sentiment === 'BULLISH') {
           executeTrade(symbol, 'BUY', asset.currentPrice, 'AI_AGENT', 'AGGRESSIVE', `AI Agent: ${reason}`, aiState[symbol].confidence);
         } else if (sentiment === 'BEARISH') {
@@ -1681,53 +1690,53 @@ function processTicks(symbol) {
         }
       }
     } else {
-    if (isXauRestrictedAI) setSkipReason(asset, 'XAUUSD AI time restriction');
-    else if (adx < aiAdxMin) setSkipReason(asset, `ADX ${adx.toFixed(1)} < ${aiAdxMin}`);
-  }
+      if (isXauRestrictedAI) setSkipReason(asset, 'XAUUSD AI time restriction');
+      else if (adx < aiAdxMin) setSkipReason(asset, `ADX ${adx.toFixed(1)} < ${aiAdxMin}`);
+    }
 
-  if (asset.activeStrategies.includes('MEAN_REVERT')) {
-    if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
-    if (asset.regime !== 'RANGE') {
-      setSkipReason(asset, `Regime ${asset.regime} != RANGE`);
-    } else {
-      const stage = guard.stage;
-      const dev = stage >= 3 ? 0.0018 : stage === 2 ? 0.0022 : stage === 1 ? 0.0028 : 0.0032;
-      const rsiLow = stage >= 3 ? 48 : stage === 2 ? 45 : stage === 1 ? 42 : 38;
-      const rsiHigh = stage >= 3 ? 52 : stage === 2 ? 55 : stage === 1 ? 58 : 62;
-      const extremeLow = stage >= 3 ? 0.40 : stage === 2 ? 0.35 : stage === 1 ? 0.30 : 0.25;
-      const extremeHigh = 1 - extremeLow;
-
-      const rel = (asset.currentPrice - asset.ema) / (asset.ema || asset.currentPrice || 1);
-      const { positionPct } = structure;
-      const localCandles = candlesM5[symbol] || [];
-      const closed = localCandles.filter(c => c.isClosed);
-      const last10 = closed.slice(-10);
-      const low = last10.length ? Math.min(...last10.map(c => c.low)) : asset.currentPrice;
-      const high = last10.length ? Math.max(...last10.map(c => c.high)) : asset.currentPrice;
-
-      const canBuy = rel <= -dev && asset.rsi <= rsiLow && positionPct <= extremeLow;
-      const canSell = rel >= dev && asset.rsi >= rsiHigh && positionPct >= extremeHigh;
-
-      const mrAdxMax = 40;
-      if (adx > mrAdxMax) {
-        setSkipReason(asset, `ADX ${adx.toFixed(1)} > ${mrAdxMax}`);
-      } else if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
-        setSkipReason(asset, 'Lunch pause');
-      } else if (canBuy) {
-        const sl = Math.min(low, asset.currentPrice) * (1 - 0.0006);
-        executeTrade(symbol, 'BUY', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Oversold dip below EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
-        setSkipReason(asset, null);
-      } else if (canSell) {
-        const sl = Math.max(high, asset.currentPrice) * (1 + 0.0006);
-        executeTrade(symbol, 'SELL', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Overbought rally above EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
-        setSkipReason(asset, null);
+    if (asset.activeStrategies.includes('MEAN_REVERT')) {
+      if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
+      if (asset.regime !== 'RANGE') {
+        setSkipReason(asset, `Regime ${asset.regime} != RANGE`);
       } else {
-        setSkipReason(asset, 'No setup');
+        const stage = guard.stage;
+        const dev = stage >= 3 ? 0.0018 : stage === 2 ? 0.0022 : stage === 1 ? 0.0028 : 0.0032;
+        const rsiLow = stage >= 3 ? 48 : stage === 2 ? 45 : stage === 1 ? 42 : 38;
+        const rsiHigh = stage >= 3 ? 52 : stage === 2 ? 55 : stage === 1 ? 58 : 62;
+        const extremeLow = stage >= 3 ? 0.40 : stage === 2 ? 0.35 : stage === 1 ? 0.30 : 0.25;
+        const extremeHigh = 1 - extremeLow;
+
+        const rel = (asset.currentPrice - asset.ema) / (asset.ema || asset.currentPrice || 1);
+        const { positionPct } = structure;
+        const localCandles = candlesM5[symbol] || [];
+        const closed = localCandles.filter(c => c.isClosed);
+        const last10 = closed.slice(-10);
+        const low = last10.length ? Math.min(...last10.map(c => c.low)) : asset.currentPrice;
+        const high = last10.length ? Math.max(...last10.map(c => c.high)) : asset.currentPrice;
+
+        const canBuy = rel <= -dev && asset.rsi <= rsiLow && positionPct <= extremeLow;
+        const canSell = rel >= dev && asset.rsi >= rsiHigh && positionPct >= extremeHigh;
+
+        const mrAdxMax = 40;
+        if (adx > mrAdxMax) {
+          setSkipReason(asset, `ADX ${adx.toFixed(1)} > ${mrAdxMax}`);
+        } else if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
+          setSkipReason(asset, 'Lunch pause');
+        } else if (canBuy) {
+          const sl = Math.min(low, asset.currentPrice) * (1 - 0.0006);
+          executeTrade(symbol, 'BUY', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Oversold dip below EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
+          setSkipReason(asset, null);
+        } else if (canSell) {
+          const sl = Math.max(high, asset.currentPrice) * (1 + 0.0006);
+          executeTrade(symbol, 'SELL', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Overbought rally above EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
+          setSkipReason(asset, null);
+        } else {
+          setSkipReason(asset, 'No setup');
+        }
       }
     }
-  }
 
-}
+  }
 
 }
 
@@ -2136,13 +2145,13 @@ app.post('/admin/close', (req, res) => {
     const sp = (req.body?.symbol || req.query?.symbol || 'XAUUSD').toString();
     let closedPnL = 0; let closed = 0;
     const targets = sp === 'ALL' ? Array.from(new Set(trades.filter(t => t.status === 'OPEN').map(t => t.symbol))) : [sp];
-    
+
     // Get FX
     let usdToGbp = getFxRate('USDGBP');
     if (!usdToGbp) {
-       if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
-       else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
-       else usdToGbp = 0.8; 
+      if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
+      else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
+      else usdToGbp = 0.8;
     }
 
     for (const symbol of targets) {
@@ -2156,23 +2165,23 @@ app.post('/admin/close', (req, res) => {
         t.closeReason = 'MANUAL';
         t.closeTime = Date.now();
         t.closePrice = exit;
-        
+
         const pnlUSD = calcPnlUSD(symbol, t.entryPrice, exit, t.currentSize, isBuy);
         const pnlGBP = pnlUSD * usdToGbp;
-        
+
         t.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP; closed++;
         t.floatingPnl = 0;
         try { notifyAll('Trade Closed', `${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL £${pnlGBP.toFixed(2)}`); } catch { }
         try { sendSms(`CLOSE ${symbol} ${t.type} @ ${Number(exit).toFixed(2)} (ADMIN_CLOSE) PnL £${pnlGBP.toFixed(2)}`); } catch { }
       }
     }
-    
+
     // Clean Recalc
     if (closed > 0) {
       const startOfDay = getStartOfDayUtcMs();
       account.dayPnL = trades.reduce((acc, t) => {
-          if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
-          return acc;
+        if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
+        return acc;
       }, 0);
       account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
       account.equity = account.balance;
@@ -2200,29 +2209,29 @@ if (process.argv.includes('--selftest')) {
   // Mock FX
   fxRates['GBP_USD'] = { mid: 1.25, time: Date.now() };
   fxRates['USD_GBP'] = { mid: 0.80, time: Date.now() };
-  
+
   // Mock Account
   account.balance = 1000; // £1000
-  
+
   const testCases = [
     { symbol: 'NAS100', entry: 17000, stop: 16950, riskPct: 0.01 }, // 50 pts
     { symbol: 'XAUUSD', entry: 2000.00, stop: 1998.00, riskPct: 0.01 } // 200 pts ($2.00)
   ];
-  
+
   for (const tc of testCases) {
-     console.log(`\nTesting ${tc.symbol}...`);
-     const size = calculatePositionSize({
-       balance: account.balance,
-       riskPct: tc.riskPct,
-       entryPrice: tc.entry,
-       stopPrice: tc.stop,
-       symbol: tc.symbol
-     });
-     
-     // Verify PnL math
-     const pnlUSD = calcPnlUSD(tc.symbol, tc.entry, tc.stop, size, true); // Long hit SL
-     const pnlGBP = pnlUSD * 0.80;
-     console.log(`[VERIFY] Size:${size} LossUSD:$${Math.abs(pnlUSD).toFixed(2)} LossGBP:£${Math.abs(pnlGBP).toFixed(2)} TargetRisk:£${(account.balance*tc.riskPct).toFixed(2)}`);
+    console.log(`\nTesting ${tc.symbol}...`);
+    const size = calculatePositionSize({
+      balance: account.balance,
+      riskPct: tc.riskPct,
+      entryPrice: tc.entry,
+      stopPrice: tc.stop,
+      symbol: tc.symbol
+    });
+
+    // Verify PnL math
+    const pnlUSD = calcPnlUSD(tc.symbol, tc.entry, tc.stop, size, true); // Long hit SL
+    const pnlGBP = pnlUSD * 0.80;
+    console.log(`[VERIFY] Size:${size} LossUSD:$${Math.abs(pnlUSD).toFixed(2)} LossGBP:£${Math.abs(pnlGBP).toFixed(2)} TargetRisk:£${(account.balance * tc.riskPct).toFixed(2)}`);
   }
   process.exit(0);
 }
@@ -2258,7 +2267,7 @@ if (process.argv.includes('--test-micro')) {
   // Mock FX
   fxRates['USDGBP'] = { mid: 0.8, time: Date.now() };
   fxRates['USD_GBP'] = { mid: 0.8, time: Date.now() };
-  
+
   // Test Case: XAUUSD 0.01 Lot
   // 1 pip move ($0.01 price change) -> $0.01 USD -> £0.008 GBP
   // 100 pip move ($1.00 price change) -> $1.00 USD -> £0.80 GBP
@@ -2266,17 +2275,17 @@ if (process.argv.includes('--test-micro')) {
   const entry = 2000.00;
   const exit = 2001.00; // +$1.00 move
   const size = 0.01;
-  
+
   const pnlUSD = calcPnlUSD(symbol, entry, exit, size, true);
   const pnlGBP = pnlUSD * 0.80;
-  
+
   console.log(`Symbol: ${symbol}`);
   console.log(`Size: ${size} lots`);
   console.log(`Move: $${entry.toFixed(2)} -> $${exit.toFixed(2)} (+$1.00)`);
   console.log(`Expected USD PnL: $1.00`);
   console.log(`Calculated USD PnL: $${pnlUSD.toFixed(2)}`);
   console.log(`Calculated GBP PnL: £${pnlGBP.toFixed(2)} (Assumed rate 0.80)`);
-  
+
   if (Math.abs(pnlUSD - 1.00) < 0.001) {
     console.log('[PASS] Micro position math is correct.');
   } else {
@@ -2305,15 +2314,15 @@ setInterval(() => {
       console.log('[SYSTEM] Weekend Close - Closing all positions');
       let closedPnL = 0;
       let closed = 0;
-      
+
       // Get FX
       let usdToGbp = getFxRate('USDGBP');
       if (!usdToGbp) {
-         if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
-         else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
-         else usdToGbp = 0.8; 
+        if (fxRates['USD_GBP']?.mid) usdToGbp = fxRates['USD_GBP'].mid;
+        else if (fxRates['GBP_USD']?.mid) usdToGbp = 1 / fxRates['GBP_USD'].mid;
+        else usdToGbp = 0.8;
       }
-      
+
       for (const symbol of ['NAS100', 'XAUUSD']) {
         const mkt = market[symbol];
         if (!mkt) continue;
@@ -2326,10 +2335,10 @@ setInterval(() => {
           t.closeReason = 'MANUAL';
           t.closeTime = Date.now();
           t.closePrice = exit;
-          
+
           const pnlUSD = calcPnlUSD(symbol, t.entryPrice, exit, t.currentSize, isBuy);
           const pnlGBP = pnlUSD * usdToGbp;
-          
+
           t.pnl += pnlGBP;
           account.balance += pnlGBP;
           closedPnL += pnlGBP;
@@ -2338,13 +2347,13 @@ setInterval(() => {
           notifyAll('Trade Closed', `${symbol} ${t.type} @ ${exit.toFixed(2)} (WEEKEND_CLOSE) PnL £${pnlGBP.toFixed(2)}`);
         }
       }
-      
+
       // Clean Recalc
       if (closed > 0) {
         const startOfDay = getStartOfDayUtcMs();
         account.dayPnL = trades.reduce((acc, t) => {
-            if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
-            return acc;
+          if (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay) return acc + (t.pnl || 0);
+          return acc;
         }, 0);
         account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
         account.equity = account.balance;
@@ -2358,9 +2367,15 @@ function sseBroadcast() {
   try {
     const payload = JSON.stringify({ account, trades, assets });
     for (const client of sseClients) {
-      try { client.write(`data: ${payload}\n\n`); } catch { }
+      try {
+        client.write(`data: ${payload}\n\n`);
+      } catch (err) {
+        if (sseClients.length > 0) console.warn('[SSE] Broadcast failed:', err.message);
+      }
     }
-  } catch { }
+  } catch (err) {
+    if (sseClients.length > 0) console.warn('[SSE] Outer broadcast failed:', err.message);
+  }
 }
 
 setInterval(() => { try { sseBroadcast(); } catch { } }, 3000);
@@ -2456,3 +2471,14 @@ async function flushAndExit(code = 0) {
 
 process.on('SIGINT', () => flushAndExit(0));
 process.on('SIGTERM', () => flushAndExit(0));
+
+// --- GLOBAL ERROR HANDLING ---
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception:', err);
+  // Log and attempt clean exit (process manager should restart if available)
+  try { flushAndExit(1); } catch { process.exit(1); }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
