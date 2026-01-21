@@ -160,14 +160,19 @@ const aiState = {
 
 function getFxRate(pair) {
   const now = Date.now();
-  // Relaxed from 60s to 1h to prevent "soft-locks" during brief data gaps
-  const MAX_AGE = 60 * 60 * 1000;
+  // Relaxed from 60s to 24h to prevent "soft-locks" during data gaps
+  const MAX_AGE = 24 * 60 * 60 * 1000;
   if (pair === 'USDGBP') {
     if (fxRates['USD_GBP']?.mid && (now - fxRates['USD_GBP'].time < MAX_AGE)) return fxRates['USD_GBP'].mid;
     if (fxRates['GBP_USD']?.mid && (now - fxRates['GBP_USD'].time < MAX_AGE)) return 1 / fxRates['GBP_USD'].mid;
+    // Fallback if missing/stale
+    console.warn('[FX] Using fallback USDGBP rate 0.8');
+    return 0.8;
   }
   if (pair === 'GBPUSD') {
     if (fxRates['GBP_USD']?.mid && (now - fxRates['GBP_USD'].time < MAX_AGE)) return fxRates['GBP_USD'].mid;
+    // Fallback
+    return 1.25;
   }
   return null;
 }
@@ -767,7 +772,7 @@ Return ONLY this JSON:
 { "sentiment": "BULLISH" | "BEARISH" | "NEUTRAL", "confidence": number (0-100), "reason": "Simple, beginner-friendly explanation of WHY (e.g. 'Price is going up and pulled back a bit, good time to buy')." }`;
 
     const response = await aiClient.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"

@@ -127,9 +127,9 @@ function manageTrades(symbol: string, bid: number, ask: number, sma20: number, l
       const info = aiState[symbol] || { lastCheck: 0, sentiment: 'NEUTRAL', confidence: 0 };
       aiState[symbol] = info;
       if (info.confidence > 80) {
-      const snt = info.sentiment;
-      if (isBuy && snt === 'BEARISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
-      if (!isBuy && snt === 'BULLISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
+        const snt = info.sentiment;
+        if (isBuy && snt === 'BEARISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
+        if (!isBuy && snt === 'BULLISH' && t.strategy === 'AI_AGENT') { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (t.entryPrice - exit) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
       }
     }
     if (isBuy && exit <= t.stopLoss) { t.status = 'CLOSED'; t.closeTime = Date.now(); t.closePrice = exit; const pnl = (exit - t.entryPrice) * t.currentSize; t.pnl += pnl; account.balance += pnl; closed += pnl; stateChanged = true; continue; }
@@ -392,10 +392,10 @@ const server = app.listen(port, () => {
 (server as any).on('error', (err: any) => {
   if (err && err.code === 'EADDRINUSE') {
     console.log(`[SYSTEM] Crypto bot already running on port ${port}. Exiting.`);
-    try { process.exit(0); } catch {}
+    try { process.exit(0); } catch { }
   } else {
     console.error('Server error:', err);
-    try { process.exit(1); } catch {}
+    try { process.exit(1); } catch { }
   }
 });
 app.get('/ai_status', (req, res) => {
@@ -432,7 +432,7 @@ async function consultGemini(symbol: string) {
   Respond ONLY with a JSON object:
   { "sentiment": "BULLISH" | "BEARISH" | "NEUTRAL", "confidence": number (0-100), "reason": "concise rationale" }`;
   try {
-    const resp = await aiClient.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt, config: { responseMimeType: 'application/json' } });
+    const resp = await aiClient.models.generateContent({ model: 'gemini-1.5-flash', contents: prompt, config: { responseMimeType: 'application/json' } });
     const text = (resp as any).text || '';
     const obj = JSON.parse(text);
     const snt = String(obj.sentiment || 'NEUTRAL').toUpperCase() as 'BULLISH' | 'BEARISH' | 'NEUTRAL';
