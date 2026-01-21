@@ -605,11 +605,20 @@ async function githubLoadState() {
       }
     }
     const mergedList = Array.from(mergedByKey.values());
-    if (mergedList.length > trades.length) {
+
+
+    // Always apply the merge to ensure status updates (Open->Closed) are captured
+    if (mergedList.length > 0) {
+      const prevCount = trades.length;
       trades = mergedList;
-      if (parsed?.account && typeof parsed.account.balance === 'number') account = parsed.account;
+
+      // CRITICAL: assert trust in local calculation, never overwrite balance from GitHub
+      recalculateAccountState();
+
+      if (trades.length !== prevCount) {
+        console.log(`[SYSTEM] GitHub state merged: ${trades.length} trades`);
+      }
       saveState();
-      console.log(`[SYSTEM] GitHub state merged: ${trades.length} trades`);
     }
   } catch { }
 }
