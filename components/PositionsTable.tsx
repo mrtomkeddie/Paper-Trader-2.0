@@ -20,19 +20,19 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
         return trades.filter(t => {
             const matchAsset = assetFilter === 'ALL' || t.symbol === assetFilter;
             const matchStrategy = strategyFilter === 'ALL' || (t.strategy || 'MANUAL') === strategyFilter;
-            
+
             // Time Filter
             let matchTime = true;
             if (timeFilter !== 'ALL' && t.status !== 'OPEN') {
                 const now = Date.now();
                 const oneDay = 24 * 60 * 60 * 1000;
                 const time = t.closeTime || t.openTime || 0;
-                
+
                 if (time === 0) matchTime = false;
                 else {
                     const tradeDate = new Date(time);
                     const currentDate = new Date(now);
-                    
+
                     if (timeFilter === 'TODAY') {
                         matchTime = tradeDate.toDateString() === currentDate.toDateString();
                     } else if (timeFilter === 'WEEK') {
@@ -48,14 +48,14 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
     }, [trades, assetFilter, strategyFilter, timeFilter]);
 
     const openTrades = filteredTrades.filter(t => t.status === 'OPEN').sort((a, b) => b.openTime - a.openTime);
-    const closedTrades = filteredTrades.filter(t => t.status !== 'OPEN').sort((a, b) => (b.closeTime || 0) - (a.closeTime || 0)).slice(0, 50);
+    const closedTrades = filteredTrades.filter(t => t.status !== 'OPEN').sort((a, b) => (b.closeTime || 0) - (a.closeTime || 0));
 
     const renderFilterBar = () => (
         <div className="flex gap-2 mb-4">
-             <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
+            <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
                 <span className="text-[10px] font-bold text-gray-500 uppercase">Asset</span>
-                <select 
-                    value={assetFilter} 
+                <select
+                    value={assetFilter}
                     onChange={(e) => setAssetFilter(e.target.value)}
                     className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:bg-[#13141b] [&>option]:text-white"
                 >
@@ -65,8 +65,8 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
             </div>
             <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
                 <span className="text-[10px] font-bold text-gray-500 uppercase">Strategy</span>
-                <select 
-                    value={strategyFilter} 
+                <select
+                    value={strategyFilter}
                     onChange={(e) => setStrategyFilter(e.target.value)}
                     className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:bg-[#13141b] [&>option]:text-white"
                 >
@@ -76,8 +76,8 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
             </div>
             <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5">
                 <span className="text-[10px] font-bold text-gray-500 uppercase">Time</span>
-                <select 
-                    value={timeFilter} 
+                <select
+                    value={timeFilter}
                     onChange={(e) => setTimeFilter(e.target.value as TimeFilter)}
                     className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer [&>option]:bg-[#13141b] [&>option]:text-white"
                 >
@@ -110,10 +110,10 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                             const isProfit = (trade.pnl || trade.floatingPnl || 0) >= 0;
                             const pnlVal = trade.status === 'OPEN' ? (trade.floatingPnl || 0) : trade.pnl;
                             const isSelected = selectedTradeId === trade.id;
-                            
+
                             return (
-                                <tr 
-                                    key={trade.id} 
+                                <tr
+                                    key={trade.id}
                                     onClick={() => onSelectTrade(trade)}
                                     className={`border-b border-white/5 cursor-pointer transition-colors ${isSelected ? 'bg-white/10' : 'hover:bg-white/5'}`}
                                 >
@@ -155,9 +155,9 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
         const isProfit = (trade.pnl || trade.floatingPnl || 0) >= 0;
         const pnlVal = trade.status === 'OPEN' ? (trade.floatingPnl || 0) : trade.pnl;
         const isSelected = selectedTradeId === trade.id;
-        
+
         return (
-            <div 
+            <div
                 key={trade.id}
                 onClick={() => onSelectTrade(trade)}
                 className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer mb-3 ${isSelected ? 'bg-white/10 border-white/20 shadow-lg' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
@@ -190,7 +190,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                         )}
                     </div>
                 </div>
-                
+
                 <div className="grid grid-cols-3 gap-4 text-xs">
                     <div className="bg-black/20 rounded-lg p-2 border border-white/5">
                         <div className="text-gray-500 mb-1">Entry</div>
@@ -219,11 +219,11 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                     {openTrades.length} Active | {closedTrades.length} Recent
                 </span>
             </h3>
-            
+
             {renderFilterBar()}
 
-            <PerformanceSummary 
-                trades={closedTrades} 
+            <PerformanceSummary
+                trades={closedTrades}
                 filter={timeFilter}
             />
 
@@ -245,7 +245,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                             {openTrades.map(renderMobileCard)}
                         </div>
                     )}
-                    
+
                     {closedTrades.length > 0 && (
                         <div>
                             <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">History</h4>
