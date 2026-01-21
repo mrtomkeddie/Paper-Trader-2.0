@@ -1323,27 +1323,34 @@ function processTicks(symbol) {
 
     const nowMs = Date.now();
     const ageMs = nowMs - Number(trade.openTime || nowMs);
-    const maxHoldMs = trade.strategy === 'AI_AGENT' ? (24 * 60 * 60 * 1000) : (48 * 60 * 60 * 1000);
-    if (ageMs > maxHoldMs) {
+
+    // Calculate current PnL for time-exit decision
+    const currentPriceForPnl = isBuy ? bid : ask;
+    const currentPnlUSD = calcPnlUSD(symbol, trade.entryPrice, currentPriceForPnl, trade.currentSize, isBuy);
+    const currentPnlGBP = currentPnlUSD * usdToGbp;
+
+    // SMART TIME EXIT:
+    // 1. If trade is in PROFIT (pnl > 0), we NEVER close it based on time. Let winners run!
+    // 2. If trade is in LOSS (pnl <= 0), we extend the limit to 5 days (120h).
+    const maxHoldMs = 5 * 24 * 60 * 60 * 1000; // 5 Days
+
+    if (currentPnlGBP <= 0 && ageMs > maxHoldMs) {
       const exit = isBuy
         ? (bid != null ? bid : (price != null ? price : trade.entryPrice))
         : (ask != null ? ask : (price != null ? price : trade.entryPrice));
       trade.status = 'CLOSED';
       trade.closeReason = 'TIME_EXIT';
-      trade.outcomeReason = 'Max hold time reached.';
+      trade.outcomeReason = 'Max hold time reached for stagnant/losing trade (5 days).';
       trade.closeTime = nowMs;
       trade.closePrice = exit;
 
-      const pnlUSD = calcPnlUSD(symbol, trade.entryPrice, exit, trade.currentSize, isBuy);
-      const pnlGBP = pnlUSD * usdToGbp;
-
-      trade.pnl += pnlGBP;
-      account.balance += pnlGBP;
-      closedPnL += pnlGBP;
+      trade.pnl += currentPnlGBP;
+      account.balance += currentPnlGBP;
+      closedPnL += currentPnlGBP;
       trade.floatingPnl = 0;
       closedAnyTrade = true;
-      sendSms(`CLOSE ${symbol} ${trade.type} @ ${Number(exit).toFixed(2)} (TIME_EXIT) PnL £${pnlGBP.toFixed(2)}`);
-      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${Number(exit).toFixed(2)} (TIME_EXIT) PnL £${pnlGBP.toFixed(2)}`);
+      sendSms(`CLOSE ${symbol} ${trade.type} @ ${Number(exit).toFixed(2)} (TIME_EXIT) PnL £${currentPnlGBP.toFixed(2)}`);
+      notifyAll('Trade Closed', `${symbol} ${trade.type} @ ${Number(exit).toFixed(2)} (TIME_EXIT) PnL £${currentPnlGBP.toFixed(2)}`);
       continue;
     }
 
