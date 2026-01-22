@@ -15,15 +15,51 @@ import webpush from 'web-push';
 // Load .env file from root
 dotenv.config();
 
+// --- LOGGING SETUP ---
+
+const LOG_FILE = path.join(process.cwd(), 'server', 'bot.log');
+function logToFile(msg) {
+  try {
+    const ts = new Date().toISOString();
+    const line = `[${ts}] ${msg}\n`;
+    fs.appendFileSync(LOG_FILE, line);
+  } catch (e) {
+    process.stdout.write('[[LOGGING ERROR]] ' + e + '\n');
+  }
+}
+
+// Override console methods
+const originalLog = console.log;
+const originalWarn = console.warn;
+const originalError = console.error;
+
+console.log = (...args) => {
+  originalLog(...args);
+  logToFile(`[INFO] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+};
+
+console.warn = (...args) => {
+  originalWarn(...args);
+  logToFile(`[WARN] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+};
+
+console.error = (...args) => {
+  originalError(...args);
+  logToFile(`[ERROR] ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')}`);
+};
+
+
 // --- CRASH PREVENTION: GLOBAL ERROR HANDLERS ---
 process.on('uncaughtException', (err) => {
   console.error('[[FATAL]] Uncaught Exception:', err);
+  logToFile(`[[FATAL]] Uncaught Exception: ${err.message}\n${err.stack}`);
   // Keep process alive if possible, or exit cleanly
   // process.exit(1); 
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('[[FATAL]] Unhandled Rejection at:', promise, 'reason:', reason);
+  logToFile(`[[FATAL]] Unhandled Rejection: ${reason}`);
 });
 
 
@@ -782,7 +818,7 @@ Return ONLY this JSON:
 { "sentiment": "BULLISH" | "BEARISH" | "NEUTRAL", "confidence": number (0-100), "reason": "Simple, beginner-friendly explanation of WHY (e.g. 'Price is going up and pulled back a bit, good time to buy')." }`;
 
     const response = await aiClient.models.generateContent({
-      model: 'gemini-1.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"
@@ -808,6 +844,8 @@ Return ONLY this JSON:
 
   } catch (error) {
     console.error(`[AI] Error consulting Gemini:`, error);
+    // [FIX] Update lastCheck to prevent infinite retry loop on error
+    aiState[symbol].lastCheck = Date.now();
   } finally {
     assets[symbol].isThinking = false;
   }

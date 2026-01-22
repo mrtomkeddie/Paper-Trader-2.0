@@ -1,10 +1,10 @@
 {
   "account": {
-    "balance": 474.88025347081776,
-    "equity": 474.88025347081776,
-    "dayPnL": 38.73604428674908,
-    "totalPnL": -25.119746529182258,
-    "winRate": 37.03703703703704
+    "balance": 642.0428426708181,
+    "equity": 642.0428426708181,
+    "dayPnL": 167.1625892000004,
+    "totalPnL": 142.04284267081815,
+    "winRate": 40.35087719298245
   },
   "trades": [
     {
@@ -13,34 +13,40 @@
       "type": "BUY",
       "entryPrice": 4635.41,
       "initialSize": 0.01,
-      "currentSize": 0.01,
-      "stopLoss": 4628.4568850000005,
+      "currentSize": 0,
+      "stopLoss": 4820.1377865,
       "tpLevels": [
         {
           "id": 1,
           "price": 4663.22246,
           "percentage": 0.4,
-          "hit": false
+          "hit": true
         },
         {
           "id": 2,
           "price": 4681.7641,
           "percentage": 0.4,
-          "hit": false
+          "hit": true
         },
         {
           "id": 3,
           "price": 4774.4723,
           "percentage": 0.2,
-          "hit": false
+          "hit": true
         }
       ],
       "openTime": 1768386592511,
-      "status": "OPEN",
+      "status": "CLOSED",
       "strategy": "AI_AGENT",
-      "pnl": 0,
+      "pnl": 167.1625892000004,
       "entryReason": "AI Agent: The main trend on the 15-minute chart is going up, so we prefer to look for chances to buy. Price is currently just hanging out in the middle (RSI at 50), not moving strongly up or down, which means it's pausing within the bigger uptrend. We'll wait for a good moment to jump in and buy.",
-      "confidence": 65
+      "confidence": 65,
+      "outcomeReason": "Max hold time reached for stagnant/losing trade (5 days).",
+      "isTrailing": true,
+      "floatingPnl": 0,
+      "closeReason": "TIME_EXIT",
+      "closeTime": 1769083929149,
+      "closePrice": 4844.3632365
     },
     {
       "id": "c865bac0-4336-4c34-82fb-f17f2f444eef",
