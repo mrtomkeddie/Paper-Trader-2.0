@@ -18,7 +18,7 @@ const AVAILABLE_STRATEGIES = [
     { type: StrategyType.AI_AGENT, label: 'Gemini AI', icon: Zap, color: 'purple' },
     { type: StrategyType.TREND_FOLLOW, label: 'Trend', icon: TrendingUp, color: 'blue' },
     { type: StrategyType.MEAN_REVERT, label: 'MeanRev', icon: TrendingDown, color: 'orange' },
-    { type: StrategyType.NY_ORB, label: 'NY ORB', icon: Clock, color: 'blue' },
+
     { type: StrategyType.LONDON_SWEEP, label: 'London', icon: Activity, color: 'yellow' },
 ];
 
