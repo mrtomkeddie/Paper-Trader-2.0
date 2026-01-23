@@ -44,18 +44,18 @@ export class OandaService {
       const response = await fetch(`${this.baseUrl}/accounts/${this.accountId}/summary`, {
         headers: this.getHeaders()
       });
-      
+
       if (!response.ok) {
-          return null;
+        return null;
       }
-      
+
       const data = await response.json();
       // Oanda returns strings for financial numbers
       return {
-          balance: parseFloat(data.account.balance),
-          nav: parseFloat(data.account.NAV), // Net Asset Value (Equity)
-          marginAvailable: parseFloat(data.account.marginAvailable),
-          currency: data.account.currency
+        balance: parseFloat(data.account.balance),
+        nav: parseFloat(data.account.NAV), // Net Asset Value (Equity)
+        marginAvailable: parseFloat(data.account.marginAvailable),
+        currency: data.account.currency
       };
     } catch (error) {
       console.error('Oanda Account Network Error:', error);
@@ -69,9 +69,9 @@ export class OandaService {
       const response = await fetch(`${this.baseUrl}/accounts/${this.accountId}/pricing?instruments=${oandaSymbols}`, {
         headers: this.getHeaders()
       });
-      
+
       if (!response.ok) throw new Error('Oanda API Error');
-      
+
       const data = await response.json();
       return data.prices; // Array of price objects
     } catch (error) {
@@ -85,9 +85,9 @@ export class OandaService {
       const response = await fetch(`${this.baseUrl}/accounts/${this.accountId}/openTrades`, {
         headers: this.getHeaders()
       });
-      
+
       if (!response.ok) return [];
-      
+
       const data = await response.json();
       return data.trades; // Returns array of Oanda Trade objects
     } catch (error) {
@@ -103,8 +103,7 @@ export class OandaService {
       const adjustedUnits = side === TradeType.BUY ? Math.floor(units).toString() : (-Math.floor(units)).toString();
 
       // Format prices to correct precision (Oanda is strict)
-      // XAU/USD uses 2 decimals. NAS100 uses 1 or 2 depending on broker settings, usually 1.
-      const precision = symbol === AssetSymbol.NAS100 ? 1 : 2;
+      const precision = 2;
 
       const body: any = {
         order: {
@@ -119,7 +118,7 @@ export class OandaService {
 
       // SAFETY NET: Attach Hard Take Profit if provided
       if (takeProfitPrice > 0) {
-          body.order.takeProfitOnFill = { price: takeProfitPrice.toFixed(precision) };
+        body.order.takeProfitOnFill = { price: takeProfitPrice.toFixed(precision) };
       }
 
       console.log("Sending Order to Oanda:", JSON.stringify(body));
@@ -133,8 +132,8 @@ export class OandaService {
       const data = await response.json();
 
       if (!response.ok) {
-          console.error("OANDA ORDER REJECTED:", JSON.stringify(data, null, 2));
-          return null;
+        console.error("OANDA ORDER REJECTED:", JSON.stringify(data, null, 2));
+        return null;
       }
 
       console.log("OANDA ORDER SUCCESS:", data);
@@ -148,25 +147,25 @@ export class OandaService {
   // Close a trade partially or fully
   async closeTrade(tradeId: string, units: number) {
     try {
-       // Ensure units is a string and positive for closure
-       const unitsStr = Math.abs(Math.floor(units)).toString();
-       
-       const response = await fetch(`${this.baseUrl}/accounts/${this.accountId}/trades/${tradeId}/close`, {
-          method: 'PUT',
-          headers: this.getHeaders(),
-          body: JSON.stringify({ units: unitsStr })
-       });
-       
-       const data = await response.json();
-       if (!response.ok) {
-           console.error("OANDA CLOSE FAILED:", data);
-           return false;
-       }
-       console.log(`OANDA CLOSED ${unitsStr} UNITS:`, data);
-       return true;
-    } catch (error) {
-        console.error('Oanda Close Network Error:', error);
+      // Ensure units is a string and positive for closure
+      const unitsStr = Math.abs(Math.floor(units)).toString();
+
+      const response = await fetch(`${this.baseUrl}/accounts/${this.accountId}/trades/${tradeId}/close`, {
+        method: 'PUT',
+        headers: this.getHeaders(),
+        body: JSON.stringify({ units: unitsStr })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        console.error("OANDA CLOSE FAILED:", data);
         return false;
+      }
+      console.log(`OANDA CLOSED ${unitsStr} UNITS:`, data);
+      return true;
+    } catch (error) {
+      console.error('Oanda Close Network Error:', error);
+      return false;
     }
   }
 }

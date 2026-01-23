@@ -8,20 +8,20 @@ export const useTradingEngine = () => {
   const brokerMode = BrokerMode.REMOTE_SERVER;
 
   const [remoteUrl, setRemoteUrl] = useState(() => {
-      if (typeof window !== 'undefined') {
-        // Check local storage first to allow overrides
-        const raw = localStorage.getItem('remoteUrl');
-        const saved = raw ? raw.trim().replace(/\/$/, '') : '';
-        const hasProto = /^https?:\/\//i.test(saved);
-        const isLocalhost = saved.includes('localhost') || saved.includes('127.0.0.1');
-        
-        // Only accept saved URL if it is valid AND NOT localhost (to enforce production)
-        if (hasProto && saved && !isLocalhost) return saved;
+    if (typeof window !== 'undefined') {
+      // Check local storage first to allow overrides
+      const raw = localStorage.getItem('remoteUrl');
+      const saved = raw ? raw.trim().replace(/\/$/, '') : '';
+      const hasProto = /^https?:\/\//i.test(saved);
+      const isLocalhost = saved.includes('localhost') || saved.includes('127.0.0.1');
 
-        // Force connection to Deployed/Remote Server by default
-        return DEFAULT_REMOTE_URL;
-      }
+      // Only accept saved URL if it is valid AND NOT localhost (to enforce production)
+      if (hasProto && saved && !isLocalhost) return saved;
+
+      // Force connection to Deployed/Remote Server by default
       return DEFAULT_REMOTE_URL;
+    }
+    return DEFAULT_REMOTE_URL;
   });
 
   const [oandaConfig, setOandaConfig] = useState<OandaConfig>({ apiKey: '', accountId: '', environment: 'practice' });
@@ -33,13 +33,12 @@ export const useTradingEngine = () => {
 
   // Assets State
   const initialAssets: Record<AssetSymbol, AssetData> = {
-    [AssetSymbol.XAUUSD]: createInitialAsset(AssetSymbol.XAUUSD),
-    [AssetSymbol.NAS100]: createInitialAsset(AssetSymbol.NAS100)
+    [AssetSymbol.XAUUSD]: createInitialAsset(AssetSymbol.XAUUSD)
   };
   const [assets, setAssets] = useState<Record<AssetSymbol, AssetData>>(initialAssets);
   const esRef = useRef<EventSource | null>(null);
   const lastUpdateRef = useRef<number>(0);
-  
+
   // --- MAIN ENGINE LOOP (POLLING ONLY) ---
   useEffect(() => {
     try {
@@ -55,14 +54,14 @@ export const useTradingEngine = () => {
             if (state.trades) setTrades(state.trades);
             setIsConnected(true);
             lastUpdateRef.current = Date.now();
-          } catch {}
+          } catch { }
         };
         stream.onerror = () => {
-          try { stream.close(); } catch {}
+          try { stream.close(); } catch { }
           esRef.current = null;
           setIsConnected(false);
           setTimeout(() => {
-            try { connect(remoteUrl); } catch {}
+            try { connect(remoteUrl); } catch { }
           }, 2000);
         };
         return stream;
@@ -71,14 +70,14 @@ export const useTradingEngine = () => {
       const watchdog = setInterval(() => {
         const stale = Date.now() - (lastUpdateRef.current || 0) > 12000;
         if (stale) {
-          try { es.close(); } catch {}
+          try { es.close(); } catch { }
           esRef.current = null;
           setIsConnected(false);
-          try { connect(remoteUrl); } catch {}
+          try { connect(remoteUrl); } catch { }
         }
       }, 5000);
-      return () => { try { clearInterval(watchdog); } catch {}; try { es.close(); } catch {}; esRef.current = null; };
-    } catch {}
+      return () => { try { clearInterval(watchdog); } catch { }; try { es.close(); } catch { }; esRef.current = null; };
+    } catch { }
   }, [remoteUrl]);
 
   useEffect(() => {
@@ -96,30 +95,30 @@ export const useTradingEngine = () => {
           setIsConnected(true);
           lastUpdateRef.current = Date.now();
         }
-      } catch {}
+      } catch { }
     }, 5000);
-    return () => { try { clearInterval(id); } catch {} };
+    return () => { try { clearInterval(id); } catch { } };
   }, [remoteUrl]);
 
-  
+
 
   useEffect(() => {
     if (isConnected) return;
     const interval = setInterval(async () => {
       try {
-          const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-          const res = await fetch(`${cleanUrl}/state?ts=${Date.now()}`, { cache: 'no-store' });
-          if (res.ok) {
-              const state = await res.json();
-              if (state.assets) setAssets(state.assets);
-              if (state.account) setAccount(state.account);
-              if (state.trades) setTrades(state.trades);
-              setIsConnected(true);
-          } else {
-              setIsConnected(false);
-          }
-      } catch (e) {
+        const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
+        const res = await fetch(`${cleanUrl}/state?ts=${Date.now()}`, { cache: 'no-store' });
+        if (res.ok) {
+          const state = await res.json();
+          if (state.assets) setAssets(state.assets);
+          if (state.account) setAccount(state.account);
+          if (state.trades) setTrades(state.trades);
+          setIsConnected(true);
+        } else {
           setIsConnected(false);
+        }
+      } catch (e) {
+        setIsConnected(false);
       }
     }, TICK_RATE_MS);
     return () => clearInterval(interval);
@@ -140,7 +139,7 @@ export const useTradingEngine = () => {
         }
         if (typeof window !== 'undefined') localStorage.setItem('remoteUrl', preferred);
         setRemoteUrl(preferred);
-      } catch {}
+      } catch { }
     };
     chooseUrl();
   }, []);
@@ -150,83 +149,83 @@ export const useTradingEngine = () => {
   // --- Public Interface Wrappers for Remote Calls ---
   const toggleBot = useCallback(async (symbol: AssetSymbol) => {
     const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-    try { await fetch(`${cleanUrl}/toggle/${encodeURIComponent(symbol)}`, { method: 'POST' }); } catch (e) {}
+    try { await fetch(`${cleanUrl}/toggle/${encodeURIComponent(symbol)}`, { method: 'POST' }); } catch (e) { }
   }, [remoteUrl]);
 
   const toggleStrategy = useCallback(async (symbol: AssetSymbol, s: StrategyType) => {
-      const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-      
-      // Optimistic UI Update: Update local state instantly
+    const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
+
+    // Optimistic UI Update: Update local state instantly
+    setAssets(prev => {
+      const asset = prev[symbol];
+      const list = asset.activeStrategies;
+      const newList = list.includes(s)
+        ? list.filter(strat => strat !== s)
+        : [...list, s];
+
+      return {
+        ...prev,
+        [symbol]: { ...asset, activeStrategies: newList }
+      };
+    });
+
+    try {
+      const res = await fetch(`${cleanUrl}/strategy/${encodeURIComponent(symbol)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ strategy: s })
+      });
+      if (!res.ok) throw new Error('Server rejected strategy toggle');
+    } catch (e) {
+      // Revert optimistic update if server request fails
       setAssets(prev => {
         const asset = prev[symbol];
+        // We can't easily "undo" without knowing the previous state exactly,
+        // but we can toggle it back.
+        // Better: just rely on the next poll/SSE to fix it, but let's notify.
+        // Or simpler: Toggle it back manually.
         const list = asset.activeStrategies;
-        const newList = list.includes(s) 
-            ? list.filter(strat => strat !== s)
-            : [...list, s];
-        
+        const newList = list.includes(s)
+          ? list.filter(strat => strat !== s) // It was added, so remove it
+          : [...list, s]; // It was removed, so add it back
+
+        // Actually, if we just toggled it, the "current" list (in prev) has the NEW state.
+        // So we need to reverse the logic to get back to OLD state.
+        // BUT 'prev' in this setter might be different from the 'prev' in the first setter due to closure?
+        // No, 'prev' is the current state when this runs.
+        // If the first setter ran, 'prev' here has the CHANGED state.
+        // So we just toggle 's' again to revert.
+
+        const revertList = list.includes(s)
+          ? list.filter(strat => strat !== s)
+          : [...list, s];
+
         return {
-            ...prev,
-            [symbol]: { ...asset, activeStrategies: newList }
+          ...prev,
+          [symbol]: { ...asset, activeStrategies: revertList }
         };
       });
-
-      try { 
-          const res = await fetch(`${cleanUrl}/strategy/${encodeURIComponent(symbol)}`, { 
-              method: 'POST', 
-              headers: {'Content-Type': 'application/json'}, 
-              body: JSON.stringify({ strategy: s }) 
-          }); 
-          if (!res.ok) throw new Error('Server rejected strategy toggle');
-      } catch (e) {
-          // Revert optimistic update if server request fails
-          setAssets(prev => {
-              const asset = prev[symbol];
-              // We can't easily "undo" without knowing the previous state exactly,
-              // but we can toggle it back.
-              // Better: just rely on the next poll/SSE to fix it, but let's notify.
-              // Or simpler: Toggle it back manually.
-              const list = asset.activeStrategies;
-              const newList = list.includes(s) 
-                  ? list.filter(strat => strat !== s) // It was added, so remove it
-                  : [...list, s]; // It was removed, so add it back
-               
-              // Actually, if we just toggled it, the "current" list (in prev) has the NEW state.
-              // So we need to reverse the logic to get back to OLD state.
-              // BUT 'prev' in this setter might be different from the 'prev' in the first setter due to closure?
-              // No, 'prev' is the current state when this runs.
-              // If the first setter ran, 'prev' here has the CHANGED state.
-              // So we just toggle 's' again to revert.
-              
-              const revertList = list.includes(s)
-                  ? list.filter(strat => strat !== s)
-                  : [...list, s];
-
-              return {
-                  ...prev,
-                  [symbol]: { ...asset, activeStrategies: revertList }
-              };
-          });
-          console.error("Failed to toggle strategy, reverting UI", e);
-      }
+      console.error("Failed to toggle strategy, reverting UI", e);
+    }
   }, [remoteUrl]);
 
   const resetAccount = useCallback(async () => {
-     if (confirm("Reset account balance only? History will be preserved.")) {
-          const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
-          try { await fetch(`${cleanUrl}/reset_account`, { method: 'POST' }); } catch(e) {}
-     }
+    if (confirm("Reset account balance only? History will be preserved.")) {
+      const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
+      try { await fetch(`${cleanUrl}/reset_account`, { method: 'POST' }); } catch (e) { }
+    }
   }, [remoteUrl]);
 
   const configureOanda = useCallback(async (mode: BrokerMode, config: OandaConfig, url?: string): Promise<boolean> => {
-      // In this simplified mode, we mostly care about the URL
-      if (typeof window !== 'undefined') {
-          if (url) { 
-              const clean = url.trim().replace(/\/$/, "");
-              localStorage.setItem('remoteUrl', clean); 
-              setRemoteUrl(clean); 
-          }
+    // In this simplified mode, we mostly care about the URL
+    if (typeof window !== 'undefined') {
+      if (url) {
+        const clean = url.trim().replace(/\/$/, "");
+        localStorage.setItem('remoteUrl', clean);
+        setRemoteUrl(clean);
       }
-      return true;
+    }
+    return true;
   }, []);
 
   // Return remoteUrl so UI can display it for debug
@@ -234,21 +233,19 @@ export const useTradingEngine = () => {
 };
 
 function createInitialAsset(symbol: AssetSymbol): AssetData {
-    // Default strategies match server/bot.js defaults
-    const defaultStrategies = symbol === AssetSymbol.NAS100 
-        ? [StrategyType.NY_ORB, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT, StrategyType.AI_AGENT]
-        : [StrategyType.LONDON_SWEEP, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT, StrategyType.AI_AGENT];
+  // Default strategies match server/bot.js defaults
+  const defaultStrategies = [StrategyType.LONDON_SWEEP, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT, StrategyType.AI_AGENT];
 
-    return {
-      symbol,
-      currentPrice: ASSET_CONFIG[symbol].startPrice,
-      history: [],
-      rsi: 50, ema: ASSET_CONFIG[symbol].startPrice, ema200: ASSET_CONFIG[symbol].startPrice, trend: 'UP',
-      macd: { macdLine: 0, signalLine: 0, histogram: 0 },
-      bollinger: { upper: 0, middle: 0, lower: 0 },
-      slope: 0,
-      botActive: true,
-      activeStrategies: defaultStrategies,
-      isThinking: false, isLive: false,
-    };
+  return {
+    symbol,
+    currentPrice: ASSET_CONFIG[symbol].startPrice,
+    history: [],
+    rsi: 50, ema: ASSET_CONFIG[symbol].startPrice, ema200: ASSET_CONFIG[symbol].startPrice, trend: 'UP',
+    macd: { macdLine: 0, signalLine: 0, histogram: 0 },
+    bollinger: { upper: 0, middle: 0, lower: 0 },
+    slope: 0,
+    botActive: true,
+    activeStrategies: defaultStrategies,
+    isThinking: false, isLive: false,
+  };
 }

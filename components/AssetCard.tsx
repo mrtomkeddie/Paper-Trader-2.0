@@ -33,7 +33,6 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
     const getIcon = () => {
         switch (asset.symbol) {
             case AssetSymbol.XAUUSD: return <CircleDollarSign size={24} strokeWidth={2} />;
-            case AssetSymbol.NAS100: return <Activity size={24} strokeWidth={2} />;
             default: return <Activity size={24} />;
         }
     };
@@ -41,7 +40,6 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
     const getIconColor = () => {
         switch (asset.symbol) {
             case AssetSymbol.XAUUSD: return 'bg-yellow-500/20 text-yellow-400';
-            case AssetSymbol.NAS100: return 'bg-blue-500/20 text-blue-400';
             default: return 'bg-gray-500/20 text-gray-400';
         }
     };
@@ -50,9 +48,7 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
         if (symbol === AssetSymbol.XAUUSD) {
             return [StrategyType.LONDON_SWEEP, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT, StrategyType.AI_AGENT];
         }
-        if (symbol === AssetSymbol.NAS100) {
-            return [StrategyType.NY_ORB, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT, StrategyType.AI_AGENT];
-        }
+
         return [StrategyType.AI_AGENT];
     };
 
@@ -165,10 +161,7 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
                             if (strat === StrategyType.LONDON_CONTINUATION) {
                                 label = 'Ldn Cont.';
                             }
-                            if (strat === StrategyType.NY_ORB) {
-                                label = 'NY ORB';
-                                activeColor = 'bg-blue-600/80';
-                            }
+
                             if (strat === StrategyType.TREND_FOLLOW) {
                                 label = 'Trend Follow';
                                 activeColor = 'bg-orange-600/80';
@@ -190,7 +183,7 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
                                 >
                                     {strat === StrategyType.AI_AGENT && <Sparkles size={10} className={isActive ? 'text-white' : ''} />}
                                     {(strat === StrategyType.LONDON_SWEEP || strat === StrategyType.LONDON_CONTINUATION) && <Landmark size={10} className={isActive ? 'text-white' : ''} />}
-                                    {strat === StrategyType.NY_ORB && <Clock size={10} className={isActive ? 'text-white' : ''} />}
+
                                     {strat === StrategyType.TREND_FOLLOW && <TrendingUp size={10} className={isActive ? 'text-white' : ''} />}
                                     {strat === StrategyType.MEAN_REVERT && <TrendingDown size={10} className={isActive ? 'text-white' : ''} />}
                                     {label}

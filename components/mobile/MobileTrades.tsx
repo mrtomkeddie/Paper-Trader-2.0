@@ -9,7 +9,7 @@ interface Props {
 
 const getStrategyLabel = (strategy: string) => {
     switch (strategy) {
-        case StrategyType.NY_ORB: return 'NY ORB';
+        case 'NY_ORB': return 'NY ORB';
         case StrategyType.AI_AGENT: return 'Gemini AI';
         case StrategyType.TREND_FOLLOW: return 'Trend';
         case StrategyType.LONDON_SWEEP: return 'Ldn Sweep';
@@ -88,13 +88,13 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
 
         // Asset Logic (OR within assets)
         const matchesAsset = activeAssets.length === 0 ||
-            (activeAssets.includes('NAS100') && t.symbol === AssetSymbol.NAS100) ||
+            (activeAssets.includes('NAS100') && (t.symbol as string) === 'NAS100') ||
             (activeAssets.includes('GOLD') && t.symbol === AssetSymbol.XAUUSD);
 
         // Strategy Logic (OR within strategies)
         const matchesStrategy = activeStrategies.length === 0 || activeStrategies.some(s => {
             if (s === 'GEMINI') return t.strategy === StrategyType.AI_AGENT;
-            if (s === 'NY ORB') return t.strategy === StrategyType.NY_ORB;
+            if (s === 'NY ORB') return (t.strategy as string) === 'NY_ORB';
             if (s === 'TREND') return t.strategy === StrategyType.TREND_FOLLOW;
             if (s === 'LONDON') return t.strategy === StrategyType.LONDON_SWEEP || t.strategy === StrategyType.LONDON_CONTINUATION;
             return false;
@@ -129,7 +129,7 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
                     <div>
                         <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-white">{trade.symbol}</span>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${trade.strategy === StrategyType.NY_ORB ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded uppercase font-bold ${(trade.strategy as string) === 'NY_ORB' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
                                 {getStrategyLabel(trade.strategy)}
                             </span>
                         </div>

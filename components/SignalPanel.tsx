@@ -12,7 +12,6 @@ interface Props {
 }
 
 const STRATEGY_CONFIG: Record<string, StrategyType[]> = {
-    [AssetSymbol.NAS100]: [StrategyType.AI_AGENT, StrategyType.NY_ORB, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT],
     [AssetSymbol.XAUUSD]: [StrategyType.AI_AGENT, StrategyType.LONDON_SWEEP, StrategyType.TREND_FOLLOW, StrategyType.MEAN_REVERT],
 };
 
@@ -20,7 +19,6 @@ const AVAILABLE_STRATEGIES = [
     { type: StrategyType.AI_AGENT, label: 'Gemini AI' },
     { type: StrategyType.TREND_FOLLOW, label: 'Trend Follow' },
     { type: StrategyType.MEAN_REVERT, label: 'Mean Revert' },
-    { type: StrategyType.NY_ORB, label: 'NY ORB' },
     { type: StrategyType.LONDON_SWEEP, label: 'London Sweep' },
 ];
 
@@ -28,11 +26,11 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
     // Determine Signal Status
     // If a specific trade is selected, show its status.
     // If Live View (no trade selected), show AI Sentiment.
-    
+
     let signalTitle = "WAITING FOR SIGNAL";
     let signalColor = "bg-gray-800 text-gray-400";
     let confidence = trade?.confidence ?? asset.aiConfidence ?? 0;
-    
+
     if (trade) {
         if (trade.status === 'CLOSED') {
             signalTitle = `${trade.type} CLOSED`;
@@ -68,7 +66,7 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
 
     // Use entryReason if viewing a past/active trade, otherwise live AI reason
     const reasonText = trade?.entryReason || asset.aiReason || "AI is analyzing market structure. Waiting for clear confirmation...";
-    
+
     const getFriendlyOutcome = (t: Trade) => {
         if (t.closeReason === 'STOP_LOSS') {
             if (t.pnl > 0) return "Closed by Trailing Stop. Although the final portion stopped out, partial profits were already banked.";
@@ -83,8 +81,8 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
             {!trade && activeOpenTrade && (
                 <div className="absolute top-0 left-0 right-0 bg-blue-600/10 border-b border-blue-500/20 px-4 py-1.5 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                         <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Position Running</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Position Running</span>
                     </div>
                     <span className={`text-[10px] font-mono font-bold ${(activeOpenTrade.floatingPnl || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {(activeOpenTrade.floatingPnl || 0) >= 0 ? '+' : ''}{(activeOpenTrade.floatingPnl || 0).toFixed(2)}
@@ -98,16 +96,16 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                         <div className="flex flex-col">
                             <span className="text-xl">{trade.symbol}</span>
                             <span className="text-xs text-gray-500 font-normal">
-                                {new Date(trade.openTime).toLocaleString('en-GB', { 
-                                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
+                                {new Date(trade.openTime).toLocaleString('en-GB', {
+                                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
                             </span>
                         </div>
                     ) : "Live Market Monitor"}
                 </h3>
-                
+
                 {trade && onClearSelection && (
-                    <button 
+                    <button
                         onClick={onClearSelection}
                         className="px-3 py-1.5 bg-blue-600/20 text-blue-400 text-xs font-bold rounded-lg hover:bg-blue-600/30 transition-colors border border-blue-500/30 flex items-center gap-2"
                     >
@@ -127,20 +125,20 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                     <span className="text-gray-400">Confidence:</span>
                     <span className="text-white font-bold">{confidence}%</span>
                 </div>
-                
+
                 {trade && (
                     <>
                         <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-400 flex items-center gap-2"><Shield size={14} /> Stop Loss:</span>
                             <span className="text-red-400 font-mono">{slPrice.toFixed(2)}</span>
                         </div>
-                        
+
                         {/* Take Profit Ladder */}
                         <div className="space-y-2 pt-2 border-t border-white/5">
                             {trade.tpLevels.map((tp) => (
                                 <div key={tp.id} className="flex justify-between items-center text-sm">
                                     <span className={`flex items-center gap-1 ${tp.hit ? 'text-green-500 font-bold' : 'text-gray-400'}`}>
-                                        <Target size={12} className={tp.hit ? "text-green-500 fill-green-500/20" : ""}/> TP {tp.id} ({tp.percentage * 100}%):
+                                        <Target size={12} className={tp.hit ? "text-green-500 fill-green-500/20" : ""} /> TP {tp.id} ({tp.percentage * 100}%):
                                     </span>
                                     <span className={`${tp.hit ? 'text-green-500 line-through' : 'text-green-400'} font-mono font-bold`}>
                                         {tp.price.toFixed(2)}
@@ -163,7 +161,7 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                 <p className="text-xs text-gray-400 leading-relaxed">
                     {reasonText}
                 </p>
-                
+
                 {trade && getFriendlyOutcome(trade) && (
                     <div className="mt-4 pt-3 border-t border-white/10">
                         <div className="flex items-center gap-2 mb-2">
@@ -185,32 +183,32 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
             {(!trade || trade.status === 'OPEN') && onToggleStrategy && !hideStrategies && (
                 <div className="border-t border-white/5 pt-4 mt-auto">
                     <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-2">
-                        <Zap size={12} className="text-blue-400"/> Active Strategies
+                        <Zap size={12} className="text-blue-400" /> Active Strategies
                     </h4>
                     <div className="space-y-3">
                         {AVAILABLE_STRATEGIES
                             .filter(s => STRATEGY_CONFIG[asset.symbol]?.includes(s.type))
                             .map((strat) => {
-                             const isActive = asset.activeStrategies?.includes(strat.type) ?? false;
-                             return (
-                                <div key={strat.type} className="flex items-center justify-between group">
-                                    <span className={`text-sm transition-colors ${isActive ? 'text-white font-medium' : 'text-gray-500'}`}>
-                                        {strat.label}
-                                    </span>
-                                    <button 
-                                        onClick={() => onToggleStrategy(asset.symbol, strat.type)}
-                                        className={`w-9 h-5 rounded-full relative transition-all duration-300 focus:outline-none ${isActive ? 'bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.3)]' : 'bg-gray-800 border border-gray-700'}`}
-                                    >
-                                        <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
-                                    </button>
-                                </div>
-                             );
-                        })}
+                                const isActive = asset.activeStrategies?.includes(strat.type) ?? false;
+                                return (
+                                    <div key={strat.type} className="flex items-center justify-between group">
+                                        <span className={`text-sm transition-colors ${isActive ? 'text-white font-medium' : 'text-gray-500'}`}>
+                                            {strat.label}
+                                        </span>
+                                        <button
+                                            onClick={() => onToggleStrategy(asset.symbol, strat.type)}
+                                            className={`w-9 h-5 rounded-full relative transition-all duration-300 focus:outline-none ${isActive ? 'bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.3)]' : 'bg-gray-800 border border-gray-700'}`}
+                                        >
+                                            <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${isActive ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
                     </div>
                 </div>
             )}
 
-            </div>
+        </div>
     );
 };
 

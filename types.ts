@@ -1,7 +1,6 @@
 
 export enum AssetSymbol {
-  XAUUSD = 'XAUUSD',
-  NAS100 = 'NAS100'
+  XAUUSD = 'XAUUSD'
 }
 
 export enum StrategyType {
@@ -10,11 +9,10 @@ export enum StrategyType {
   MEAN_REVERT = 'MEAN_REVERT',
   AI_AGENT = 'AI_AGENT',
   MANUAL = 'MANUAL',
-  
+
   // Institutional Strategies
-  LONDON_SWEEP = 'LONDON_SWEEP', 
-  LONDON_CONTINUATION = 'LONDON_CONTINUATION',
-  NY_ORB = 'NY_ORB'
+  LONDON_SWEEP = 'LONDON_SWEEP',
+  LONDON_CONTINUATION = 'LONDON_CONTINUATION'
 }
 
 export enum TradeType {
@@ -45,26 +43,26 @@ export interface Trade {
   id: string;
   symbol: AssetSymbol;
   type: TradeType;
-  
+
   entryPrice: number;
   initialSize: number; // Starting Lots
   currentSize: number; // Remaining Lots
-  
+
   stopLoss: number;
-  
+
   // Multi-Level Take Profit
-  tpLevels: TpLevel[]; 
+  tpLevels: TpLevel[];
 
   openTime: number;
   closeTime?: number;
   closePrice?: number;
-  
+
   pnl: number; // Accumulated Realized PnL
   floatingPnl?: number; // Current unrealized (for UI)
-  
+
   status: 'OPEN' | 'CLOSED';
   strategy: StrategyType;
-  
+
   // Analysis Fields
   confidence?: number; // Confidence score at entry (0-100)
   entryReason?: string; // Why the trade was taken
@@ -95,19 +93,19 @@ export interface AssetData {
   rsi: number;
   ema: number;
   // The "Big Picture" Trend
-  trend: 'UP' | 'DOWN'; 
+  trend: 'UP' | 'DOWN';
   ema200: number;
   slope: number; // Linear Regression Slope (Trend Angle)
 
   // New Indicators
   macd: { macdLine: number; signalLine: number; histogram: number };
   bollinger: { upper: number; middle: number; lower: number };
-  
+
   botActive: boolean;
   activeStrategies: StrategyType[]; // CHANGED: Array of strategies
   isThinking?: boolean; // UI state for when AI is querying
   isLive?: boolean; // Connected to WebSocket or API
-  
+
   // AI Data
   aiSentiment?: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   aiConfidence?: number;
