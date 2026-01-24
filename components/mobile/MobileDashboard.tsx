@@ -1,10 +1,12 @@
 import React from 'react';
-import { AssetData, AssetSymbol, StrategyType } from '../../types';
+import { AssetData, AssetSymbol, StrategyType, Trade } from '../../types';
 import { Activity, Zap, TrendingUp, TrendingDown, Power, Clock } from 'lucide-react';
+import PerformanceSummary from '../PerformanceSummary';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 
 interface Props {
     assets: Record<AssetSymbol, AssetData>;
+    trades: Trade[];
     onToggleStrategy: (symbol: AssetSymbol, strategy: StrategyType) => void;
     onToggleAuto: (symbol: AssetSymbol) => void;
 }
@@ -76,29 +78,24 @@ const AssetCard: React.FC<{
                 </ResponsiveContainer>
             </div>
 
-            {/* Strategy Toggles */}
+            {/* Strategy Toggles - Compact Horizontal Scroll */}
             <div className="mb-6">
-                <h3 className="text-xs font-bold text-gray-500 uppercase mb-3 ml-1">Active Strategies</h3>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Active Strategies</h3>
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                     {AVAILABLE_STRATEGIES
                         .filter(s => STRATEGY_CONFIG[asset.symbol]?.includes(s.type))
                         .map((strat) => {
                             const isActive = activeStrategies.includes(strat.type);
-
-                            // Determine active color classes based on asset
                             const activeClasses = asset.symbol === AssetSymbol.XAUUSD
                                 ? 'bg-yellow-600 text-white border-yellow-500 shadow-lg shadow-yellow-900/20'
                                 : 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-900/20';
-
                             return (
                                 <div
                                     key={strat.type}
-                                    className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 border
-                                ${isActive
-                                            ? activeClasses
-                                            : 'bg-[#1C1C1E] text-gray-600 border-white/5 opacity-50'}`}
+                                    className={`py-2 px-3 rounded-xl text-[10px] font-bold flex items-center gap-1.5 border whitespace-nowrap min-w-fit
+                                ${isActive ? activeClasses : 'bg-[#1C1C1E] text-gray-600 border-white/5 opacity-50'}`}
                                 >
-                                    <strat.icon size={14} className={isActive ? 'text-white' : 'text-gray-500'} />
+                                    <strat.icon size={12} className={isActive ? 'text-white' : 'text-gray-500'} />
                                     {strat.label}
                                 </div>
                             );
@@ -123,18 +120,20 @@ const AssetCard: React.FC<{
     );
 };
 
-const MobileDashboard: React.FC<Props> = ({ assets, onToggleStrategy, onToggleAuto }) => {
+const MobileDashboard: React.FC<Props> = ({ assets, trades, onToggleStrategy, onToggleAuto }) => {
     return (
         <div className="px-4 pb-24">
-            {/* Render both cards explicitly for requested layout */}
-
-
             {assets[AssetSymbol.XAUUSD] && (
-                <AssetCard
-                    asset={assets[AssetSymbol.XAUUSD]}
-                    onToggleStrategy={onToggleStrategy}
-                    onToggleAuto={onToggleAuto}
-                />
+                <>
+                    <AssetCard
+                        asset={assets[AssetSymbol.XAUUSD]}
+                        onToggleStrategy={onToggleStrategy}
+                        onToggleAuto={onToggleAuto}
+                    />
+
+                    {/* Add Stats Below */}
+                    <PerformanceSummary trades={trades} filter="TODAY" />
+                </>
             )}
         </div>
     );

@@ -146,6 +146,7 @@ const App: React.FC = () => {
             activeAssetData ? (
               <MobileDashboard
                 assets={assets}
+                trades={trades}
                 onToggleStrategy={setStrategy}
                 onToggleAuto={toggleBot}
               />
