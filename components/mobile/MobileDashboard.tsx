@@ -1,7 +1,8 @@
 import React from 'react';
 import { AssetData, AssetSymbol, StrategyType, Trade } from '../../types';
+
 import { Activity, Zap, TrendingUp, TrendingDown, Power, Clock } from 'lucide-react';
-import PerformanceSummary from '../PerformanceSummary';
+import MobilePerformanceCard from './MobilePerformanceCard';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 
 interface Props {
@@ -78,10 +79,10 @@ const AssetCard: React.FC<{
                 </ResponsiveContainer>
             </div>
 
-            {/* Strategy Toggles - Compact Horizontal Scroll */}
+            {/* Strategy Toggles - 2-Column Grid */}
             <div className="mb-6">
                 <h3 className="text-[10px] font-bold text-gray-500 uppercase mb-2 ml-1">Active Strategies</h3>
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                <div className="grid grid-cols-2 gap-2">
                     {AVAILABLE_STRATEGIES
                         .filter(s => STRATEGY_CONFIG[asset.symbol]?.includes(s.type))
                         .map((strat) => {
@@ -92,10 +93,10 @@ const AssetCard: React.FC<{
                             return (
                                 <div
                                     key={strat.type}
-                                    className={`py-2 px-3 rounded-xl text-[10px] font-bold flex items-center gap-1.5 border whitespace-nowrap min-w-fit
+                                    className={`py-3 px-3 rounded-xl text-[10px] font-bold flex items-center justify-center gap-2 border
                                 ${isActive ? activeClasses : 'bg-[#1C1C1E] text-gray-600 border-white/5 opacity-50'}`}
                                 >
-                                    <strat.icon size={12} className={isActive ? 'text-white' : 'text-gray-500'} />
+                                    <strat.icon size={13} className={isActive ? 'text-white' : 'text-gray-500'} />
                                     {strat.label}
                                 </div>
                             );
@@ -132,7 +133,7 @@ const MobileDashboard: React.FC<Props> = ({ assets, trades, onToggleStrategy, on
                     />
 
                     {/* Add Stats Below */}
-                    <PerformanceSummary trades={trades} filter="TODAY" />
+                    <MobilePerformanceCard trades={trades} filter="TODAY" />
                 </>
             )}
         </div>
