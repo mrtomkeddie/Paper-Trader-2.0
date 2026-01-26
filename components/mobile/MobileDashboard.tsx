@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AssetData, AssetSymbol, StrategyType, Trade } from '../../types';
-import { Activity, Zap, TrendingUp, TrendingDown, Layers, BarChart3, Target, Flame } from 'lucide-react';
+import { Activity, Zap, TrendingUp, TrendingDown, Layers, BarChart3, Target, Flame, Power } from 'lucide-react';
 import MobilePerformanceCard from './MobilePerformanceCard';
 import { AreaChart, Area, ResponsiveContainer, YAxis } from 'recharts';
 
@@ -55,8 +55,8 @@ const AssetCard: React.FC<{
                 <button
                     onClick={() => onToggleAuto(asset.symbol)}
                     className={`flex items-center gap-2 pl-3 pr-1 py-1 rounded-full border transition-all duration-300 ${asset.botActive
-                            ? 'bg-[#ccff00]/10 border-[#ccff00]/20 text-[#ccff00]'
-                            : 'bg-white/5 border-white/10 text-gray-400'
+                        ? 'bg-[#ccff00]/10 border-[#ccff00]/20 text-[#ccff00]'
+                        : 'bg-white/5 border-white/10 text-gray-400'
                         }`}
                 >
                     <span className="text-[10px] font-bold tracking-wide uppercase">
@@ -121,8 +121,8 @@ const AssetCard: React.FC<{
                                     key={strat.type}
                                     onClick={() => onToggleStrategy(asset.symbol, strat.type)}
                                     className={`relative group overflow-hidden rounded-2xl p-3 text-left transition-all duration-200 border ${isActive
-                                            ? 'bg-[#2c2c2e] border-white/10'
-                                            : 'bg-[#1c1c1e] border-transparent opacity-60'
+                                        ? 'bg-[#2c2c2e] border-white/10'
+                                        : 'bg-[#1c1c1e] border-transparent opacity-60'
                                         }`}
                                 >
                                     <div className="flex items-center justify-between mb-2">
