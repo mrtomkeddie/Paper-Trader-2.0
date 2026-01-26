@@ -95,7 +95,6 @@ const OANDA_TOKEN = process.env.OANDA_API_KEY;
 const OANDA_ACCOUNT_ID = process.env.OANDA_ACCOUNT_ID;
 const OANDA_ENV = process.env.OANDA_ENV || 'practice';
 const USE_OANDA = !!(OANDA_TOKEN && OANDA_ACCOUNT_ID);
-const CRYPTO_UPSTREAM_URL = process.env.CRYPTO_UPSTREAM_URL || process.env.CRYPTO_REMOTE_URL || 'http://localhost:3002';
 const ENABLE_GITHUB_SYNC = process.env.GITHUB_SYNC_ENABLED === 'true';
 
 // --- NOTIFICATIONS (Twilio SMS) ---
@@ -853,49 +852,8 @@ Return ONLY this JSON:
 }
 
 
-// --- LIVE DATA CONNECTION (BINANCE) ---
-let ws;
-function connectBinance() {
-  try { if (ws) ws.close(); } catch { }
-  ws = new WebSocket('wss://stream.binance.com:9443/ws/paxgusdt@kline_1m/btcusdt@kline_1m');
-  ws.on('open', () => { });
-  ws.on('message', (data) => {
-    try {
-      const event = JSON.parse(data);
-      const isGold = event.s === 'PAXGUSDT';
-      const isNas = event.s === 'BTCUSDT';
-      const symbol = isGold ? 'XAUUSD' : isNas ? 'NAS100' : null;
-      if (symbol && event.k) {
-        const price = isNas ? parseFloat(event.k.c) / 5 : parseFloat(event.k.c);
-        updateMarketFromMid(symbol, price);
-        const asset = assets[symbol];
-        lastTickTs[symbol] = Date.now();
-        feedSource = 'BINANCE';
-        try { asset.feedSource = feedSource; asset.lastTickTs = lastTickTs[symbol]; } catch { }
-        asset.currentPrice = market[symbol].mid;
-        asset.isLive = true;
-        asset.history.push({ time: new Date().toLocaleTimeString(), value: market[symbol].mid });
-        if (asset.history.length > 300) asset.history.shift();
-        asset.ema = calculateEMA(asset.currentPrice, asset.ema, 20);
-        asset.ema200 = calculateEMA(asset.currentPrice, asset.ema200, 200);
-        const closedCloses = candlesM5[symbol].filter(c => c.isClosed).map(c => c.close);
-        asset.slope = calculateSlope(closedCloses, 10);
-        asset.rsi = calculateRSI(asset.history.map(h => h.value));
-        asset.trend = price > asset.ema200 ? 'UP' : 'DOWN';
-        const sma = asset.ema;
-        const stdDev = asset.currentPrice * 0.002;
-        asset.bollinger = { upper: sma + stdDev * 2, middle: sma, lower: sma - stdDev * 2 };
-        updateCandles(symbol, asset.currentPrice);
-        updateCandlesM15(symbol, asset.currentPrice);
-        processTicks(symbol);
-      }
-    } catch (err) {
-      console.warn('[FEED] Binance message parsing error:', err.message);
-    }
-  });
-  ws.on('close', () => { setTimeout(connectLiveFeed, 5000); });
-  ws.on('error', () => { try { ws.close(); } catch { } });
-}
+// --- LIVE DATA CONNECTION ---
+// Binance connection removed (Gold Only)
 
 let oandaReq = null;
 let lastOandaHeartbeat = Date.now();
@@ -910,7 +868,7 @@ let feedWatchdogLastReconnectMs = 0;
 function connectOanda() {
   const host = OANDA_ENV === 'live' ? 'stream-fxtrade.oanda.com' : 'stream-fxpractice.oanda.com';
   // Subscribe to GBP_USD for FX rates
-  const instruments = ['NAS100_USD', 'XAU_USD', 'GBP_USD'].join(',');
+  const instruments = ['XAU_USD', 'GBP_USD'].join(',');
   const options = {
     hostname: host,
     path: `/v3/accounts/${OANDA_ACCOUNT_ID}/pricing/stream?instruments=${encodeURIComponent(instruments)}`,
@@ -945,8 +903,7 @@ function connectOanda() {
             }
 
             let symbol = null;
-            if (inst === 'NAS100_USD') symbol = 'NAS100';
-            else if (inst === 'XAU_USD') symbol = 'XAUUSD';
+            if (inst === 'XAU_USD') symbol = 'XAUUSD';
 
             if (!symbol || !mid) continue;
             market[symbol] = { bid, ask, mid };
@@ -1028,14 +985,11 @@ setInterval(() => {
   }
 
   if (now - feedWatchdogLastReconnectMs < 60 * 1000) return;
-  const nasWindow = hour >= 8 && hour < 21;
   const xauWindow = true;
-  const staleNas = nasWindow && (now - (lastTickTs.NAS100 || 0) > 2 * 60 * 1000);
   const staleXau = xauWindow && (now - (lastTickTs.XAUUSD || 0) > 2 * 60 * 1000);
-  const stalledM5Nas = nasWindow && (now - (lastM5CloseTs.NAS100 || 0) > 12 * 60 * 1000) && (now - (lastTickTs.NAS100 || 0) < 2 * 60 * 1000);
   const stalledM5Xau = xauWindow && (now - (lastM5CloseTs.XAUUSD || 0) > 12 * 60 * 1000) && (now - (lastTickTs.XAUUSD || 0) < 2 * 60 * 1000);
 
-  if (staleNas || staleXau || stalledM5Nas || stalledM5Xau) {
+  if (staleXau || stalledM5Xau) {
     feedWatchdogLastReconnectMs = now;
     console.warn(`[WATCHDOG] Feed stale or candle stalled (source=${feedSource || 'UNKNOWN'}). Reconnecting...`);
     connectLiveFeed();
@@ -1055,10 +1009,7 @@ function connectLiveFeed() {
   }
 
   // Cleanup prior connections
-  if (ws) {
-    try { ws.close(); } catch { }
-    ws = null;
-  }
+
   if (oandaReq) {
     try { oandaReq.destroy(); } catch { }
     oandaReq = null;
@@ -1069,7 +1020,8 @@ function connectLiveFeed() {
   if (USE_OANDA) {
     connectOanda();
   } else {
-    connectBinance();
+    // connectBinance(); // Removed for Gold Only
+    console.warn('[FEED] No OANDA. Gold Only Bot requires OANDA.');
   }
 }
 
@@ -1079,7 +1031,7 @@ connectLiveFeed();
   try {
     if (!USE_OANDA) return;
     const host = OANDA_ENV === 'live' ? 'api-fxtrade.oanda.com' : 'api-fxpractice.oanda.com';
-    const map = { 'NAS100': 'NAS100_USD' };
+    const map = {}; // NAS100 Removed
     for (const symbol of Object.keys(assets)) {
       const inst = map[symbol];
       if (!inst) continue;
@@ -1315,17 +1267,7 @@ function getGuardConfig(symbol, nowMs = Date.now()) {
   };
 }
 
-function isNasLunchPauseNow(ts = Date.now()) {
-  try {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date(ts));
-    const hh = parseInt(String(parts.find(p => p.type === 'hour')?.value || '0'), 10);
-    const mm = parseInt(String(parts.find(p => p.type === 'minute')?.value || '0'), 10);
-    const mins = hh * 60 + mm;
-    return mins >= (11 * 60 + 30) && mins <= (13 * 60 + 30);
-  } catch {
-    return false;
-  }
-}
+// isNasLunchPauseNow Removed
 
 function processTicks(symbol) {
   let closedPnL = 0;
@@ -1578,16 +1520,13 @@ function processTicks(symbol) {
     } else {
       const utcHour = new Date().getUTCHours();
 
-      // 1. NAS100 TIME FILTER (08:00 - 21:00 UTC)
-      // Restrict 'NAS100' trades to ONLY execute between 08:00 UTC and 21:00 UTC.
-      const isNasRestricted = symbol === 'NAS100' && (utcHour < 8 || utcHour >= 21);
-
+      // NAS100 Logic Removed
       // 2. XAUUSD TIME FILTER (12:00 UTC+ only)
       // Avoid London Sweep conflict
       const isXauRestricted = symbol === 'XAUUSD' && utcHour < 12;
 
-      if (!isNasRestricted && !isXauRestricted) {
-        if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
+      if (!isXauRestricted) {
+        if (false) { // Lunch pause placeholder removed
           setSkipReason(asset, 'Lunch pause');
         } else {
           const isTrendUp = asset.currentPrice > asset.ema200;
@@ -1710,38 +1649,11 @@ function processTicks(symbol) {
       }
     }
 
-    // C. NY ORB (NAS100)
-    if (asset.activeStrategies.includes('NY_ORB') && symbol === 'NAS100') {
-      if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
-      const nowUtc = new Date();
-      const hour = nowUtc.getUTCHours();
-      const mins = hour * 60 + nowUtc.getUTCMinutes();
-      const start = 14 * 60 + 30; // 14:30
-      const end = 15 * 60 + 30;   // 15:30
-
-      if (mins >= start && mins <= end) {
-        const volExpansion = asset.bollinger.upper - asset.bollinger.lower > asset.currentPrice * 0.0012;
-
-        // LONG Logic (Breakout)
-        if (volExpansion && asset.currentPrice > asset.bollinger.upper) {
-          console.log(`[NY_ORB] ${symbol} BUY @ ${asset.currentPrice.toFixed(2)}`);
-          executeTrade(symbol, 'BUY', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE', 'NY ORB: Volatility expansion breakout above Bollinger Bands.', 88);
-        }
-
-        // SHORT Logic (Close below Lower Band)
-        const lastClosed = candlesM5[symbol].filter(c => c.isClosed).pop();
-        if (lastClosed && volExpansion && lastClosed.close < asset.bollinger.lower) {
-          // SL at Breakout Candle High
-          const slPrice = lastClosed.high;
-          console.log(`[NY_ORB] ${symbol} SELL @ ${asset.currentPrice.toFixed(2)}`);
-          executeTrade(symbol, 'SELL', asset.currentPrice, 'NY_ORB', 'AGGRESSIVE', 'NY ORB: Close below Lower Bollinger Band.', 88, slPrice);
-        }
-      }
-    }
+    // NY ORB Removed (NAS100 Specific)
 
     // D. AI AGENT (Real Gemini)
     let minConfidence = 65;
-    if (symbol === 'NAS100') minConfidence = 85;
+    // NAS100 Check Removed
 
     // XAUUSD Time Restriction: Only trade after 09:00 UTC (Avoid London open volatility)
     const isXauRestrictedAI = symbol === 'XAUUSD' && new Date().getUTCHours() < 9;
@@ -1750,9 +1662,7 @@ function processTicks(symbol) {
     const adx = calculateADX(candlesM5[symbol]);
 
     if (adx >= aiAdxMin && !isXauRestrictedAI) {
-      if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
-        setSkipReason(asset, 'Lunch pause');
-      } else if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence >= minConfidence) {
+      if (asset.activeStrategies.includes('AI_AGENT') && aiState[symbol].confidence >= minConfidence) {
         // AI AGENT EXECUTION
         const sentiment = aiState[symbol].sentiment;
         const reason = aiState[symbol].reason;
@@ -1794,8 +1704,6 @@ function processTicks(symbol) {
         const mrAdxMax = 40;
         if (adx > mrAdxMax) {
           setSkipReason(asset, `ADX ${adx.toFixed(1)} > ${mrAdxMax}`);
-        } else if (symbol === 'NAS100' && isNasLunchPauseNow(Date.now())) {
-          setSkipReason(asset, 'Lunch pause');
         } else if (canBuy) {
           const sl = Math.min(low, asset.currentPrice) * (1 - 0.0006);
           executeTrade(symbol, 'BUY', asset.currentPrice, 'MEAN_REVERT', 'CONSERVATIVE', `Mean Revert: Oversold dip below EMA with RSI ${asset.rsi.toFixed(0)}.`, 72, sl);
@@ -1971,51 +1879,7 @@ app.get('/diagnostics/:symbol', (req, res) => {
     res.status(500).json({ error: e?.message || 'error' });
   }
 });
-app.get('/crypto/state', async (req, res) => {
-  try {
-    const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/state?ts=${Date.now()}`;
-    const r = await fetch(url, { headers: { 'Cache-Control': 'no-store' } });
-    const data = await r.json();
-    res.json(data);
-  } catch {
-    res.status(502).json({ error: 'bad_gateway' });
-  }
-});
-app.get('/crypto/events', (req, res) => {
-  try {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-  } catch { }
-  const target = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/events?ts=${Date.now()}`;
-  const isHttps = target.startsWith('https://');
-  const client = (isHttps ? https : http).request(target, (up) => {
-    up.on('data', (chunk) => { try { res.write(chunk); } catch { } });
-    up.on('end', () => { try { res.end(); } catch { } });
-  });
-  client.on('error', () => { try { res.end(); } catch { } });
-  client.end();
-  req.on('close', () => { try { client.destroy(); } catch { } });
-});
-app.post('/crypto/toggle/:symbol', async (req, res) => {
-  try {
-    const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/toggle/${encodeURIComponent(req.params.symbol)}`;
-    const r = await fetch(url, { method: 'POST' });
-    res.sendStatus(r.status);
-  } catch {
-    res.sendStatus(502);
-  }
-});
-app.post('/crypto/strategy/:symbol', async (req, res) => {
-  try {
-    const url = `${CRYPTO_UPSTREAM_URL.replace(/\/$/, '')}/strategy/${encodeURIComponent(req.params.symbol)}`;
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ strategy: req.body?.strategy }) });
-    const data = await r.json().catch(() => null);
-    if (data) res.json(data); else res.sendStatus(r.status);
-  } catch {
-    res.sendStatus(502);
-  }
-});
+// Crypto Routes Removed
 
 app.post('/toggle/:symbol', (req, res) => {
   const { symbol } = req.params;
@@ -2319,14 +2183,12 @@ if (process.argv.includes('--test-risk')) {
   fxRates['USDGBP'] = { mid: 0.8, time: Date.now() }; // Mock FX
   fxRates['USD_GBP'] = { mid: 0.8, time: Date.now() };
 
-  console.log('[TEST] Adding 3 consecutive losses for NAS100...');
-  const now = Date.now();
-  trades.push({ symbol: 'NAS100', status: 'CLOSED', pnl: -50, closeTime: now - 10000 });
-  trades.push({ symbol: 'NAS100', status: 'CLOSED', pnl: -20, closeTime: now - 5000 });
-  trades.push({ symbol: 'NAS100', status: 'CLOSED', pnl: -10, closeTime: now - 1000 });
+  trades.push({ symbol: 'XAUUSD', status: 'CLOSED', pnl: -50, closeTime: now - 10000 });
+  trades.push({ symbol: 'XAUUSD', status: 'CLOSED', pnl: -20, closeTime: now - 5000 });
+  trades.push({ symbol: 'XAUUSD', status: 'CLOSED', pnl: -10, closeTime: now - 1000 });
 
-  console.log('[TEST] Attempting to open new NAS100 trade...');
-  const check = checkRiskLimits('NAS100', 0.01);
+  console.log('[TEST] Attempting to open new XAUUSD trade...');
+  const check = checkRiskLimits('XAUUSD', 0.01);
   if (!check.allowed && check.reason.includes('Consecutive Losses')) {
     console.log(`[PASS] Blocked correctly: ${check.reason}`);
   } else {
@@ -2372,12 +2234,13 @@ if (process.argv.includes('--test-micro')) {
 // Start Server
 app.listen(PORT, '0.0.0.0', () => console.log(`Scheduler running on port ${PORT}`));
 
-// Keep-Alive Ping for Free Tier (Optional)
+// Keep-Alive Ping for Render (Public URL)
 setInterval(() => {
   try {
-    http.get(`http://localhost:${PORT}/health`);
+    const url = process.env.RENDER_EXTERNAL_URL || 'https://paper-trader-2-0.onrender.com';
+    https.get(`${url}/health`);
   } catch (e) { }
-}, 14 * 60 * 1000); // Every 14 mins
+}, 10 * 60 * 1000); // Every 10 mins
 
 setInterval(() => {
   try {
@@ -2397,7 +2260,7 @@ setInterval(() => {
         else usdToGbp = 0.8;
       }
 
-      for (const symbol of ['NAS100', 'XAUUSD']) {
+      for (const symbol of ['XAUUSD']) {
         const mkt = market[symbol];
         if (!mkt) continue;
         const { bid, ask, mid } = mkt;

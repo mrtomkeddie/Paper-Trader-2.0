@@ -1,12 +1,52 @@
 {
   "account": {
-    "balance": 642.0428426708181,
-    "equity": 642.0428426708181,
-    "dayPnL": 0,
-    "totalPnL": 142.04284267081815,
+    "balance": 636.1336571377313,
+    "equity": 636.1336571377313,
+    "dayPnL": -5.909185533086798,
+    "totalPnL": 136.13365713773135,
     "winRate": 40.35087719298245
   },
   "trades": [
+    {
+      "id": "e8a5c2b3-f0a3-4c97-aea8-7baaa6148567",
+      "symbol": "XAUUSD",
+      "type": "BUY",
+      "entryPrice": 5089.91,
+      "initialSize": 0.01,
+      "currentSize": 0.01,
+      "stopLoss": 5082.275135,
+      "tpLevels": [
+        {
+          "id": 1,
+          "price": 5120.44946,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 2,
+          "price": 5140.8090999999995,
+          "percentage": 0.4,
+          "hit": false
+        },
+        {
+          "id": 3,
+          "price": 5242.6073,
+          "percentage": 0.2,
+          "hit": false
+        }
+      ],
+      "openTime": 1769448498106,
+      "status": "CLOSED",
+      "strategy": "AI_AGENT",
+      "pnl": -5.909185533086798,
+      "entryReason": "AI Agent: The bigger picture (M15) is going up, so we want to buy when the price goes a little down. Like bouncing a ball that's already going up!",
+      "confidence": 90,
+      "floatingPnl": 0,
+      "closeReason": "STOP_LOSS",
+      "outcomeReason": "Stop Loss: Price hit SL.",
+      "closeTime": 1769448647872,
+      "closePrice": 5082.18
+    },
     {
       "id": "c82d6b64-1f19-40c4-9f6a-e6e9c04a14f7",
       "symbol": "XAUUSD",
@@ -2275,14 +2315,6 @@
     }
   ],
   "assets": {
-    "NAS100": {
-      "activeStrategies": [
-        "NY_ORB",
-        "AI_AGENT",
-        "TREND_FOLLOW"
-      ],
-      "botActive": true
-    },
     "XAUUSD": {
       "activeStrategies": [
         "LONDON_SWEEP",
