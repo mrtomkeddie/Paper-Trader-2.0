@@ -73,13 +73,13 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ trades }) => {
 
       {/* Table Header */}
       <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-black/40 text-[10px] text-gray-500 font-mono uppercase tracking-wider border-b border-white/5">
-        <div className="col-span-2">Time_Stamp</div>
-        <div className="col-span-1">Agent</div>
-        <div className="col-span-1">Type</div>
-        <div className="col-span-2 text-right">Price</div>
-        <div className="col-span-1 text-right">Size</div>
-        <div className="col-span-1 text-right">PnL</div>
-        <div className="col-span-4 pl-4">Log_Snippet</div>
+        <div className="col-span-3 sm:col-span-2">Time</div>
+        <div className="col-span-5 sm:col-span-1">Agent</div>
+        <div className="hidden sm:block sm:col-span-1">Type</div>
+        <div className="hidden sm:block sm:col-span-2 text-right">Price</div>
+        <div className="hidden sm:block sm:col-span-1 text-right">Size</div>
+        <div className="col-span-4 sm:col-span-1 text-right">PnL</div>
+        <div className="hidden sm:block sm:col-span-4 pl-4">Log_Snippet</div>
       </div>
 
       {/* Table Body */}
@@ -104,32 +104,32 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ trades }) => {
                 {/* Hover Highlight Line */}
                 <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-premium-cyan opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                <div className="col-span-2 text-gray-500 font-light group-hover:text-gray-300 transition-colors">
-                  {new Date(t.openTime).toLocaleString('en-US', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', '')}
+                <div className="col-span-3 sm:col-span-2 text-gray-500 font-light group-hover:text-gray-300 transition-colors">
+                  {new Date(t.openTime).toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </div>
 
-                <div className="col-span-1 flex items-center gap-2">
+                <div className="col-span-5 sm:col-span-1 flex items-center gap-2">
                   <div className={`w-1.5 h-1.5 rounded-full ${t.agentId === 'quant' ? 'bg-premium-cyan shadow-[0_0_5px_cyan]' : t.agentId === 'macro' ? 'bg-blue-500 shadow-[0_0_5px_blue]' : 'bg-premium-gold shadow-[0_0_5px_gold]'}`} />
                   <span className="uppercase tracking-wide text-[10px] opacity-80">{t.agentId.substring(0, 3)}</span>
                 </div>
 
-                <div className={`col-span-1 font-bold ${t.type === 'BUY' ? 'text-premium-green drop-shadow-[0_0_3px_rgba(0,255,163,0.3)]' : 'text-premium-red drop-shadow-[0_0_3px_rgba(255,77,77,0.3)]'}`}>
+                <div className={`hidden sm:block sm:col-span-1 font-bold ${t.type === 'BUY' ? 'text-premium-green drop-shadow-[0_0_3px_rgba(0,255,163,0.3)]' : 'text-premium-red drop-shadow-[0_0_3px_rgba(255,77,77,0.3)]'}`}>
                   {t.type}
                 </div>
 
-                <div className="col-span-2 text-right text-gray-300 group-hover:text-white transition-colors">
+                <div className="hidden sm:block sm:col-span-2 text-right text-gray-300 group-hover:text-white transition-colors">
                   {(t.entryPrice || 0).toFixed(2)}
                 </div>
 
-                <div className="col-span-1 text-right text-gray-500">
+                <div className="hidden sm:block sm:col-span-1 text-right text-gray-500">
                   {(t.initialSize || 0)}
                 </div>
 
-                <div className={`col-span-1 text-right font-bold ${displayPnL >= 0 ? 'text-premium-green' : 'text-premium-red'}`}>
+                <div className={`col-span-4 sm:col-span-1 text-right font-bold ${displayPnL >= 0 ? 'text-premium-green' : 'text-premium-red'}`}>
                   {formatCurrency(displayPnL)}
                 </div>
 
-                <div className="col-span-4 pl-4 text-gray-600 truncate group-hover:text-premium-cyan/70 transition-colors text-[10px] italic">
+                <div className="hidden sm:block sm:col-span-4 pl-4 text-gray-600 truncate group-hover:text-premium-cyan/70 transition-colors text-[10px] italic">
                   {t.entryReason ? `// ${t.entryReason}` : "// No logic logged..."}
                 </div>
               </div>

@@ -72,74 +72,99 @@ export class Manager {
         return trades;
     }
 
-    recalculateState(allTrades) {
-        this.agents.forEach(agent => {
-            const agentTrades = allTrades.filter(t => t.agentId === agent.id);
-            agent.trades = agentTrades;
-
-            const closedPnL = agentTrades
-                .filter(t => t.status === 'CLOSED')
-                .reduce((sum, t) => sum + (t.pnl || 0), 0);
-
-            const floatingPnL = agentTrades
-                .filter(t => t.status === 'OPEN')
-                .reduce((sum, t) => sum + (t.floatingPnl || 0), 0);
-
             agent.balance = 1000 + closedPnL;
             agent.equity = agent.balance + floatingPnL;
-        });
+});
     }
 
-    /**
-     * Get total system state for frontend/DB
-     */
-    getState() {
-        const accounts = {};
-        let allTrades = [];
+toggleAgentPause(agentId) {
+    const agent = this.agents.find(a => a.id === agentId);
+    if (!agent) return null;
 
-        this.agents.forEach(agent => {
-            accounts[agent.id] = {
-                name: agent.name,
-                role: agent.role,
-                balance: agent.balance,
-                equity: agent.equity,
-                isThinking: agent.isThinking,
-                lastAction: agent.lastAction,
-                lastThought: agent.lastThought,
-                latestDecision: agent.latestDecision // Include full decision object
-            };
-            allTrades = allTrades.concat(agent.trades);
+    // Toggle halt state
+    agent.isHalted = !agent.isHalted;
+    console.log(`[MANAGER] Agent ${agentId} is now ${agent.isHalted ? 'PAUSED' : 'ACTIVE'}`);
+
+    // If pausing, close all open trades immediately
+    if (agent.isHalted) {
+        agent.trades.forEach(t => {
+            if (t.status === 'OPEN') {
+                // Force close logic
+                t.status = 'CLOSED';
+                t.closeTime = Date.now();
+                t.closePrice = this.marketData[t.symbol]?.currentPrice || t.entryPrice;
+                t.closeReason = 'MANUAL_PAUSE';
+
+                // Finalize PnL
+                const isBuy = t.type === 'BUY';
+                const priceDiff = isBuy ? (t.closePrice - t.entryPrice) : (t.entryPrice - t.closePrice);
+                // Approximate PnL calculation if config missing (simplified)
+                t.pnl = priceDiff * (t.currentSize || 0); // Need actual calc if possible, but this is a failsafe
+
+                console.log(`[MANAGER] Force closed trade ${t.id} for agent ${agentId}`);
+            }
         });
+        // Recalc state after force close
+        this.recalculateState(this.getAllTrades());
+    }
 
-        return {
-            accounts,
-            trades: allTrades
+    return agent.isHalted;
+}
+
+getAllTrades() {
+    return this.agents.flatMap(a => a.trades);
+}
+
+/**
+ * Get total system state for frontend/DB
+ */
+getState() {
+    const accounts = {};
+    let allTrades = [];
+
+    this.agents.forEach(agent => {
+        accounts[agent.id] = {
+            name: agent.name,
+            role: agent.role,
+            balance: agent.balance,
+            equity: agent.equity,
+            isThinking: agent.isThinking,
+            lastAction: agent.lastAction,
+            lastThought: agent.lastThought,
+            latestDecision: agent.latestDecision // Include full decision object
         };
-    }
-    getDetailedState() {
-        // Collect balances
-        const accounts = {};
-        this.agents.forEach(a => {
-            accounts[a.id] = {
-                id: a.id,
-                name: a.name,
-                role: a.role,
-                balance: a.balance,
-                equity: a.equity,
-                isThinking: a.isThinking,
-                lastAction: a.lastAction
-            };
-        });
+        allTrades = allTrades.concat(agent.trades);
+    });
 
-        // Collect latest decisions (snapshot)
-        const decisions = this.agents
-            .filter(a => a.latestDecision)
-            .map(a => ({
-                agentId: a.id,
-                ...a.latestDecision,
-                timestamp: Date.now() // specific logic might be needed for real timestamp
-            }));
+    return {
+        accounts,
+        trades: allTrades
+    };
+}
+getDetailedState() {
+    // Collect balances
+    const accounts = {};
+    this.agents.forEach(a => {
+        accounts[a.id] = {
+            id: a.id,
+            name: a.name,
+            role: a.role,
+            balance: a.balance,
+            equity: a.equity,
+            isThinking: a.isThinking,
+            lastAction: a.lastAction
+        };
+    });
 
-        return { accounts, decisions };
-    }
+    // Collect latest decisions (snapshot)
+    const decisions = this.agents
+        .filter(a => a.latestDecision)
+        .map(a => ({
+            agentId: a.id,
+            ...a.latestDecision,
+            timestamp: Date.now() // specific logic might be needed for real timestamp
+        }));
+
+    return { accounts, decisions };
+}
 }

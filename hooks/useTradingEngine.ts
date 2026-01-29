@@ -247,8 +247,19 @@ export const useTradingEngine = () => {
     } catch (e) { }
   }, [remoteUrl]);
 
+  const toggleAgentPause = useCallback(async (agentId: string) => {
+    const cleanUrl = remoteUrl.trim().replace(/\/$/, "");
+    try {
+      await fetch(`${cleanUrl}/agent/pause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId })
+      });
+    } catch (e) { }
+  }, [remoteUrl]);
+
   // Return remoteUrl so UI can display it for debug
-  return { assets, account, accounts, decisions, trades, toggleBot, setStrategy: toggleStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected, remoteUrl, toggleMaster };
+  return { assets, account, accounts, decisions, trades, toggleBot, setStrategy: toggleStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected, remoteUrl, toggleMaster, toggleAgentPause };
 };
 
 function createInitialAsset(symbol: AssetSymbol): AssetData {
