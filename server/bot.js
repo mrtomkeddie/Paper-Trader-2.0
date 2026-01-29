@@ -2060,17 +2060,7 @@ app.post('/reset_account', (req, res) => {
   res.sendStatus(200);
 });
 
-app.post('/agent/pause', (req, res) => {
-  const { agentId } = req.body;
-  if (manager) {
-    const isPaused = manager.toggleAgentPause(agentId);
-    if (isPaused !== null) {
-      saveState();
-      return res.json({ success: true, isPaused });
-    }
-  }
-  res.status(404).json({ error: 'Agent not found' });
-});
+
 
 app.post('/clear_trades', (req, res) => {
   console.log('[SYSTEM] Clearing all trades...');

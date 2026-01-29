@@ -88,39 +88,7 @@ export class Manager {
         });
     }
 
-    toggleAgentPause(agentId) {
-        const agent = this.agents.find(a => a.id === agentId);
-        if (!agent) return null;
 
-        // Toggle halt state
-        agent.isHalted = !agent.isHalted;
-        console.log(`[MANAGER] Agent ${agentId} is now ${agent.isHalted ? 'PAUSED' : 'ACTIVE'}`);
-
-        // If pausing, close all open trades immediately
-        if (agent.isHalted) {
-            agent.trades.forEach(t => {
-                if (t.status === 'OPEN') {
-                    // Force close logic
-                    t.status = 'CLOSED';
-                    t.closeTime = Date.now();
-                    t.closePrice = this.marketData[t.symbol]?.currentPrice || t.entryPrice;
-                    t.closeReason = 'MANUAL_PAUSE';
-
-                    // Finalize PnL
-                    const isBuy = t.type === 'BUY';
-                    const priceDiff = isBuy ? (t.closePrice - t.entryPrice) : (t.entryPrice - t.closePrice);
-                    // Approximate PnL calculation if config missing (simplified)
-                    t.pnl = priceDiff * (t.currentSize || 0); // Need actual calc if possible, but this is a failsafe
-
-                    console.log(`[MANAGER] Force closed trade ${t.id} for agent ${agentId}`);
-                }
-            });
-            // Recalc state after force close
-            this.recalculateState(this.getAllTrades());
-        }
-
-        return agent.isHalted;
-    }
 
     getAllTrades() {
         return this.agents.flatMap(a => a.trades);
