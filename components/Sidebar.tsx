@@ -70,20 +70,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onO
                     <span className="font-medium tracking-wide text-sm group-hover:text-premium-gold transition-colors">Settings</span>
                 </button>
 
-                <div className="px-4 py-4 mt-4 border-t border-white/5">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-white/10 flex items-center justify-center shadow-inner">
-                            <span className="text-xs font-bold text-gray-400">USR</span>
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold text-gray-300">Admin User</span>
-                            <span className="text-[10px] text-premium-green flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-premium-green animate-pulse"></span>
-                                Connected
-                            </span>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     );
