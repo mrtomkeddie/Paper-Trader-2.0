@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export class QuantAgent extends Agent {
     constructor() {
-        super('quant', 'The Quant', 'Technical Scalper (DeepSeek R1)', 1000);
+        super('quant', 'The Quant', 'Technical Scalper (DeepSeek R1)', 500);
 
         // Initialize DeepSeek Client
         if (process.env.DEEPSEEK_API_KEY) {

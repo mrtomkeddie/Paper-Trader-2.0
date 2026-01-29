@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export class RiskAgent extends Agent {
     constructor() {
-        super('risk', 'The Skeptic', 'Risk Manager (Claude)', 1000);
+        super('risk', 'The Skeptic', 'Risk Manager (Claude)', 500);
 
         if (process.env.ANTHROPIC_API_KEY) {
             this.client = new Anthropic({

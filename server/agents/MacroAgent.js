@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 export class MacroAgent extends Agent {
     constructor() {
-        super('macro', 'The Strategist', 'Global Macro (Gemini)', 1000);
+        super('macro', 'The Strategist', 'Global Macro (Gemini)', 500);
 
         if (process.env.API_KEY || process.env.GOOGLE_API_KEY) {
             const key = process.env.API_KEY || process.env.GOOGLE_API_KEY;

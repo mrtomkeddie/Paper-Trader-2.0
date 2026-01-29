@@ -1316,7 +1316,7 @@ function processTicks(symbol) {
   // Tick the manager (Quant, Macro, Risk) ONLY if bot is active
   if (asset.botActive) {
     const agentData = {
-      price: asset.currentPrice,
+      currentPrice: asset.currentPrice,
       rsi: asset.rsi,
       slope: asset.slope,
       trend: asset.trend,

@@ -14,8 +14,8 @@
       "balance": 1000,
       "equity": 1000,
       "isThinking": true,
-      "lastAction": "HOLD",
-      "lastThought": "Oversold RSI at 200 EMA, wait for clearer signal.",
+      "lastAction": "SELL",
+      "lastThought": "Downtrend, rejection at 200 EMA with bearish pin bar, oversold but momentum fading.",
       "latestDecision": null
     },
     "macro": {
@@ -79,19 +79,18 @@
       "symbol": "XAUUSD",
       "type": "BUY",
       "initialSize": 0.05,
-      "currentSize": 0.05,
-      "stopLoss": 5510,
+      "currentSize": 0,
       "tpLevels": [
         {
           "id": 1,
           "price": 5542,
           "percentage": 1,
-          "hit": false
+          "hit": true
         }
       ],
       "openTime": 1769687618316,
       "status": "OPEN",
-      "pnl": 0,
+      "pnl": null,
       "entryReason": "Extremely oversold RSI 17.62 with price holding above 200 EMA support in uptrend.",
       "decisionSnapshot": {
         "rsi": 17.61658031108543,
@@ -104,7 +103,8 @@
         }
       },
       "strategy": "AI_AGENT",
-      "floatingPnl": null
+      "floatingPnl": null,
+      "outcomeReason": "Take Profit: Level 1 hit. Locked in profit."
     }
   ],
   "pushSubscriptions": [],

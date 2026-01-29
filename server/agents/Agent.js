@@ -5,7 +5,7 @@ export class Agent {
      * @param {string} role - Description of role
      * @param {number} initialBalance - Starting capital
      */
-    constructor(id, name, role, initialBalance = 1000) {
+    constructor(id, name, role, initialBalance = 500) {
         this.id = id;
         this.name = name;
         this.role = role;

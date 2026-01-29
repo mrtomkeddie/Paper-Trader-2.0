@@ -85,7 +85,7 @@ export class Manager {
                 .filter(t => t.status === 'OPEN')
                 .reduce((sum, t) => sum + (t.floatingPnl || 0), 0);
 
-            agent.balance = 1000 + closedPnL;
+            agent.balance = 500 + closedPnL;
             agent.equity = agent.balance + floatingPnL;
         });
     }
