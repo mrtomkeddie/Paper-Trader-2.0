@@ -29,7 +29,7 @@ const DashboardHeader: React.FC<Props> = ({ account, accounts, assets, toggleAss
         ? agentValues.reduce((acc, a) => acc + (a?.equity || 0), 0)
         : (account?.equity || 0);
 
-    const totalOpenPnL = totalEquity - totalBalance;
+
 
     const haltedAgents = agentValues.filter(a => a?.isHalted);
 
@@ -77,13 +77,7 @@ const DashboardHeader: React.FC<Props> = ({ account, accounts, assets, toggleAss
                         </div>
                     </div>
 
-                    {/* Open P&L */}
-                    <div className="text-center">
-                        <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Open P&L</div>
-                        <div className={`text-xl font-bold font-mono tabular-nums ${totalOpenPnL >= 0 ? 'text-premium-green drop-shadow-[0_0_5px_rgba(0,255,163,0.3)]' : 'text-premium-red'}`}>
-                            {formatCurrency(totalOpenPnL)}
-                        </div>
-                    </div>
+
                 </div>
 
                 {/* RIGHT: Settings */}
