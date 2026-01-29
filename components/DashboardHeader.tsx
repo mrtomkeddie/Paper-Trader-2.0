@@ -70,7 +70,7 @@ const DashboardHeader: React.FC<Props> = ({ account, accounts, toggleAsset, acti
                     <div className="text-right">
                         <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Open P&L</div>
                         <div className={`text-xl font-bold tabular-nums ${totalOpenPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {totalOpenPnL >= 0 ? '+' : ''}£{totalOpenPnL.toFixed(2)}
+                            {totalOpenPnL >= 0 ? '+' : ''}£{(totalOpenPnL || 0).toFixed(2)}
                         </div>
                     </div>
                 </div>

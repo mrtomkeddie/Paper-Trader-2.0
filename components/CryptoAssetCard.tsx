@@ -81,12 +81,12 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col justify-center">
           <span className="text-[9px] text-ios-gray uppercase font-bold mb-1">Net P&L</span>
-          <span className={`text-sm font-bold tabular-nums ${pnlIsPositive ? 'text-ios-green' : 'text-ios-red'}`}>{pnlIsPositive ? '+' : ''}{stats.totalPnL.toFixed(2)}</span>
+          <span className={`text-sm font-bold tabular-nums ${pnlIsPositive ? 'text-ios-green' : 'text-ios-red'}`}>{(pnlIsPositive ? '+' : '') + (stats.totalPnL || 0).toFixed(2)}</span>
         </div>
         <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col justify-center">
           <span className="text-[9px] text-ios-gray uppercase font-bold mb-1">Win Rate</span>
           <div className="flex items-baseline gap-0.5">
-            <span className="text-sm font-bold text-white tabular-nums">{stats.winRate.toFixed(0)}</span>
+            <span className="text-sm font-bold text-white tabular-nums">{(stats.winRate || 0).toFixed(0)}</span>
             <span className="text-[10px] text-ios-gray">%</span>
           </div>
         </div>

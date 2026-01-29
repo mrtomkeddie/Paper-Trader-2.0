@@ -213,8 +213,8 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                 </div>
 
                 <div className="flex justify-between mt-3 text-[10px] text-gray-500 font-mono px-1">
-                    <span>Lot: {trade.currentSize.toFixed(2)}</span>
-                    <span>@{trade.entryPrice.toFixed(2)}</span>
+                    <span>Lot: {(trade.currentSize || 0).toFixed(2)}</span>
+                    <span>@{(trade.entryPrice || 0).toFixed(2)}</span>
                 </div>
             </div>
         );

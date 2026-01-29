@@ -133,7 +133,7 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
                                 {getStrategyLabel(trade.strategy)}
                             </span>
                         </div>
-                        <div className="text-[10px] text-gray-500 mt-0.5">@ {trade.entryPrice.toFixed(2)}</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5">@ {(trade.entryPrice || 0).toFixed(2)}</div>
                     </div>
                 </div>
 
@@ -141,11 +141,11 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
                     <div className="text-right flex flex-col items-end gap-0.5">
                         <div className="flex flex-col items-end">
                             <span className={`text-xs font-bold font-mono ${realized >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                R: {realized >= 0 ? '+' : ''}{realized.toFixed(2)}
+                                R: {realized >= 0 ? '+' : ''}{(realized || 0).toFixed(2)}
                             </span>
                             {isActive && (
                                 <span className={`text-xs font-bold font-mono ${floating >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                    F: {floating >= 0 ? '+' : ''}{floating.toFixed(2)}
+                                    F: {floating >= 0 ? '+' : ''}{(floating || 0).toFixed(2)}
                                 </span>
                             )}
                         </div>
@@ -200,7 +200,7 @@ const MobileTrades: React.FC<Props> = ({ trades, onSelectTrade }) => {
                     <div className="bg-[#1C1C1E] rounded-xl p-3 border border-white/5 flex-1">
                         <div className="text-[9px] font-bold text-gray-500 uppercase mb-1">Net P&L</div>
                         <div className={`${netPnL >= 0 ? 'text-green-500' : 'text-red-500'} font-bold text-lg`}>
-                            {netPnL >= 0 ? '+' : ''}{netPnL.toFixed(2)}
+                            {netPnL >= 0 ? '+' : ''}{(netPnL || 0).toFixed(2)}
                         </div>
                     </div>
                     <div className="bg-[#1C1C1E] rounded-xl p-3 border border-white/5 flex-1">

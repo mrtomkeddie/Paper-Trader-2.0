@@ -1,7 +1,7 @@
 {
   "account": {
-    "balance": 500,
-    "equity": 500,
+    "balance": null,
+    "equity": null,
     "totalPnL": 0,
     "winRate": 0,
     "trades_count": 0,
@@ -14,8 +14,8 @@
       "balance": 1000,
       "equity": 1000,
       "isThinking": true,
-      "lastAction": "OPEN BUY XAUUSD",
-      "lastThought": "Extreme oversold RSI (0.88) in uptrend, price above 200 EMA.",
+      "lastAction": "HOLD",
+      "lastThought": "Oversold RSI at 200 EMA, wait for clearer signal.",
       "latestDecision": null
     },
     "macro": {
@@ -46,19 +46,18 @@
       "symbol": "XAUUSD",
       "type": "BUY",
       "initialSize": 0.05,
-      "currentSize": 0.05,
-      "stopLoss": 5516,
+      "currentSize": 0,
       "tpLevels": [
         {
           "id": 1,
           "price": 5529,
           "percentage": 1,
-          "hit": false
+          "hit": true
         }
       ],
       "openTime": 1769688496091,
       "status": "OPEN",
-      "pnl": 0,
+      "pnl": null,
       "entryReason": "Extreme oversold RSI (0.88) in uptrend, price above 200 EMA.",
       "decisionSnapshot": {
         "rsi": 0.8771929826310867,
@@ -70,7 +69,9 @@
           "lower": 5500.738018830612
         }
       },
-      "strategy": "AI_AGENT"
+      "strategy": "AI_AGENT",
+      "floatingPnl": null,
+      "outcomeReason": "Take Profit: Level 1 hit. Locked in profit."
     },
     {
       "id": "quant-1769687618316",

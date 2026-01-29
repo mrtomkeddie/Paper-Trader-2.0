@@ -82,8 +82,8 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ trades }) => {
                 <span className="uppercase">{t.agentId}</span>
               </div>
               <div className={`col-span-1 font-bold ${t.type === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>{t.type}</div>
-              <div className="col-span-2 text-right text-gray-300">{t.entryPrice.toFixed(2)}</div>
-              <div className="col-span-1 text-right">{t.initialSize}</div>
+              <div className="col-span-2 text-right text-gray-300">{(t.entryPrice || 0).toFixed(2)}</div>
+              <div className="col-span-1 text-right">{(t.initialSize || 0)}</div>
               <div className="col-span-4 pl-4 text-gray-500 truncate group-hover:text-cyan-400 transition-colors">
                 {t.entryReason || "No reasoning logged..."}
               </div>

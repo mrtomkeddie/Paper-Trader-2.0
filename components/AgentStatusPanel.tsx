@@ -23,7 +23,7 @@ const AgentCard: React.FC<{ agent: AgentAccount; icon: React.ReactNode; color: s
             <div className="text-right">
                 <p className="text-[10px] text-gray-400 uppercase">Equity</p>
                 <p className={`text-base font-mono font-bold ${agent.equity >= 1000 ? 'text-green-400' : 'text-red-400'}`}>
-                    £{agent.equity.toFixed(2)}
+                    £{(agent.equity || 0).toFixed(2)}
                 </p>
             </div>
         </div>

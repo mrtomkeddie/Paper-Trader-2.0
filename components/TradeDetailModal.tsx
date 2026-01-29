@@ -59,9 +59,9 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
             <span className="text-xs font-semibold uppercase tracking-wider text-ios-gray block mb-1">
               {trade.status === 'OPEN' ? 'Floating P&L' : 'Realized Net Result'}
             </span>
-            <span className={`text-4xl font-bold tabular-nums tracking-tight ${(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : trade.pnl) >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
-              {(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : trade.pnl) >= 0 ? '+' : ''}
-              {(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : trade.pnl).toFixed(2)}
+            <span className={`text-4xl font-bold tabular-nums tracking-tight ${(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)) >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
+              {(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)) >= 0 ? '+' : ''}
+              {(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)).toFixed(2)}
             </span>
             {trade.status === 'OPEN' && (
               <div className="text-xs text-ios-blue font-bold mt-1 animate-pulse">ACTIVE - RUNNING</div>
@@ -83,7 +83,7 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
                   </div>
                 </div>
                 <span className={`font-mono text-xs ${level.hit ? 'text-ios-green font-bold' : 'text-white/40'}`}>
-                  {level.price.toFixed(2)}
+                  {(level.price || 0).toFixed(2)}
                 </span>
               </div>
             ))}
@@ -102,13 +102,13 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
               <div className="flex items-center gap-1.5 text-ios-gray text-[10px] uppercase font-bold mb-1">
                 <Target size={12} /> Entry
               </div>
-              <span className="text-white font-mono">{trade.entryPrice.toFixed(2)}</span>
+              <span className="text-white font-mono">{(trade.entryPrice || 0).toFixed(2)}</span>
             </div>
             <div className="bg-black/40 rounded-xl p-3 border border-white/5">
               <div className="flex items-center gap-1.5 text-ios-gray text-[10px] uppercase font-bold mb-1">
                 <AlertTriangle size={12} /> Stop Loss
               </div>
-              <span className="text-white font-mono">{trade.stopLoss.toFixed(2)}</span>
+              <span className="text-white font-mono">{(trade.stopLoss || 0).toFixed(2)}</span>
             </div>
           </div>
 

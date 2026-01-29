@@ -47,7 +47,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent }) => {
                     <p className="text-xs text-gray-400 font-mono">{agent.role}</p>
                 </div>
                 <div className={`px-2 py-1 rounded text-xs font-bold border ${isProfitable ? 'border-green-500/30 text-green-400 bg-green-500/10' : 'border-red-500/30 text-red-400 bg-red-500/10'}`}>
-                    {pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(1)}%
+                    {pnl >= 0 ? '+' : ''}{(pnlPercent || 0).toFixed(1)}%
                 </div>
             </div>
 

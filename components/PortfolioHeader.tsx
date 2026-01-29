@@ -21,7 +21,7 @@ const PortfolioHeader: React.FC<Props> = ({ indices, crypto }) => {
         </div>
         <div className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${isPositiveDay ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-red/15 text-ios-red'}`}>
           {isPositiveDay ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-          <span>£{Math.abs(totalDayPnL).toFixed(2)} ({((totalDayPnL / Math.max(1, totalBalance)) * 100).toFixed(2)}%)</span>
+          <span>£{Math.abs(totalDayPnL || 0).toFixed(2)} ({((totalDayPnL || 0) / Math.max(1, totalBalance || 1) * 100).toFixed(2)}%)</span>
           <span className="ml-1 opacity-60 font-medium text-xs">Today</span>
         </div>
       </div>

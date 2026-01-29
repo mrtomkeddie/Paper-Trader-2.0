@@ -130,7 +130,7 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                     <>
                         <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-400 flex items-center gap-2"><Shield size={14} /> Stop Loss:</span>
-                            <span className="text-red-400 font-mono">{slPrice.toFixed(2)}</span>
+                            <span className="text-red-400 font-mono">{(slPrice || 0).toFixed(2)}</span>
                         </div>
 
                         {/* Take Profit Ladder */}
@@ -141,7 +141,7 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                                         <Target size={12} className={tp.hit ? "text-green-500 fill-green-500/20" : ""} /> TP {tp.id} ({tp.percentage * 100}%):
                                     </span>
                                     <span className={`${tp.hit ? 'text-green-500 line-through' : 'text-green-400'} font-mono font-bold`}>
-                                        {tp.price.toFixed(2)}
+                                        {(tp.price || 0).toFixed(2)}
                                     </span>
                                 </div>
                             ))}
@@ -175,7 +175,7 @@ const SignalPanel: React.FC<Props> = ({ asset, trade, activeOpenTrade, onToggleS
                 )}
 
                 <div className="mt-3 text-[10px] text-gray-600 border-t border-white/5 pt-2">
-                    Trend: {asset.trend} | RSI: {asset.rsi.toFixed(1)} | Vol: {(asset.bollinger.upper - asset.bollinger.lower).toFixed(2)}
+                    Trend: {asset.trend} | RSI: {(asset.rsi || 0).toFixed(1)} | Vol: {((asset.bollinger?.upper || 0) - (asset.bollinger?.lower || 0)).toFixed(2)}
                 </div>
             </div>
 
