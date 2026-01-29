@@ -88,9 +88,9 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent }) => {
 
                 <div className="pt-3 border-t border-white/5">
                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Last Action</span>
-                        <span className={`text-sm font-bold font-mono ${agent.lastAction === 'BUY' ? 'text-premium-green' : agent.lastAction === 'SELL' ? 'text-premium-red' : 'text-gray-500'}`}>
-                            {agent.lastAction}
+                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Today's P&L</span>
+                        <span className={`text-sm font-bold font-mono ${pnl >= 0 ? 'text-premium-green' : 'text-premium-red'}`}>
+                            {pnl >= 0 ? '+' : ''}£{Math.abs(pnl).toFixed(2)}
                         </span>
                     </div>
                 </div>
