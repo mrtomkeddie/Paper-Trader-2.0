@@ -61,12 +61,10 @@ Output a JSON object ONLY:
 `;
 
             const response = await this.client.models.generateContent({
-                model: 'gemini-1.5-flash',
-                contents: [{ role: 'user', parts: [{ text: prompt }] }],
-                tools: [{ googleSearch: {} }]
+                model: 'gemini-2.0-flash',
+                contents: prompt
             });
-
-            const text = response.response.candidates[0].content.parts[0].text;
+            const text = response.text;
             this.processDecision(text, symbol, currentPrice);
 
         } catch (error) {

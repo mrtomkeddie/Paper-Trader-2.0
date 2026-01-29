@@ -52,7 +52,7 @@ Output a JSON object ONLY:
             const message = await this.client.messages.create({
                 max_tokens: 1024,
                 messages: [{ role: 'user', content: prompt }],
-                model: 'claude-3-5-sonnet-20240620',
+                model: 'claude-sonnet-4-20250514',
             });
 
             // Anthropic response structure: message.content[0].text

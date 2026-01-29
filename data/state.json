@@ -1,7 +1,7 @@
 {
   "account": {
-    "balance": 3000,
-    "equity": 3000,
+    "balance": 500,
+    "equity": 500,
     "totalPnL": 0,
     "winRate": 0,
     "trades_count": 0,
