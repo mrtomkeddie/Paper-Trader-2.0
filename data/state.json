@@ -1,7 +1,7 @@
 {
   "account": {
-    "balance": null,
-    "equity": null,
+    "balance": 3000,
+    "equity": 3000,
     "totalPnL": 0,
     "winRate": 0,
     "trades_count": 0,
@@ -13,9 +13,9 @@
       "role": "Technical Scalper (DeepSeek R1)",
       "balance": 1000,
       "equity": 1000,
-      "isThinking": true,
-      "lastAction": "SELL",
-      "lastThought": "Downtrend, rejection at 200 EMA with bearish pin bar, oversold but momentum fading.",
+      "isThinking": false,
+      "lastAction": "WAITING",
+      "lastThought": "",
       "latestDecision": null
     },
     "macro": {
@@ -23,7 +23,7 @@
       "role": "Global Macro (Gemini)",
       "balance": 1000,
       "equity": 1000,
-      "isThinking": true,
+      "isThinking": false,
       "lastAction": "WAITING",
       "lastThought": "",
       "latestDecision": null
@@ -33,88 +33,13 @@
       "role": "Risk Manager (Claude)",
       "balance": 1000,
       "equity": 1000,
-      "isThinking": true,
+      "isThinking": false,
       "lastAction": "WAITING",
       "lastThought": "",
       "latestDecision": null
     }
   },
-  "trades": [
-    {
-      "id": "quant-1769688496091",
-      "agentId": "quant",
-      "symbol": "XAUUSD",
-      "type": "BUY",
-      "initialSize": 0.05,
-      "currentSize": 0,
-      "entryPrice": 2700,
-      "stopLoss": 2685,
-      "tpLevels": [
-        {
-          "id": 1,
-          "price": 5529,
-          "percentage": 1,
-          "hit": true
-        }
-      ],
-      "openTime": 1769688496091,
-      "status": "CLOSED",
-      "closeReason": "TP_COMPLETE",
-      "closeTime": 1769688500000,
-      "pnl": 0,
-      "entryReason": "Extreme oversold RSI (0.88) in uptrend, price above 200 EMA.",
-      "decisionSnapshot": {
-        "rsi": 0.8771929826310867,
-        "trend": "UP",
-        "ema200": 5517.054265153745,
-        "bollinger": {
-          "upper": 5544.916858830613,
-          "middle": 5522.827438830613,
-          "lower": 5500.738018830612
-        }
-      },
-      "strategy": "AI_AGENT",
-      "floatingPnl": 0,
-      "outcomeReason": "Take Profit: Level 1 hit. Locked in profit. (Auto-closed: invalid entry data)"
-    },
-    {
-      "id": "quant-1769687618316",
-      "agentId": "quant",
-      "symbol": "XAUUSD",
-      "type": "BUY",
-      "initialSize": 0.05,
-      "currentSize": 0,
-      "entryPrice": 2700,
-      "stopLoss": 2685,
-      "tpLevels": [
-        {
-          "id": 1,
-          "price": 5542,
-          "percentage": 1,
-          "hit": true
-        }
-      ],
-      "openTime": 1769687618316,
-      "status": "CLOSED",
-      "closeReason": "TP_COMPLETE",
-      "closeTime": 1769687622000,
-      "pnl": 0,
-      "entryReason": "Extremely oversold RSI 17.62 with price holding above 200 EMA support in uptrend.",
-      "decisionSnapshot": {
-        "rsi": 17.61658031108543,
-        "trend": "UP",
-        "ema200": 5526.051109207585,
-        "bollinger": {
-          "upper": 5548.748077518431,
-          "middle": 5526.6435175184315,
-          "lower": 5504.538957518432
-        }
-      },
-      "strategy": "AI_AGENT",
-      "floatingPnl": 0,
-      "outcomeReason": "Take Profit: Level 1 hit. Locked in profit. (Auto-closed: invalid entry data)"
-    }
-  ],
+  "trades": [],
   "pushSubscriptions": [],
   "assets": {
     "XAUUSD": {

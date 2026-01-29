@@ -2,14 +2,14 @@ import React, { useState, Component, ErrorInfo, ReactNode } from 'react';
 import { useTradingEngine } from './hooks/useTradingEngine';
 import DashboardHeader from './components/DashboardHeader';
 import { AgentCard } from './components/AgentCard';
-import { NeuralFeed } from './components/NeuralFeed';
+// NeuralFeed removed
 import { TradingViewWidget } from './components/TradingViewWidget'; // Kept generic import but not used in visual
 import SettingsModal from './components/SettingsModal';
 import MobileHeader from './components/mobile/MobileHeader';
 import { AssetSymbol, StrategyType, Trade } from './types';
 import { DEFAULT_REMOTE_URL } from './constants';
 import PositionsTable from './components/PositionsTable';
-import { Activity, Layers, Receipt, History, AlertTriangle } from 'lucide-react';
+import { Layers, Receipt, History, AlertTriangle } from 'lucide-react';
 import { TradeHistory } from './components/TradeHistory';
 
 // --- Error Boundary ---
@@ -61,8 +61,8 @@ const AppContent: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false); // Desktop Toggle
 
-  // Mobile Tabs: 'dashboard' | 'trades' | 'feed' | 'history'
-  const [activeMobileTab, setActiveMobileTab] = useState<'dashboard' | 'trades' | 'feed' | 'history'>('dashboard');
+  // Mobile Tabs: 'dashboard' | 'trades' | 'history'
+  const [activeMobileTab, setActiveMobileTab] = useState<'dashboard' | 'trades' | 'history'>('dashboard');
 
   const activeAssetData = assets ? assets[activeSymbol] : null;
 
@@ -154,11 +154,7 @@ const AppContent: React.FC = () => {
                   </div>
                 </div>
 
-                {/* RIGHT COLUMN: NEURAL FEED (Span 4) */}
-                <div className="col-span-4 h-full">
-                  {/* Wrapped in a container to match the height style if needed, but NeuralFeed usually handles its own */}
-                  <NeuralFeed decisions={decisions || []} />
-                </div>
+                {/* RIGHT COLUMN: Removed NeuralFeed */}
               </div>
             </>
           ) : (
@@ -192,12 +188,7 @@ const AppContent: React.FC = () => {
             </>
           )}
 
-          {/* FEED TAB */}
-          {activeMobileTab === 'feed' && (
-            <div className="h-full min-h-[70vh]">
-              <NeuralFeed decisions={decisions || []} />
-            </div>
-          )}
+          {/* FEED TAB removed */}
 
           {/* TRADES TAB */}
           {activeMobileTab === 'trades' && (
@@ -224,13 +215,6 @@ const AppContent: React.FC = () => {
         >
           <LayoutDashboard size={20} />
           <span className="text-[10px] uppercase font-bold">Dash</span>
-        </button>
-        <button
-          onClick={() => setActiveMobileTab('feed')}
-          className={`flex flex-col items-center gap-1 ${activeMobileTab === 'feed' ? 'text-cyan-400' : 'text-gray-600'}`}
-        >
-          <Activity size={20} />
-          <span className="text-[10px] uppercase font-bold">Neural</span>
         </button>
         <button
           onClick={() => setActiveMobileTab('trades')}
