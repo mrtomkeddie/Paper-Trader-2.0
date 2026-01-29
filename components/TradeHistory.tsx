@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Trade } from '../types';
 import DeepDiveModal from './DeepDiveModal';
 import { Filter, Search, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { formatCurrency } from '../utils/formatters';
 
 interface TradeHistoryProps {
   trades: Trade[];
@@ -55,10 +56,11 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ trades }) => {
       {/* Table Header */}
       <div className="grid grid-cols-12 gap-2 px-6 py-2 bg-gray-950/50 text-[10px] text-gray-500 font-mono uppercase tracking-wider border-b border-gray-800/50">
         <div className="col-span-2">Time</div>
-        <div className="col-span-2">Agent</div>
+        <div className="col-span-1">Agent</div>
         <div className="col-span-1">Action</div>
         <div className="col-span-2 text-right">Price</div>
         <div className="col-span-1 text-right">Size</div>
+        <div className="col-span-1 text-right">PnL</div>
         <div className="col-span-4 pl-4">Reasoning Snippet</div>
       </div>
 
@@ -70,25 +72,32 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ trades }) => {
             <span className="text-xs font-mono">No audit records found.</span>
           </div>
         ) : (
-          filteredTrades.map((t) => (
-            <div
-              key={t.id}
-              onClick={() => setSelectedTrade(t)}
-              className="grid grid-cols-12 gap-2 px-6 py-3 border-b border-gray-800/30 hover:bg-white/[0.02] cursor-pointer transition-colors group text-xs font-mono text-gray-400 items-center"
-            >
-              <div className="col-span-2 text-gray-500">{new Date(t.openTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-              <div className="col-span-2 flex items-center gap-2">
-                <span className={`w-1.5 h-1.5 rounded-full ${t.agentId === 'quant' ? 'bg-cyan-500' : t.agentId === 'macro' ? 'bg-blue-500' : 'bg-orange-500'}`} />
-                <span className="uppercase">{t.agentId}</span>
+          filteredTrades.map((t) => {
+            const displayPnL = t.status === 'OPEN' ? (t.floatingPnl || 0) : (t.pnl || 0);
+
+            return (
+              <div
+                key={t.id}
+                onClick={() => setSelectedTrade(t)}
+                className="grid grid-cols-12 gap-2 px-6 py-3 border-b border-gray-800/30 hover:bg-white/[0.02] cursor-pointer transition-colors group text-xs font-mono text-gray-400 items-center"
+              >
+                <div className="col-span-2 text-gray-500">{new Date(t.openTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                <div className="col-span-1 flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${t.agentId === 'quant' ? 'bg-cyan-500' : t.agentId === 'macro' ? 'bg-blue-500' : 'bg-orange-500'}`} />
+                  <span className="uppercase truncate">{t.agentId}</span>
+                </div>
+                <div className={`col-span-1 font-bold ${t.type === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>{t.type}</div>
+                <div className="col-span-2 text-right text-gray-300">{(t.entryPrice || 0).toFixed(2)}</div>
+                <div className="col-span-1 text-right">{(t.initialSize || 0)}</div>
+                <div className={`col-span-1 text-right font-bold ${displayPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {formatCurrency(displayPnL)}
+                </div>
+                <div className="col-span-4 pl-4 text-gray-500 truncate group-hover:text-cyan-400 transition-colors">
+                  {t.entryReason || "No reasoning logged..."}
+                </div>
               </div>
-              <div className={`col-span-1 font-bold ${t.type === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>{t.type}</div>
-              <div className="col-span-2 text-right text-gray-300">{(t.entryPrice || 0).toFixed(2)}</div>
-              <div className="col-span-1 text-right">{(t.initialSize || 0)}</div>
-              <div className="col-span-4 pl-4 text-gray-500 truncate group-hover:text-cyan-400 transition-colors">
-                {t.entryReason || "No reasoning logged..."}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
