@@ -11,7 +11,6 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onOpenSettings }) => {
     const navItems = [
         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
-        { id: 'terminal', label: 'Terminal', icon: Terminal, view: 'dashboard' }, // Maps to Dashboard for now, maybe scroll to terminal?
         { id: 'history', label: 'History', icon: History, view: 'history' },
     ];
 
