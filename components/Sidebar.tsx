@@ -36,7 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onO
                     const isSelected = activeView === item.view;
 
                     return (
-                    return (
+
                         <div key={item.id} className="relative group">
                             {isSelected && (
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-premium-cyan rounded-r-full shadow-[0_0_10px_rgba(0,240,255,0.5)]" />
@@ -56,7 +56,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onO
                                 <span className={isSelected ? '' : 'text-sm'}>{item.label}</span>
                             </button>
                         </div>
-                    );
                     );
                 })}
             </nav>
