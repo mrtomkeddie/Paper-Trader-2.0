@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trade, TimeFilter } from '../types';
 import PerformanceSummary from './PerformanceSummary';
+import { formatDate, formatNumber } from '../utils/formatters';
 
 interface Props {
     trades: Trade[];
@@ -46,16 +47,16 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                                 >
                                     <td className={`py-3 px-4 ${trade.type === 'BUY' ? 'text-green-500' : 'text-red-500'}`}>{trade.type}</td>
                                     <td className="py-3 px-4 text-white font-bold">{trade.symbol}</td>
-                                    <td className="py-3 px-4 text-gray-300">{(trade?.entryPrice || 0).toFixed(2)}</td>
-                                    <td className="py-3 px-4 text-gray-300">{(trade?.currentSize || 0).toFixed(2)}</td>
+                                    <td className="py-3 px-4 text-gray-300">{formatNumber(trade?.entryPrice, 2)}</td>
+                                    <td className="py-3 px-4 text-gray-300">{formatNumber(trade?.currentSize, 2)}</td>
                                     <td className={`py-3 px-4 ${realized >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                        {realized >= 0 ? '+' : ''}{realized.toFixed(2)}
+                                        {realized >= 0 ? '+' : ''}{formatNumber(realized, 2)}
                                     </td>
                                     <td className={`py-3 px-4 ${floating >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                        {trade?.status === 'OPEN' ? (floating >= 0 ? '+' : '') + floating.toFixed(2) : '-'}
+                                        {trade?.status === 'OPEN' ? (floating >= 0 ? '+' : '') + formatNumber(floating, 2) : '-'}
                                     </td>
                                     <td className="py-3 px-4 text-gray-500 text-xs font-mono">
-                                        {new Date(trade.openTime).toLocaleString('en-GB', {
+                                        {formatDate(trade.openTime, 'en-GB', {
                                             day: '2-digit',
                                             month: '2-digit',
                                             year: '2-digit',
@@ -64,7 +65,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                                         })}
                                     </td>
                                     <td className="py-3 px-4 text-gray-500 text-xs font-mono">
-                                        {trade.status === 'CLOSED' && trade.closeTime ? new Date(trade.closeTime).toLocaleString('en-GB', {
+                                        {trade.status === 'CLOSED' && trade.closeTime ? formatDate(trade.closeTime, 'en-GB', {
                                             day: '2-digit',
                                             month: '2-digit',
                                             year: '2-digit',
@@ -101,7 +102,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                             {trade.type}
                         </span>
                         <span className="text-[10px] text-gray-500 font-mono">
-                            O: {new Date(trade.openTime).toLocaleString('en-GB', {
+                            O: {formatDate(trade.openTime, 'en-GB', {
                                 day: '2-digit',
                                 month: '2-digit',
                                 hour: '2-digit',
@@ -110,7 +111,7 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                         </span>
                         {trade.status === 'CLOSED' && trade.closeTime && (
                             <span className="text-[10px] text-gray-500 font-mono">
-                                C: {new Date(trade.closeTime).toLocaleString('en-GB', {
+                                C: {formatDate(trade.closeTime, 'en-GB', {
                                     day: '2-digit',
                                     month: '2-digit',
                                     hour: '2-digit',
@@ -125,21 +126,21 @@ const PositionsTable: React.FC<Props> = ({ trades, onSelectTrade, selectedTradeI
                     <div className={`bg-black/20 rounded-lg p-2 border ${realized >= 0 ? 'border-green-500/10' : 'border-red-500/10'}`}>
                         <div className="text-gray-500 mb-1 text-center uppercase text-[10px] font-bold">Realized</div>
                         <div className={`font-bold font-mono text-center text-sm ${realized >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {realized >= 0 ? '+' : ''}{realized.toFixed(2)}
+                            {realized >= 0 ? '+' : ''}{formatNumber(realized, 2)}
                         </div>
                     </div>
 
                     <div className={`bg-black/20 rounded-lg p-2 border ${floating >= 0 ? 'border-green-500/10' : 'border-red-500/10'} ${trade.status === 'CLOSED' ? 'opacity-30' : ''}`}>
                         <div className="text-gray-500 mb-1 text-center uppercase text-[10px] font-bold">Floating</div>
                         <div className={`font-bold font-mono text-center text-sm ${floating >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {trade.status === 'OPEN' ? (floating >= 0 ? '+' : '') + floating.toFixed(2) : '-'}
+                            {trade.status === 'OPEN' ? (floating >= 0 ? '+' : '') + formatNumber(floating, 2) : '-'}
                         </div>
                     </div>
                 </div>
 
                 <div className="flex justify-between mt-3 text-[10px] text-gray-500 font-mono px-1">
-                    <span>Lot: {(trade.currentSize || 0).toFixed(2)}</span>
-                    <span>@{(trade.entryPrice || 0).toFixed(2)}</span>
+                    <span>Lot: {formatNumber(trade.currentSize, 2)}</span>
+                    <span>@{formatNumber(trade.entryPrice, 2)}</span>
                 </div>
             </div>
         );

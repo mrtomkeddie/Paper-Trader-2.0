@@ -4,6 +4,7 @@ import { AssetData, StrategyType, AssetSymbol, Trade } from '../types';
 import { ASSET_CONFIG } from '../constants';
 import { TrendingUp, TrendingDown, Sparkles, BrainCircuit, ChevronUp, ChevronDown, CircleDollarSign, Activity, Landmark, Clock } from 'lucide-react';
 import Sparkline from './Sparkline';
+import { formatNumber } from '../utils/formatters';
 
 interface Props {
     asset: AssetData;
@@ -75,7 +76,7 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
                         <h3 className="text-lg font-bold text-white tracking-tight">{asset.symbol}</h3>
                         <div className="flex items-center gap-1.5">
                             <span className="text-2xl font-bold tracking-tight tabular-nums text-white">
-                                {asset.currentPrice.toLocaleString('en-US', { minimumFractionDigits: config.decimals, maximumFractionDigits: config.decimals })}
+                                {formatNumber(asset.currentPrice, config.decimals)}
                             </span>
                         </div>
                     </div>
@@ -109,7 +110,7 @@ const AssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrategy }) =
                 <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col justify-center">
                     <span className="text-[9px] text-ios-gray uppercase font-bold mb-1">Net P&L</span>
                     <span className={`text-sm font-bold tabular-nums ${pnlIsPositive ? 'text-ios-green' : 'text-ios-red'}`}>
-                        {(pnlIsPositive ? '+' : '') + (stats.totalPnL || 0).toFixed(2)}
+                        {(pnlIsPositive ? '+' : '') + formatNumber(stats.totalPnL, 2)}
                     </span>
                 </div>
 

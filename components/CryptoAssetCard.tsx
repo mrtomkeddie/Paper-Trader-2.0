@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { TrendingUp, TrendingDown, Sparkles, BrainCircuit, ChevronUp, ChevronDown, Activity, Landmark, Clock, CircleDollarSign, Zap, Layers } from 'lucide-react';
 import { CryptoAssetData, CryptoTrade } from '../hooks/useCryptoEngine';
 import Sparkline from './Sparkline';
+import { formatNumber } from '../utils/formatters';
 
 interface Props { asset: CryptoAssetData; trades: CryptoTrade[]; toggleBot: (s: string) => void; setStrategy: (s: string, st: string) => void; }
 
@@ -56,7 +57,7 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
             <h3 className="text-lg font-bold text-white tracking-tight">{asset.symbol}</h3>
             <div className="flex items-center gap-1.5">
               <span className="text-2xl font-bold tracking-tight tabular-nums text-white">
-                {asset.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatNumber(asset.currentPrice, 2)}
               </span>
             </div>
           </div>
@@ -81,7 +82,7 @@ const CryptoAssetCard: React.FC<Props> = ({ asset, trades, toggleBot, setStrateg
       <div className="grid grid-cols-3 gap-3 mb-6">
         <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col justify-center">
           <span className="text-[9px] text-ios-gray uppercase font-bold mb-1">Net P&L</span>
-          <span className={`text-sm font-bold tabular-nums ${pnlIsPositive ? 'text-ios-green' : 'text-ios-red'}`}>{(pnlIsPositive ? '+' : '') + (stats.totalPnL || 0).toFixed(2)}</span>
+          <span className={`text-sm font-bold tabular-nums ${pnlIsPositive ? 'text-ios-green' : 'text-ios-red'}`}>{(pnlIsPositive ? '+' : '') + formatNumber(stats.totalPnL, 2)}</span>
         </div>
         <div className="bg-white/5 rounded-xl p-3 border border-white/5 flex flex-col justify-center">
           <span className="text-[9px] text-ios-gray uppercase font-bold mb-1">Win Rate</span>

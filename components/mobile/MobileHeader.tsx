@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings } from 'lucide-react';
 import { AccountState, AssetSymbol } from '../../types';
+import { formatCurrency } from '../../utils/formatters';
 
 interface Props {
     title: string;
@@ -30,7 +31,7 @@ const MobileHeader: React.FC<Props> = ({ title, account, onOpenSettings, activeA
 
             {/* Balance */}
             <h1 className="text-3xl font-black text-white tracking-tight mb-2">
-                £{account.balance.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(account.balance)}
             </h1>
 
             {/* Asset Toggle Removed */}

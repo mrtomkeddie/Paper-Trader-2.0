@@ -1,6 +1,7 @@
 import React from 'react';
 import { Search, HelpCircle, Sun, Moon, ToggleLeft, ToggleRight, Settings } from 'lucide-react';
 import { AccountState, AssetSymbol, AgentAccount } from '../types';
+import { formatCurrency } from '../utils/formatters';
 
 interface Props {
     account: AccountState;
@@ -57,7 +58,7 @@ const DashboardHeader: React.FC<Props> = ({ account, accounts, toggleAsset, acti
 
                     <div className="text-right">
                         <div className="text-lg md:text-xl font-bold text-white tabular-nums">
-                            £{totalBalance.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrency(totalBalance)}
                         </div>
                         <div className="flex justify-end mt-1">
                             <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20">
@@ -70,7 +71,7 @@ const DashboardHeader: React.FC<Props> = ({ account, accounts, toggleAsset, acti
                     <div className="text-right">
                         <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Open P&L</div>
                         <div className={`text-xl font-bold tabular-nums ${totalOpenPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                            {totalOpenPnL >= 0 ? '+' : ''}£{(totalOpenPnL || 0).toFixed(2)}
+                            {formatCurrency(totalOpenPnL)}
                         </div>
                     </div>
                 </div>

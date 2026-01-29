@@ -1,7 +1,7 @@
 
-import React from 'react';
 import { Trade, TradeType, StrategyType } from '../types';
 import { X, Target, AlertTriangle, TrendingUp, TrendingDown, BrainCircuit, Activity, Zap, Repeat, CheckCircle2, Circle } from 'lucide-react';
+import { formatDate, formatNumber } from '../utils/formatters';
 
 interface Props {
   trade: Trade | null;
@@ -43,7 +43,7 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">{trade.symbol}</h2>
-              <p className="text-xs text-ios-gray">{new Date(trade.openTime).toLocaleString()}</p>
+              <p className="text-xs text-ios-gray">{formatDate(trade.openTime)}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
@@ -61,7 +61,7 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
             </span>
             <span className={`text-4xl font-bold tabular-nums tracking-tight ${(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)) >= 0 ? 'text-ios-green' : 'text-ios-red'}`}>
               {(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)) >= 0 ? '+' : ''}
-              {(trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)).toFixed(2)}
+              {formatNumber((trade.status === 'OPEN' ? (trade.floatingPnl || 0) : (trade.pnl || 0)), 2)}
             </span>
             {trade.status === 'OPEN' && (
               <div className="text-xs text-ios-blue font-bold mt-1 animate-pulse">ACTIVE - RUNNING</div>
@@ -83,7 +83,7 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
                   </div>
                 </div>
                 <span className={`font-mono text-xs ${level.hit ? 'text-ios-green font-bold' : 'text-white/40'}`}>
-                  {(level.price || 0).toFixed(2)}
+                  {formatNumber(level.price, 2)}
                 </span>
               </div>
             ))}
@@ -102,13 +102,13 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
               <div className="flex items-center gap-1.5 text-ios-gray text-[10px] uppercase font-bold mb-1">
                 <Target size={12} /> Entry
               </div>
-              <span className="text-white font-mono">{(trade.entryPrice || 0).toFixed(2)}</span>
+              <span className="text-white font-mono">{formatNumber(trade.entryPrice, 2)}</span>
             </div>
             <div className="bg-black/40 rounded-xl p-3 border border-white/5">
               <div className="flex items-center gap-1.5 text-ios-gray text-[10px] uppercase font-bold mb-1">
                 <AlertTriangle size={12} /> Stop Loss
               </div>
-              <span className="text-white font-mono">{(trade.stopLoss || 0).toFixed(2)}</span>
+              <span className="text-white font-mono">{formatNumber(trade.stopLoss, 2)}</span>
             </div>
           </div>
 
