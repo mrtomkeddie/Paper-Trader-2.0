@@ -1,7 +1,7 @@
 
 import { AssetSymbol, StrategyType } from './types';
 
-export const INITIAL_BALANCE = 500;
+export const INITIAL_BALANCE = 1000;
 export const DEFAULT_REMOTE_URL = (import.meta as any)?.env?.VITE_REMOTE_URL || 'https://paper-trader-2-0.onrender.com';
 export const CRYPTO_DEFAULT_REMOTE_URL = (import.meta as any)?.env?.VITE_CRYPTO_REMOTE_URL || 'https://paper-trader-2-0-1.onrender.com';
 
