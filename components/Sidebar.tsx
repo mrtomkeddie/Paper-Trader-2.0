@@ -36,20 +36,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onO
                     const isSelected = activeView === item.view;
 
                     return (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveView(item.view as any)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group relative overflow-hidden ${isSelected
-                                ? 'bg-premium-cyan/10 text-premium-cyan shadow-[0_0_15px_rgba(0,240,255,0.15)] border border-premium-cyan/20'
-                                : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
-                                }`}
-                        >
+                    return (
+                        <div key={item.id} className="relative group">
                             {isSelected && (
-                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-premium-cyan shadow-[0_0_10px_cyan]" />
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-premium-cyan rounded-r-full shadow-[0_0_10px_rgba(0,240,255,0.5)]" />
                             )}
-                            <item.icon size={20} className={`transition-transform duration-300 ${isSelected ? 'scale-110 drop-shadow-[0_0_5px_cyan]' : 'group-hover:scale-110'}`} />
-                            <span className="font-medium tracking-wide text-sm">{item.label}</span>
-                        </button>
+                            <button
+                                onClick={() => setActiveView(item.view as any)}
+                                className={`w-full flex items-center gap-4 px-6 py-3 transition-all duration-300 ${isSelected
+                                    ? 'text-premium-cyan font-bold tracking-wide'
+                                    : 'text-gray-500 hover:text-gray-300 font-medium'
+                                    }`}
+                            >
+                                <item.icon
+                                    size={22}
+                                    className={`transition-all duration-300 ${isSelected ? 'drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]' : 'group-hover:text-gray-200'}`}
+                                    strokeWidth={isSelected ? 2.5 : 2}
+                                />
+                                <span className={isSelected ? '' : 'text-sm'}>{item.label}</span>
+                            </button>
+                        </div>
+                    );
                     );
                 })}
             </nav>
