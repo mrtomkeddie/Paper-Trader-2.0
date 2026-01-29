@@ -120,7 +120,17 @@ export interface AccountState {
   winRate?: number;
 }
 
+export interface Decision {
+  agentId: string;
+  action: string;
+  confidence: number;
+  reason: string;
+  timestamp: number;
+  sentiment_score?: number;
+}
+
 export interface AgentAccount {
+  id: string; // Added ID
   name: string;
   role: string;
   balance: number;
@@ -133,7 +143,8 @@ export interface AgentAccount {
 export interface MarketContextType {
   assets: Record<AssetSymbol, AssetData>;
   account: AccountState;
-  accounts?: Record<string, AgentAccount>; // New Support
+  accounts?: Record<string, AgentAccount>;
+  decisions?: Decision[]; // New Support
   trades: Trade[];
   toggleBot: (symbol: AssetSymbol) => void;
   toggleStrategy: (symbol: AssetSymbol, strategy: StrategyType) => void;

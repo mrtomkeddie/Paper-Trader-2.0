@@ -61,7 +61,7 @@ Output a JSON object ONLY:
 `;
 
             const response = await this.client.models.generateContent({
-                model: 'gemini-1.5-pro',
+                model: 'gemini-1.5-flash',
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 tools: [{ googleSearch: {} }]
             });

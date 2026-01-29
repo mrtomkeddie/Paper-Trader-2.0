@@ -1,73 +1,32 @@
 import React, { useState } from 'react';
 import { useTradingEngine } from './hooks/useTradingEngine';
-import { LayoutDashboard, List } from 'lucide-react';
 import DashboardHeader from './components/DashboardHeader';
-import AgentStatusPanel from './components/AgentStatusPanel';
-import SignalPanel from './components/SignalPanel';
-import ChartPanel from './components/ChartPanel';
-import PositionsTable from './components/PositionsTable';
+import { AgentCard } from './components/AgentCard';
+import { NeuralFeed } from './components/NeuralFeed';
+import { TradingViewWidget } from './components/TradingViewWidget';
 import SettingsModal from './components/SettingsModal';
-import MobileTradeModal from './components/MobileTradeModal';
 import MobileHeader from './components/mobile/MobileHeader';
-import MobileDashboard from './components/mobile/MobileDashboard';
-import MobileTrades from './components/mobile/MobileTrades';
 import MobileBottomNav from './components/mobile/MobileBottomNav';
 import { AssetSymbol, StrategyType, Trade } from './types';
 import { DEFAULT_REMOTE_URL } from './constants';
+import PositionsTable from './components/PositionsTable';
+import { Activity, Layers, Receipt } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { assets, account, accounts, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
+  const { assets, account, accounts, decisions, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected } = useTradingEngine();
   const [activeSymbol, setActiveSymbol] = useState<AssetSymbol>(AssetSymbol.XAUUSD);
-  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [activeMobileTab, setActiveMobileTab] = useState<'dashboard' | 'trades'>('dashboard');
-  const [mobileSelectedTrade, setMobileSelectedTrade] = useState<Trade | null>(null);
 
-  // Service Worker & Notifications Setup
-  React.useEffect(() => {
-    const urlBase64ToUint8Array = (base64String: string) => {
-      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-      return outputArray;
-    };
-    const run = async () => {
-      try {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        try { await reg.update(); } catch { }
-
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-
-        const vapid = (import.meta as any)?.env?.VITE_VAPID_PUBLIC_KEY;
-        if (!vapid) return;
-
-        const existing = await reg.pushManager.getSubscription();
-        const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vapid) });
-
-        const base = typeof window !== 'undefined' ? (localStorage.getItem('remoteUrl') || DEFAULT_REMOTE_URL) : DEFAULT_REMOTE_URL;
-        await fetch(`${base.replace(/\/$/, '')}/push/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
-      } catch { }
-    };
-    run();
-  }, []);
+  // Mobile Tabs: 'dashboard' | 'trades' | 'feed'
+  const [activeMobileTab, setActiveMobileTab] = useState<'dashboard' | 'trades' | 'feed'>('dashboard');
 
   const activeAssetData = assets[activeSymbol];
-  const openTrade = trades.find(t => t.symbol === activeSymbol && t.status === 'OPEN');
-  // Only show trade details if explicitly selected. 
-  // If Live View (selectedTrade is null), we pass openTrade separately so SignalPanel can show a summary/status but not the full card.
 
-  const handleTradeSelect = (trade: Trade) => {
-    setSelectedTrade(trade);
-    setActiveSymbol(trade.symbol as AssetSymbol);
-    setMobileSelectedTrade(trade);
-  };
+  // Prepare Agent Data for Rendering
+  const agentList = accounts ? Object.values(accounts) : [];
 
   return (
-    <div className="min-h-screen bg-[#0a0b14] text-white font-sans selection:bg-blue-500/30 flex flex-col">
+    <div className="min-h-screen bg-[#0a0b14] text-white font-sans selection:bg-cyan-500/30 flex flex-col overflow-hidden">
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -77,106 +36,149 @@ const App: React.FC = () => {
         isIndicesConnected={isConnected}
       />
 
+      {/* --- Desktop Header --- */}
       <div className="hidden md:block">
         <DashboardHeader
           account={account}
-          toggleAsset={(s) => {
-            setActiveSymbol(s);
-            setSelectedTrade(null); // Clear selection when manually changing asset
-          }}
+          toggleAsset={(s) => setActiveSymbol(s)}
           activeAsset={activeSymbol}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
       </div>
 
-      {/* Mobile Header */}
+      {/* --- Mobile Header --- */}
       <div className="md:hidden">
         <MobileHeader
-          title={activeMobileTab === 'dashboard' ? 'INDICES DASHBOARD' : 'INDICES HISTORY'}
+          title="TERMINAL"
           account={account}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          activeAsset={activeMobileTab === 'dashboard' ? activeSymbol : undefined}
-          onToggleAsset={activeMobileTab === 'dashboard' ? (s) => {
-            setActiveSymbol(s);
-            setMobileSelectedTrade(null); // Clear selection when manually changing asset
-          } : undefined}
+          activeAsset={activeSymbol}
         />
       </div>
 
-      <main className="flex-1 p-0 md:p-6 overflow-y-auto">
-        {/* Desktop Layout */}
-        <div className="hidden md:block max-w-[1600px] mx-auto space-y-6">
-          <AgentStatusPanel accounts={accounts} />
-          <div className="grid grid-cols-12 gap-6 min-h-[500px]">
-            <div className="col-span-4 h-full">
-              {activeAssetData ? (
-                <SignalPanel
-                  asset={activeAssetData}
-                  trade={selectedTrade}
-                  activeOpenTrade={openTrade}
-                  onToggleStrategy={setStrategy}
-                  onClearSelection={() => setSelectedTrade(null)}
-                />
-              ) : (
-                <div className="h-full flex items-center justify-center bg-[#13141b] rounded-2xl border border-white/5">
-                  <span className="text-gray-500">Loading Asset Data...</span>
+      <main className="flex-1 overflow-hidden relative">
+        {/* --- DESKTOP LAYOUT (GRID) --- */}
+        <div className="hidden md:grid grid-cols-12 grid-rows-12 gap-6 p-6 h-full max-w-[1920px] mx-auto">
+
+          {/* ROW 1: AGENT CARDS (Top) - Span 12 */}
+          <div className="col-span-12 row-span-2 grid grid-cols-3 gap-6">
+            {['quant', 'macro', 'risk'].map(id => {
+              const agent = accounts?.[id];
+              return agent ? <AgentCard key={id} agent={agent} /> : (
+                <div key={id} className="bg-gray-900/50 border border-gray-800 rounded-xl animate-pulse flex items-center justify-center">
+                  <span className="text-gray-600 font-mono text-sm">Initializing {id.toUpperCase()}...</span>
                 </div>
-              )}
+              );
+            })}
+          </div>
+
+          {/* ROW 2: MAIN CONTENT (Chart & Feed) */}
+
+          {/* CHART AREA - Span 9 cols, row span 6 */}
+          <div className="col-span-9 row-span-7 bg-gray-900 rounded-xl overflow-hidden border border-gray-800 shadow-2xl relative group">
+            <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur px-3 py-1 rounded text-xs font-mono text-gray-400 border border-gray-700">
+              XAUUSD [LIVE]
             </div>
-            <div className="col-span-8 h-full">
-              {activeAssetData ? (
-                <ChartPanel asset={activeAssetData} />
-              ) : (
-                <div className="h-full flex items-center justify-center bg-[#13141b] rounded-2xl border border-white/5">
-                  <span className="text-gray-500">Loading Chart...</span>
-                </div>
-              )}
+            <TradingViewWidget />
+          </div>
+
+          {/* NEURAL FEED - Span 3 cols, row span 10 (Full Height side panel) */}
+          <div className="col-span-3 row-span-10">
+            <NeuralFeed decisions={decisions || []} />
+          </div>
+
+          {/* ROW 3: BOTTOM PANEL (Positions / Controls) */}
+          <div className="col-span-9 row-span-3 bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden flex flex-col">
+            <div className="px-4 py-2 border-b border-gray-800 bg-gray-900/80 flex items-center justify-between">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <Activity className="w-3 h-3" />
+                Active Positions
+              </h3>
+              <div className="text-xs font-mono text-cyan-500">
+                OPEN PL: £{(trades.reduce((acc, t) => acc + (t.floatingPnl || 0), 0)).toFixed(2)}
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <PositionsTable trades={trades} onSelectTrade={() => { }} selectedTradeId={null} />
             </div>
           </div>
-          <div className="h-[800px]">
-            <PositionsTable
-              trades={trades}
-              onSelectTrade={handleTradeSelect}
-              selectedTradeId={selectedTrade?.id}
-            />
-          </div>
+
         </div>
 
-        {/* Mobile Layout */}
-        <div className="md:hidden pb-20">
-          {activeMobileTab === 'dashboard' ? (
-            activeAssetData ? (
-              <MobileDashboard
-                assets={assets}
-                trades={trades}
-                onToggleStrategy={setStrategy}
-                onToggleAuto={toggleBot}
-              />
-            ) : (
-              <div className="flex items-center justify-center h-64 text-gray-500">Loading...</div>
-            )
-          ) : (
-            <MobileTrades
-              trades={trades}
-              onSelectTrade={handleTradeSelect}
-            />
+        {/* --- MOBILE LAYOUT (STACKED / TABBED) --- */}
+        <div className="md:hidden h-full overflow-y-auto pb-24 p-4 space-y-4">
+
+          {/* DASHBOARD TAB */}
+          {activeMobileTab === 'dashboard' && (
+            <>
+              {/* Agent Carousel (Scrollable Row) */}
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x">
+                {['quant', 'macro', 'risk'].map(id => {
+                  const agent = accounts?.[id];
+                  return (
+                    <div key={id} className="min-w-[85vw] snap-center">
+                      {agent ? <AgentCard agent={agent} /> : <div className="h-40 bg-gray-900 rounded-xl animate-pulse" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Chart Area */}
+              <div className="h-[400px] bg-gray-900 rounded-xl overflow-hidden border border-gray-800">
+                <TradingViewWidget />
+              </div>
+            </>
           )}
+
+          {/* FEED TAB */}
+          {activeMobileTab === 'feed' && (
+            <div className="h-full min-h-[70vh]">
+              <NeuralFeed decisions={decisions || []} />
+            </div>
+          )}
+
+          {/* TRADES TAB */}
+          {activeMobileTab === 'trades' && (
+            <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 min-h-[50vh]">
+              <PositionsTable trades={trades} onSelectTrade={() => { }} selectedTradeId={null} />
+            </div>
+          )}
+
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden">
-        <MobileBottomNav activeTab={activeMobileTab} onTabChange={setActiveMobileTab} />
+      {/* Mobile Bottom Nav Override */}
+      <div className="md:hidden fixed bottom-0 w-full bg-[#0a0b14] border-t border-gray-800 flex justify-around p-4 z-50 safe-area-bottom">
+        <button
+          onClick={() => setActiveMobileTab('dashboard')}
+          className={`flex flex-col items-center gap-1 ${activeMobileTab === 'dashboard' ? 'text-cyan-400' : 'text-gray-600'}`}
+        >
+          <LayoutDashboard size={20} />
+          <span className="text-[10px] uppercase font-bold">Dash</span>
+        </button>
+        <button
+          onClick={() => setActiveMobileTab('feed')}
+          className={`flex flex-col items-center gap-1 ${activeMobileTab === 'feed' ? 'text-cyan-400' : 'text-gray-600'}`}
+        >
+          <Activity size={20} />
+          <span className="text-[10px] uppercase font-bold">Neural</span>
+        </button>
+        <button
+          onClick={() => setActiveMobileTab('trades')}
+          className={`flex flex-col items-center gap-1 ${activeMobileTab === 'trades' ? 'text-cyan-400' : 'text-gray-600'}`}
+        >
+          <Receipt size={20} />
+          <span className="text-[10px] uppercase font-bold">Trades</span>
+        </button>
       </div>
 
-      <MobileTradeModal
-        isOpen={!!mobileSelectedTrade}
-        onClose={() => setMobileSelectedTrade(null)}
-        trade={mobileSelectedTrade}
-        assetData={mobileSelectedTrade ? assets[mobileSelectedTrade.symbol as AssetSymbol] : undefined}
-      />
     </div>
   );
 };
+
+// StartIcon Helper for Nav - defining it inline or importing
+function LayoutDashboard({ size, className }: { size: number, className?: string }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="14" y="12" rx="1" /><rect width="7" height="5" x="3" y="16" rx="1" /></svg>
+}
 
 export default App;

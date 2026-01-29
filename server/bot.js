@@ -1320,6 +1320,8 @@ function processTicks(symbol) {
       rsi: asset.rsi,
       slope: asset.slope,
       trend: asset.trend,
+      ema200: asset.ema200,
+      bollinger: asset.bollinger,
       structure: structure,
       adx: adx,
       candles: candlesM5[symbol],
@@ -1801,7 +1803,17 @@ app.get('/events', (req, res) => {
   } catch { }
   try { res.write(`retry: 3000\n\n`); } catch { }
   sseClients.add(res);
-  try { const payload = JSON.stringify({ account, trades, assets }); res.write(`data: ${payload}\n\n`); } catch { }
+  try {
+    const managerState = manager.getDetailedState();
+    const data = JSON.stringify({
+      assets,
+      account,
+      trades,
+      accounts: managerState.accounts,
+      decisions: managerState.decisions
+    });
+    sseClients.forEach(clientRes => clientRes.write(`data: ${data}\n\n`));
+  } catch { }
   req.on('close', () => { try { sseClients.delete(res); } catch { } });
 });
 

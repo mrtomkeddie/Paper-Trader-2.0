@@ -2,9 +2,41 @@
   "account": {
     "balance": 636.1336571377313,
     "equity": 636.1336571377313,
-    "dayPnL": -5.909185533086798,
+    "dayPnL": 0,
     "totalPnL": 136.13365713773135,
-    "winRate": 40.35087719298245
+    "winRate": 39.6551724137931
+  },
+  "accounts": {
+    "quant": {
+      "name": "The Quant",
+      "role": "Technical Scalper (DeepSeek R1)",
+      "balance": 1000,
+      "equity": 1000,
+      "isThinking": true,
+      "lastAction": "SELL",
+      "lastThought": "Price far above EMA, doji suggests exhaustion",
+      "latestDecision": null
+    },
+    "macro": {
+      "name": "The Strategist",
+      "role": "Global Macro (Gemini)",
+      "balance": 1000,
+      "equity": 1000,
+      "isThinking": true,
+      "lastAction": "WAITING",
+      "lastThought": "",
+      "latestDecision": null
+    },
+    "risk": {
+      "name": "The Skeptic",
+      "role": "Risk Manager (Claude)",
+      "balance": 1000,
+      "equity": 1000,
+      "isThinking": true,
+      "lastAction": "WAITING",
+      "lastThought": "",
+      "latestDecision": null
+    }
   },
   "trades": [
     {

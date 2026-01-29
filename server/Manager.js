@@ -11,6 +11,7 @@ export class Manager {
         ];
         this.marketData = {}; // Symbol -> Data
         this.newTradesQueue = [];
+        this.decisionLog = []; // Log of last 50 decisions
     }
 
     /**
@@ -114,5 +115,31 @@ export class Manager {
             accounts,
             trades: allTrades
         };
+    }
+    getDetailedState() {
+        // Collect balances
+        const accounts = {};
+        this.agents.forEach(a => {
+            accounts[a.id] = {
+                id: a.id,
+                name: a.name,
+                role: a.role,
+                balance: a.balance,
+                equity: a.equity,
+                isThinking: a.isThinking,
+                lastAction: a.lastAction
+            };
+        });
+
+        // Collect latest decisions (snapshot)
+        const decisions = this.agents
+            .filter(a => a.latestDecision)
+            .map(a => ({
+                agentId: a.id,
+                ...a.latestDecision,
+                timestamp: Date.now() // specific logic might be needed for real timestamp
+            }));
+
+        return { accounts, decisions };
     }
 }
