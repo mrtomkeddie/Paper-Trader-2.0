@@ -2555,6 +2555,34 @@ async function flushAndExit(code = 0) {
 process.on('SIGINT', () => flushAndExit(0));
 process.on('SIGTERM', () => flushAndExit(0));
 
+app.post('/api/admin/reset', async (req, res) => {
+  try {
+    console.warn('[ADMIN] TRIGGERING HARD RESET');
+    // 1. Reset Global State
+    account = { balance: 1000, equity: 1000, dayPnL: 0, totalPnL: 0 };
+    trades = [];
+
+    // 2. Clear Manager
+    manager.agents.forEach(a => {
+      a.balance = 1000;
+      a.equity = 1000;
+      a.trades = [];
+      a.newTrades = [];
+      a.isHalted = false; // Reset halt
+    });
+
+    // 3. Save & Clear Cloud
+    saveState(); // Writes empty local state
+    await clearCloudState(account); // Wipes Firebase
+
+    console.log('[ADMIN] HARD RESET COMPLETE');
+    res.json({ success: true, message: 'System fully reset to £1000 base.' });
+  } catch (e) {
+    console.error('[ADMIN] Reset failed:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // --- GLOBAL ERROR HANDLING ---
 process.on('uncaughtException', (err) => {
   console.error('[CRITICAL] Uncaught Exception:', err);

@@ -17,6 +17,7 @@ export class Agent {
         this.lastAction = "WAITING";
         this.newTrades = [];
         this.latestDecision = null; // Store full JSON decision
+        this.isHalted = false; // Margin Call Flag
 
         // Trade cooldown & limits
         this.lastTradeTime = 0;
@@ -183,7 +184,10 @@ export class Agent {
         // CRITICAL: Margin Call Check
         if (this.equity < (this.balance * 0.80)) {
             console.warn(`[AGENT: ${this.name}] MARGIN CALL WARNING: Equity < 80%. Trading Halted.`);
+            this.isHalted = true;
             return false;
+        } else {
+            this.isHalted = false; // Auto-recover if funds added
         }
 
         return freeMargin > 0;
@@ -258,7 +262,8 @@ export class Agent {
             equity: this.equity,
             isThinking: this.isThinking,
             lastAction: this.lastAction,
-            lastThought: this.lastThought
+            lastThought: this.lastThought,
+            isHalted: this.isHalted
         };
     }
 }

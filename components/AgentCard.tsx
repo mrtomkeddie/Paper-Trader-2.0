@@ -10,6 +10,7 @@ interface AgentCardProps {
         equity: number;
         lastAction: string;
         isThinking: boolean;
+        isHalted?: boolean;
     };
 }
 
@@ -32,12 +33,18 @@ export const AgentCard: React.FC<AgentCardProps> = ({ agent }) => {
     }[agent.id] || 'text-gray-400';
 
     return (
-        <div className={`bg-gray-900/80 border ${theme} rounded-xl p-4 flex flex-col justify-between h-full backdrop-blur-sm transition-all duration-300 hover:scale-[1.02]`}>
-            <div className="flex justify-between items-start mb-4">
+        <div className={`bg-gray-900/80 border ${agent.isHalted ? 'border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]' : theme} rounded-xl p-4 flex flex-col justify-between h-full backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] relative overflow-hidden`}>
+            {agent.isHalted && (
+                <div className="absolute inset-0 bg-red-900/20 z-0 pointer-events-none" />
+            )}
+
+            <div className="flex justify-between items-start mb-4 relative z-10">
                 <div>
-                    <h3 className={`text-lg font-bold ${glowText} uppercase tracking-wider flex items-center gap-2`}>
+                    <h3 className={`text-lg font-bold ${agent.isHalted ? 'text-red-500' : glowText} uppercase tracking-wider flex items-center gap-2`}>
                         {agent.name}
-                        {agent.isThinking && (
+                        {agent.isHalted ? (
+                            <span className="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded-full animate-pulse ml-2">HALTED</span>
+                        ) : agent.isThinking && (
                             <span className="relative flex h-3 w-3">
                                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-current`}></span>
                                 <span className={`relative inline-flex rounded-full h-3 w-3 bg-current`}></span>

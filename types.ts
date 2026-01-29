@@ -140,6 +140,7 @@ export interface AgentAccount {
   isThinking: boolean;
   lastAction: string;
   lastThought: string;
+  isHalted?: boolean;
 }
 
 export interface MarketContextType {
