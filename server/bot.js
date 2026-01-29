@@ -550,7 +550,7 @@ setInterval(() => { try { logSystemPulse(); } catch { } }, 15 * 60 * 1000);
 
 // INITIALIZE ASSETS
 let assets = {
-  'XAUUSD': createAsset('XAUUSD', ['LONDON_SWEEP', 'TREND_FOLLOW', 'AI_AGENT'])
+  'XAUUSD': createAsset('XAUUSD', ['AI_AGENT'])
 };
 
 function createAsset(symbol, defaultStrategies) {
@@ -1555,8 +1555,8 @@ function processTicks(symbol) {
   if (guard.tradesToday >= guard.maxTradesPerDay) { setSkipReason(asset, `Daily limit ${guard.tradesToday}/${guard.maxTradesPerDay}`); return; }
   if (Date.now() - guard.lastTradeMs < guard.cooldownMs) { setSkipReason(asset, 'Cooldown'); return; }
 
-  // A. TREND FOLLOW (24/7)
-  if (asset.activeStrategies.includes('TREND_FOLLOW')) {
+  // A. TREND FOLLOW (Legacy - Disabled)
+  if (false && asset.activeStrategies.includes('TREND_FOLLOW')) {
     if (asset.regime !== 'TREND') {
       setSkipReason(asset, `Regime ${asset.regime} != TREND`);
     } else {
@@ -1675,8 +1675,8 @@ function processTicks(symbol) {
       } // End of Regime Check
     }
 
-    // B. LONDON SWEEP (GOLD)
-    if (asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAUUSD') {
+    // B. LONDON SWEEP (GOLD) (Legacy - Disabled)
+    if (false && asset.activeStrategies.includes('LONDON_SWEEP') && symbol === 'XAUUSD') {
       if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
       const allow = isWithinLondonSweepWindow(Date.now());
       if (allow) {
@@ -1725,7 +1725,8 @@ function processTicks(symbol) {
     }
     */
 
-    if (asset.activeStrategies.includes('MEAN_REVERT')) {
+    // E. MEAN REVERT (Legacy - Disabled)
+    if (false && asset.activeStrategies.includes('MEAN_REVERT')) {
       if (trades.some(t => t.symbol === symbol && t.status === 'OPEN')) return;
       if (asset.regime !== 'RANGE') {
         setSkipReason(asset, `Regime ${asset.regime} != RANGE`);
