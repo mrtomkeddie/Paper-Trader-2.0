@@ -13,9 +13,9 @@
       "role": "Technical Scalper (DeepSeek R1)",
       "balance": 1000,
       "equity": 1000,
-      "isThinking": false,
-      "lastAction": "WAITING",
-      "lastThought": "",
+      "isThinking": true,
+      "lastAction": "BUY",
+      "lastThought": "Long lower shadow at 200 EMA in uptrend",
       "latestDecision": null
     },
     "macro": {
@@ -23,19 +23,27 @@
       "role": "Global Macro (Gemini)",
       "balance": 1000,
       "equity": 1000,
-      "isThinking": false,
-      "lastAction": "WAITING",
-      "lastThought": "",
-      "latestDecision": null
+      "isThinking": true,
+      "lastAction": "HOLD",
+      "lastThought": "Conflicting signals. DXY strength could pressure gold, but geopolitical risks and dovish Fed expectations provide support.",
+      "latestDecision": {
+        "action": "HOLD",
+        "confidence": 60,
+        "sentiment_score": 3,
+        "reason": "Conflicting signals. DXY strength could pressure gold, but geopolitical risks and dovish Fed expectations provide support.",
+        "stopLoss": 5450,
+        "takeProfit": 5650,
+        "timeframe": "2 weeks"
+      }
     },
     "risk": {
       "name": "The Skeptic",
       "role": "Risk Manager (Claude)",
       "balance": 1000,
       "equity": 1000,
-      "isThinking": false,
-      "lastAction": "WAITING",
-      "lastThought": "",
+      "isThinking": true,
+      "lastAction": "HOLD",
+      "lastThought": "Neutral RSI and moderate sentiment provide no clear contrarian signal. Market lacks extreme emotions.",
       "latestDecision": null
     }
   },

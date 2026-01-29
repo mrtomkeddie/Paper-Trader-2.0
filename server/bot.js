@@ -167,7 +167,7 @@ const RISK_CONFIG = {
   MAX_TOTAL_OPEN_RISK_PCT: 0.02
 };
 
-const INITIAL_BALANCE = 500;
+const INITIAL_BALANCE = 1000;
 const RISK_PER_TRADE = 0.01;
 
 // --- STATE ---
