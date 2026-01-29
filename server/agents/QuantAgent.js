@@ -89,7 +89,7 @@ Output a JSON object ONLY:
             this.lastThought = decision.reason;
             this.lastAction = decision.action;
 
-            if (decision.action !== 'HOLD' && decision.confidence > 75) {
+            if (decision.action !== 'HOLD' && decision.confidence > 50) {
                 // Calculate dynamic size based on risk (simplified for now)
                 const size = 0.05; // Default scalp size
 

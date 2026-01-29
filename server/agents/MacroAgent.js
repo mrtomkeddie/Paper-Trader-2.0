@@ -84,7 +84,7 @@ Output a JSON object ONLY:
             this.lastAction = decision.action;
             this.latestDecision = decision; // Save for Manager
 
-            if (decision.action !== 'HOLD' && decision.confidence > 80) {
+            if (decision.action !== 'HOLD' && decision.confidence > 50) {
                 // Macro takes larger swings but wider stops? Or maybe just normal sizing.
                 const size = 0.1;
 
