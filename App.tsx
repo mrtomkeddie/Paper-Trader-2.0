@@ -138,8 +138,8 @@ const AppContent: React.FC = () => {
               {/* ROW 2: MAIN CONTENT (Positions & Feed) */}
               <div className="grid grid-cols-12 gap-6 min-h-[600px]">
 
-                {/* LEFT COLUMN: ACTIVE POSITIONS (Span 8) */}
-                <div className="col-span-8 bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden flex flex-col shadow-xl">
+                {/* ACTIVE POSITIONS - Full Width */}
+                <div className="col-span-12 bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden flex flex-col shadow-xl">
                   <div className="px-6 py-4 border-b border-gray-800 bg-gray-900/80 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                       <Layers className="w-4 h-4 text-cyan-400" />
@@ -153,8 +153,6 @@ const AppContent: React.FC = () => {
                     <PositionsTable trades={(trades || []).filter(t => t && t.status === 'OPEN')} onSelectTrade={() => { }} selectedTradeId={null} />
                   </div>
                 </div>
-
-                {/* RIGHT COLUMN: Removed NeuralFeed */}
               </div>
             </>
           ) : (
