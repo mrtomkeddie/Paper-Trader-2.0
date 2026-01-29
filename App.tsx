@@ -130,9 +130,9 @@ const AppContent: React.FC = () => {
               </div>
 
               {/* ROW 2: MAIN CONTENT (Positions) */}
-              <div className="grid grid-cols-12 gap-6 min-h-[600px]">
+              <div className="grid grid-cols-12 gap-6">
                 {/* ACTIVE POSITIONS - Full Width */}
-                <GlassCard className="col-span-12 flex flex-col min-h-[500px]">
+                <GlassCard className="col-span-12 flex flex-col min-h-[300px]">
                   <div className="px-6 py-4 border-b border-premium-border bg-premium-bg/40 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-premium-gold uppercase tracking-widest flex items-center gap-2">
                       <Layers className="w-4 h-4 text-premium-cyan" />
