@@ -2018,6 +2018,20 @@ app.post('/reset_account', (req, res) => {
   res.sendStatus(200);
 });
 
+app.post('/clear_trades', (req, res) => {
+  console.log('[SYSTEM] Clearing all trades...');
+  trades = [];
+  // Also clear trades from each agent
+  if (manager && manager.agents) {
+    manager.agents.forEach(agent => {
+      agent.trades = [];
+      agent.newTrades = [];
+    });
+  }
+  saveState();
+  console.log('[SYSTEM] All trades cleared.');
+  res.sendStatus(200);
+});
 app.post('/import', (req, res) => {
   try {
     const secret = process.env.IMPORT_SECRET || null;
