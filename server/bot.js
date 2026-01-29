@@ -2074,6 +2074,38 @@ app.post('/clear_trades', (req, res) => {
   console.log('[SYSTEM] All trades cleared.');
   res.sendStatus(200);
 });
+
+app.post('/cloud/clear', async (req, res) => {
+  console.log('[SYSTEM] Performing Hard Reset (Cloud + Local)...');
+  try {
+    // 1. Clear Cloud
+    await clearCloudState(account);
+
+    // 2. Clear Local In-Memory
+    account = { balance: INITIAL_BALANCE, equity: INITIAL_BALANCE, dayPnL: 0, totalPnL: 0 };
+    trades = [];
+    pushSubscriptions = [];
+
+    // 3. Clear Agent Memory
+    if (typeof manager !== 'undefined' && manager && manager.agents) {
+      manager.agents.forEach(agent => {
+        agent.trades = [];
+        agent.newTrades = [];
+        if (agent.reset) agent.reset();
+      });
+    }
+
+    // 4. Save to Disk
+    saveState();
+
+    console.log('[SYSTEM] Hard Reset Complete.');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[SYSTEM] Hard Reset Failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/import', (req, res) => {
   try {
     const secret = process.env.IMPORT_SECRET || null;
