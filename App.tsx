@@ -142,7 +142,7 @@ const AppContent: React.FC = () => {
                 <div className="col-span-8 bg-gray-900/50 border border-gray-800 rounded-xl overflow-hidden flex flex-col shadow-xl">
                   <div className="px-6 py-4 border-b border-gray-800 bg-gray-900/80 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-cyan-400" />
+                      <Layers className="w-4 h-4 text-cyan-400" />
                       Active Positions
                     </h3>
                     <div className="text-xs font-mono text-cyan-500 bg-cyan-950/30 px-3 py-1 rounded border border-cyan-900/50">
