@@ -17,7 +17,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, onO
     return (
         <div className="hidden md:flex flex-col w-64 h-screen sticky top-0 p-4 border-r border-premium-border bg-black/40 backdrop-blur-xl">
             {/* Logo Area */}
-            <div className="flex items-center justify-center p-4 mb-6 mt-2">
+            <div className="flex items-center justify-center p-4 mb-6 mt-0">
                 <img src="/pt2logo.png" alt="Paper Trader 2.0" className="h-12 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.4)]" />
             </div>
 
