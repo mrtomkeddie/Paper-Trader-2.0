@@ -330,30 +330,41 @@ function determineRegime(symbol, adx, slope, bbWidth) {
 const DATA_DIR = path.join(process.cwd(), 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 
-function recalculateAccountState() {
-  let realized = 0;
-  let day = 0;
-  let wins = 0;
-  let closedCount = 0;
-  // Use UTC Midnight for Daily PnL Reset
-  const startOfDay = getStartOfDayUtcMs();
-  for (const t of trades) {
-    if (t.status === 'CLOSED') {
-      realized += (t.pnl || 0);
-      const time = t.closeTime || t.openTime || 0;
-      if (time >= startOfDay) day += (t.pnl || 0);
 
-      closedCount++;
-      if ((t.pnl || 0) > 0) wins++;
-    }
+function recalculateAccountState() {
+  try {
+    // Use Manager's helper for consistency
+    const startOfDay = manager.getStartOfDayUtcMs();
+
+    // 1. Calculate Global Day PnL (Settled + Open Realized)
+    // Matches Manager.js logic: Include OPEN trades (realized parts) + CLOSED today
+    account.dayPnL = trades.reduce((acc, t) => {
+      const closedToday = t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay;
+      if (t.status === 'OPEN' || closedToday) {
+        return acc + (t.pnl || 0);
+      }
+      return acc;
+    }, 0);
+
+    // 2. Calculate Total PnL
+    account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
+
+    // 3. Calculate Equity (Balance + Floating PnL of OPEN trades)
+    const floatingPnL = trades
+      .filter(t => t.status === 'OPEN')
+      .reduce((acc, t) => acc + (t.floatingPnl || 0), 0);
+
+    // Balance is Initial + Realized PnL (Total)
+    account.balance = INITIAL_BALANCE + account.totalPnL;
+    account.equity = account.balance + floatingPnL;
+
+    // 4. Sync Manager/Agents (Crucial for Agent Cards)
+    manager.recalculateState(trades);
+    console.log(`[SYSTEM] Recalculated: Bal £${account.balance.toFixed(2)}, Day £${account.dayPnL.toFixed(2)}`);
+    saveState();
+  } catch (e) {
+    console.error('[SYSTEM] Error in recalculateAccountState:', e);
   }
-  account.balance = INITIAL_BALANCE + realized;
-  account.equity = account.balance;
-  account.totalPnL = realized;
-  account.dayPnL = day;
-  account.winRate = closedCount > 0 ? (wins / closedCount) * 100 : 0;
-  console.log(`[SYSTEM] Recalculated: Bal £${account.balance.toFixed(2)}, Day £${account.dayPnL.toFixed(2)}, WinRate ${account.winRate.toFixed(1)}%`);
-  saveState();
 }
 
 function loadState() {
@@ -2520,38 +2531,6 @@ let webpushClient = null;
   }
 })());
 
-
-function recalculateAccountState() {
-  try {
-    const startOfDay = manager.getStartOfDayUtcMs();
-
-    // 1. Calculate Global Day PnL (Settled + Open Realized)
-    // Matches Manager.js logic: Include OPEN trades (realized parts) + CLOSED today
-    account.dayPnL = trades.reduce((acc, t) => {
-      const closedToday = t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay;
-      if (t.status === 'OPEN' || closedToday) {
-        return acc + (t.pnl || 0);
-      }
-      return acc;
-    }, 0);
-
-    // 2. Calculate Total PnL
-    account.totalPnL = trades.reduce((acc, t) => acc + (t.pnl || 0), 0);
-
-    // 3. Calculate Equity (Balance + Floating PnL of OPEN trades)
-    const floatingPnL = trades
-      .filter(t => t.status === 'OPEN')
-      .reduce((acc, t) => acc + (t.floatingPnl || 0), 0);
-
-    account.equity = account.balance + floatingPnL;
-
-    // 4. Sync Manager/Agents (Crucial for Agent Cards)
-    manager.recalculateState(trades);
-    console.log(`[SYSTEM] State Recalculated. Global Day PnL: £${account.dayPnL.toFixed(2)}`);
-  } catch (e) {
-    console.error('[SYSTEM] Error in recalculateAccountState:', e);
-  }
-}
 
 async function cloudLoadState() {
   try {
