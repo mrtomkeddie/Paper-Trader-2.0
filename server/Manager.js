@@ -81,7 +81,6 @@ export class Manager {
         this.agents.forEach(agent => {
             const agentTrades = allTrades.filter(t => t.agentId === agent.id);
             const closedPnL = agentTrades
-                .filter(t => t.status === 'CLOSED')
                 .reduce((acc, t) => acc + (t.pnl || 0), 0);
 
             const floatingPnL = agentTrades
