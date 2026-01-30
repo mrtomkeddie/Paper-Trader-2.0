@@ -13,6 +13,7 @@ import PositionsTable from './components/PositionsTable';
 import { Layers, Receipt, History, AlertTriangle } from 'lucide-react';
 import { TradeHistory } from './components/TradeHistory';
 import { GlassCard } from './components/ui/GlassCard';
+import TradeDetailModal from './components/TradeDetailModal';
 
 // --- Error Boundary ---
 interface EBProps { children: ReactNode; }
@@ -61,6 +62,7 @@ const AppContent: React.FC = () => {
   const { assets, account, accounts, decisions, trades, toggleBot, setStrategy, resetAccount, brokerMode, oandaConfig, configureOanda, isConnected, toggleMaster } = useTradingEngine();
   const [activeSymbol, setActiveSymbol] = useState<AssetSymbol>(AssetSymbol.XAUUSD);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedTradeForModal, setSelectedTradeForModal] = useState<Trade | null>(null);
 
   // Unified View State: 'dashboard' | 'history'
   const [activeView, setActiveView] = useState<'dashboard' | 'history' | 'settings'>('dashboard');
@@ -144,7 +146,7 @@ const AppContent: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex-1">
-                    <PositionsTable trades={(trades || []).filter(t => t && t.status === 'OPEN')} onSelectTrade={() => { }} selectedTradeId={null} />
+                    <PositionsTable trades={(trades || []).filter(t => t && t.status === 'OPEN')} onSelectTrade={(t) => setSelectedTradeForModal(t)} selectedTradeId={null} />
                   </div>
                 </GlassCard>
               </div>
@@ -155,6 +157,11 @@ const AppContent: React.FC = () => {
             </div>
           )}
         </div>
+
+        <TradeDetailModal
+          trade={selectedTradeForModal}
+          onClose={() => setSelectedTradeForModal(null)}
+        />
 
         {/* --- MOBILE LAYOUT (STACKED / TABBED) --- */}
         <div className="md:hidden h-full overflow-y-auto pb-24 p-4 space-y-4">
@@ -173,8 +180,21 @@ const AppContent: React.FC = () => {
 
           {/* TRADES TAB */}
           {activeMobileTab === 'trades' && (
-            <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 min-h-[50vh]">
-              <PositionsTable trades={(trades || []).filter(t => t && t.status === 'OPEN')} onSelectTrade={() => { }} selectedTradeId={null} />
+            <div className="h-full min-h-[70vh]">
+              <GlassCard className="h-full flex flex-col p-0 overflow-hidden">
+                <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
+                  <h2 className="text-xs font-bold text-premium-gold uppercase tracking-widest flex items-center gap-2 font-mono">
+                    <Layers className="w-4 h-4 text-premium-cyan" />
+                    Active_Positions
+                  </h2>
+                  <div className="text-[10px] font-mono text-premium-cyan bg-premium-cyan/10 px-2 py-0.5 rounded border border-premium-cyan/20">
+                    OPEN PL: £{((trades || []).filter(t => t && t.status === 'OPEN').reduce((acc, t) => acc + (t.floatingPnl || 0), 0)).toFixed(2)}
+                  </div>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <PositionsTable trades={(trades || []).filter(t => t && t.status === 'OPEN')} onSelectTrade={(t) => setSelectedTradeForModal(t)} selectedTradeId={null} />
+                </div>
+              </GlassCard>
             </div>
           )}
 

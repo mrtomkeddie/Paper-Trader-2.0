@@ -82,7 +82,7 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
                     <div className="text-[10px] text-ios-gray">Close {level.percentage * 100}%</div>
                   </div>
                 </div>
-                <span className={`font-mono text-xs ${level.hit ? 'text-ios-green font-bold' : 'text-white/40'}`}>
+                <span className={`font-mono text-xs ${level.hit ? 'text-ios-green font-bold line-through' : 'text-white/40'}`}>
                   {formatNumber(level.price, 2)}
                 </span>
               </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Terminal } from 'lucide-react';
+import { X, Terminal, CheckCircle2, Circle } from 'lucide-react';
 import { Trade } from '../types';
 
 interface DeepDiveModalProps {
@@ -134,6 +134,34 @@ const DeepDiveModal: React.FC<DeepDiveModalProps> = ({ isOpen, onClose, trade })
                                     <span className="text-lg font-bold text-orange-400">Low-Risk Hedge</span>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Profit Ladder - NEW */}
+                        <div className="space-y-4">
+                            <div className={`${currentTheme.accent} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
+                                <div className={`w-1 h-1 rounded-full bg-current`}></div>
+                                Profit Ladder
+                            </div>
+                            <div className="space-y-3">
+                                {trade.tpLevels && trade.tpLevels.length > 0 ? trade.tpLevels.map((level, idx) => (
+                                    <div key={level.id} className={`flex items-center justify-between p-3 rounded-xl border ${level.hit ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/5'}`}>
+                                        <div className="flex items-center gap-3">
+                                            {level.hit ? <CheckCircle2 size={16} className="text-green-400" /> : <Circle size={16} className="text-white/20" />}
+                                            <div>
+                                                <div className="text-[10px] font-bold text-white uppercase tracking-tighter">
+                                                    {idx === 0 ? 'TP 1 (Bank)' : idx === 1 ? 'TP 2 (Target)' : 'TP 3 (Runner)'}
+                                                </div>
+                                                <div className="text-[8px] text-gray-500 font-mono">EXIT {level.percentage * 100}%</div>
+                                            </div>
+                                        </div>
+                                        <span className={`font-mono text-xs ${level.hit ? 'text-green-400 font-bold line-through' : 'text-white/30'}`}>
+                                            {level.price.toFixed(2)}
+                                        </span>
+                                    </div>
+                                )) : (
+                                    <div className="text-gray-600 text-[10px] italic py-2">No TP levels defined for this trade.</div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Raw JSON View */}
