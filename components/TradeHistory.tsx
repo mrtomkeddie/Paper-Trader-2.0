@@ -28,7 +28,7 @@ export const TradeHistory: React.FC<TradeHistoryProps> = ({ trades }) => {
   // Sorting: Newest first
   const sortedTrades = [...trades].sort((a, b) => b.openTime - a.openTime);
 
-  const filteredTrades = sortedTrades.filter(t => activeAgents.includes(t.agentId));
+  const filteredTrades = sortedTrades.filter(t => t.status !== 'OPEN' && activeAgents.includes(t.agentId));
 
   return (
     <GlassCard className="h-full flex flex-col p-0 overflow-hidden">
