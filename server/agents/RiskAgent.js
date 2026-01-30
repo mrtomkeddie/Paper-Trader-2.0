@@ -11,11 +11,17 @@ export class RiskAgent extends Agent {
         } else {
             console.warn('[RISK] Missing GOOGLE_API_KEY for Gemini.');
         }
+        this.lastTickTime = 0;
     }
 
     async onTick(marketData) {
         if (!this.client) return;
         if (this.isThinking) return;
+
+        // Risk Cooldown: Check every 60 seconds
+        const now = Date.now();
+        if (now - this.lastTickTime < 60000) return;
+        this.lastTickTime = now;
 
         this.isThinking = true;
 

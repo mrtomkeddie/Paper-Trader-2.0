@@ -14,15 +14,18 @@ export class QuantAgent extends Agent {
         } else {
             console.warn('[QUANT] Missing DEEPSEEK_API_KEY. Agent will run in mock mode.');
         }
+        // Initialize state
+        this.lastTickTime = 0;
     }
 
     async onTick(marketData) {
         if (!this.client) return;
         if (this.isThinking) return;
 
-        // Simple cooldown or condition to decide when to think
-        // For scalping, maybe every 5-15 minutes or on significant price moves?
-        // For now, checks every tick but rate limiting is handled by the Manager invoking onTick
+        // Scalper Cooldown: Check every 60 seconds max
+        const now = Date.now();
+        if (now - this.lastTickTime < 60000) return;
+        this.lastTickTime = now;
 
         this.isThinking = true;
 
@@ -66,10 +69,11 @@ Output a JSON object ONLY:
 
             const completion = await this.client.chat.completions.create({
                 messages: [{ role: "system", content: prompt }],
-                model: "deepseek-reasoner", // or deepseek-chat if reasoner invalid
+                model: "deepseek-chat",
             });
 
             const response = completion.choices[0].message.content;
+            console.log(`[QUANT] Raw Response: ${response.substring(0, 50)}...`); // Debug log
             this.processDecision(response, symbol, currentPrice, { rsi, trend, ema200, bollinger });
 
         } catch (error) {
@@ -89,7 +93,7 @@ Output a JSON object ONLY:
             this.lastThought = decision.reason;
             this.lastAction = decision.action;
 
-            if (decision.action !== 'HOLD' && decision.confidence > 75) {
+            if (decision.action !== 'HOLD' && decision.confidence > 70) {
                 // Calculate Profit Ladder (3-tier)
                 const isBuy = decision.action === 'BUY';
                 const dist = Math.abs(decision.takeProfit - currentPrice);

@@ -11,11 +11,17 @@ export class MacroAgent extends Agent {
         } else {
             console.warn('[MACRO] Missing API_KEY for Gemini.');
         }
+        this.lastTickTime = 0;
     }
 
     async onTick(marketData) {
         if (!this.client) return;
         if (this.isThinking) return;
+
+        // Macro Cooldown: Check every 15 minutes
+        const now = Date.now();
+        if (now - this.lastTickTime < 15 * 60 * 1000) return;
+        this.lastTickTime = now;
 
         this.isThinking = true;
 
