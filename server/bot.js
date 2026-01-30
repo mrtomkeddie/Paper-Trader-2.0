@@ -2320,7 +2320,7 @@ app.post('/admin/close', (req, res) => {
 
 app.post('/admin/delete-trade', (req, res) => {
   try {
-    const { id } = req.body;
+    const id = (req.body?.id || req.query?.id || '').toString();
     if (!id) return res.status(400).json({ error: 'Trade ID required' });
     const initialCount = trades.length;
     trades = trades.filter(t => t.id !== id);
