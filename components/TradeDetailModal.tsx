@@ -92,9 +92,19 @@ const TradeDetailModal: React.FC<Props> = ({ trade, onClose }) => {
 
           {/* Analysis Text */}
           <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-            <p className="text-sm text-ios-gray leading-relaxed">
+            <p className="text-sm text-ios-gray leading-relaxed text-center">
               {getResultAnalysis()}
             </p>
+          </div>
+
+          {/* Thinking Process */}
+          <div className="space-y-2">
+            <h4 className="text-[10px] uppercase font-bold text-ios-gray ml-1">Thinking Process</h4>
+            <div className="bg-white/5 rounded-2xl p-5 border border-white/5 shadow-inner">
+              <p className="text-sm text-gray-300 leading-relaxed italic">
+                "{trade.entryReason || 'Initial hypothesis was based on price action and neural sentiment.'}"
+              </p>
+            </div>
           </div>
 
           {/* Entry/Stop Data */}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Terminal, CheckCircle2, Circle } from 'lucide-react';
-import { Trade } from '../types';
+import { X, Target, AlertTriangle, TrendingUp, TrendingDown, BrainCircuit, Activity, Zap, Repeat, CheckCircle2, Circle, Terminal } from 'lucide-react';
+import { Trade, TradeType } from '../types';
+import { formatDate, formatNumber } from '../utils/formatters';
 
 interface DeepDiveModalProps {
     isOpen: boolean;
@@ -12,180 +13,141 @@ interface DeepDiveModalProps {
 const DeepDiveModal: React.FC<DeepDiveModalProps> = ({ isOpen, onClose, trade }) => {
     if (!isOpen || !trade) return null;
 
-    const data: any = trade.decisionSnapshot || { error: "No detailed log captured for this trade." };
+    const isBuy = trade.type === TradeType.BUY;
+    const isProfit = (trade.pnl || 0) >= 0;
 
-    // Theme colors matching the Agent Cards - Use literal values for Tailwind
-    const themes = {
-        quant: {
-            accent: 'text-cyan-400',
-            border: 'border-cyan-500/30',
-            glow: 'shadow-[0_0_30px_rgba(6,182,212,0.15)]',
-            bg: 'bg-cyan-500/10'
-        },
-        macro: {
-            accent: 'text-blue-400',
-            border: 'border-blue-500/30',
-            glow: 'shadow-[0_0_30px_rgba(59,130,246,0.15)]',
-            bg: 'bg-blue-500/10'
-        },
-        risk: {
-            accent: 'text-orange-400',
-            border: 'border-orange-500/30',
-            glow: 'shadow-[0_0_30px_rgba(249,115,22,0.15)]',
-            bg: 'bg-orange-500/10'
-        }
+    // Agent mapping for display
+    const agentMap: Record<string, { name: string; icon: any; color: string }> = {
+        quant: { name: 'Quant Agent', icon: Zap, color: 'text-cyan-400' },
+        macro: { name: 'Macro Agent', icon: Activity, color: 'text-blue-400' },
+        risk: { name: 'Risk Agent', icon: AlertTriangle, color: 'text-orange-400' },
     };
 
-    const currentTheme = themes[trade.agentId as keyof typeof themes] || themes.quant;
+    const agent = agentMap[trade.agentId] || { name: trade.agentId.toUpperCase(), icon: Terminal, color: 'text-gray-400' };
+
+    // Helper for result analysis text
+    const getResultAnalysis = () => {
+        if (trade.closeReason === 'STOP_LOSS') {
+            if (trade.pnl && trade.pnl > 0) return "Closed by Trailing Stop. Although the final portion stopped out, partial profits were already banked.";
+            return "Stop Loss Hit: The market reversed against our prediction. The trade was closed automatically to protect your capital.";
+        }
+        if (trade.pnl && trade.pnl > 0) {
+            return "Trade complete. Targets were met and profits have been settled into your account.";
+        }
+        return "Trade cycle complete. The position has been closed and the result is final.";
+    };
 
     return createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+
             <div
-                className={`w-full max-w-2xl bg-[#0a0f1e] border ${currentTheme.border} rounded-2xl ${currentTheme.glow} flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden shadow-2xl relative z-10`}
+                className="bg-[#1C1C1E]/90 backdrop-blur-xl w-full max-w-sm rounded-[28px] border border-white/10 shadow-2xl relative z-10 animate-fade-in-up max-h-[85vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="flex items-center justify-between p-5 border-b border-gray-800 bg-gray-900/50">
+                {/* Header - Fixed at top */}
+                <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-gradient-to-b from-white/5 to-transparent shrink-0">
                     <div className="flex items-center gap-3">
-                        <Terminal className={`${currentTheme.accent} w-5 h-5`} />
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${isBuy ? 'bg-ios-blue/20 text-ios-blue' : 'bg-ios-red/20 text-ios-red'}`}>
+                            {isBuy ? 'B' : 'S'}
+                        </div>
                         <div>
-                            <h2 className={`text-lg font-mono font-bold ${currentTheme.accent} tracking-wider`}>
-                                DECISION_LOG // {trade.agentId?.toUpperCase()}
-                            </h2>
-                            <div className="text-[10px] text-gray-500 font-mono">ENCRYPTED_SYNAPSE_STREAM</div>
+                            <div className="flex items-center gap-1.5">
+                                <agent.icon size={12} className={agent.color} />
+                                <span className={`text-[10px] font-bold uppercase tracking-wider ${agent.color}`}>{agent.name}</span>
+                            </div>
+                            <h2 className="text-xl font-bold text-white tracking-tight">{trade.symbol}</h2>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-full text-gray-400 hover:text-white transition-all">
-                        <X size={20} />
+                    <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
+                        <X size={16} className="text-white" />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-auto p-4 sm:p-6 font-mono text-sm relative custom-scrollbar">
-                    {/* Grid background */}
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] opacity-20 pointer-events-none"></div>
+                {/* Scrollable Content Area */}
+                <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
 
-                    <div className="relative z-10 space-y-8">
-                        {/* Summary Cards */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="p-3 bg-black/40 rounded-xl border border-gray-800/50">
-                                <div className="text-[10px] text-gray-500 uppercase mb-1">Status</div>
-                                <div className={`text-xs font-bold ${trade.status === 'OPEN' ? 'text-cyan-400' : 'text-gray-400'}`}>{trade.status}</div>
-                            </div>
-                            <div className="p-3 bg-black/40 rounded-xl border border-gray-800/50">
-                                <div className="text-[10px] text-gray-500 uppercase mb-1">Type</div>
-                                <div className={`text-xs font-bold ${trade.type === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>{trade.type}</div>
-                            </div>
-                            <div className="p-3 bg-black/40 rounded-xl border border-gray-800/50">
-                                <div className="text-[10px] text-gray-500 uppercase mb-1">Entry Price</div>
-                                <div className="text-xs font-bold text-gray-200">${trade.entryPrice.toFixed(2)}</div>
-                            </div>
-                            <div className="p-3 bg-black/40 rounded-xl border border-gray-800/50">
-                                <div className="text-[10px] text-gray-500 uppercase mb-1">Size</div>
-                                <div className="text-xs font-bold text-gray-200">{trade.initialSize} Lot</div>
-                            </div>
-                        </div>
-
-                        {/* Reasoning Snippet */}
-                        <div className="space-y-2">
-                            <div className={`${currentTheme.accent} text-[10px] font-bold uppercase tracking-widest`}>Thinking Process</div>
-                            <div className="p-4 bg-[#050510] rounded-xl border border-gray-800 italic text-gray-300 leading-relaxed ring-1 ring-inset ring-white/5">
-                                "{trade.entryReason || 'No reasoning captured.'}"
-                            </div>
-                        </div>
-
-                        {/* Agent Specific Data Formatting */}
-                        <div className="space-y-4">
-                            <div className={`${currentTheme.accent} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
-                                <div className={`w-1 h-1 rounded-full bg-current pulse`}></div>
-                                Signal Parameters
-                            </div>
-
-                            {trade.agentId === 'quant' && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="p-4 bg-gray-900/30 rounded-xl border border-gray-800 flex justify-between items-center">
-                                        <span className="text-gray-500 text-xs">RSI (14)</span>
-                                        <span className="text-lg font-bold text-cyan-400">{data.rsi?.toFixed(2) || 'N/A'}</span>
-                                    </div>
-                                    <div className="p-4 bg-gray-900/30 rounded-xl border border-gray-800 flex justify-between items-center">
-                                        <span className="text-gray-500 text-xs">Trend</span>
-                                        <span className="text-lg font-bold text-cyan-400 uppercase">{data.trend || 'N/A'}</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {trade.agentId === 'macro' && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="p-4 bg-gray-900/30 rounded-xl border border-gray-800 flex justify-between items-center">
-                                        <span className="text-gray-500 text-xs">Sentiment</span>
-                                        <span className={`text-lg font-bold ${data.sentiment_score >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {data.sentiment_score > 0 ? '+' : ''}{data.sentiment_score || '0'}
-                                        </span>
-                                    </div>
-                                    <div className="p-4 bg-gray-900/30 rounded-xl border border-gray-800 flex justify-between items-center">
-                                        <span className="text-gray-500 text-xs">Outlook</span>
-                                        <span className="text-lg font-bold text-blue-400">{data.timeframe || 'Mid-Term'}</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {trade.agentId === 'risk' && (
-                                <div className="p-4 bg-gray-900/30 rounded-xl border border-gray-800 flex justify-between items-center">
-                                    <span className="text-gray-500 text-xs">Risk Tolerance</span>
-                                    <span className="text-lg font-bold text-orange-400">Low-Risk Hedge</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Profit Ladder - NEW */}
-                        <div className="space-y-4">
-                            <div className={`${currentTheme.accent} text-[10px] font-bold uppercase tracking-widest flex items-center gap-2`}>
-                                <div className={`w-1 h-1 rounded-full bg-current`}></div>
-                                Profit Ladder
-                            </div>
-                            <div className="space-y-3">
-                                {trade.tpLevels && trade.tpLevels.length > 0 ? trade.tpLevels.map((level, idx) => (
-                                    <div key={level.id} className={`flex items-center justify-between p-3 rounded-xl border ${level.hit ? 'bg-green-500/10 border-green-500/30' : 'bg-black/40 border-white/5'}`}>
-                                        <div className="flex items-center gap-3">
-                                            {level.hit ? <CheckCircle2 size={16} className="text-green-400" /> : <Circle size={16} className="text-white/20" />}
-                                            <div>
-                                                <div className="text-[10px] font-bold text-white uppercase tracking-tighter">
-                                                    {idx === 0 ? 'TP 1 (Bank)' : idx === 1 ? 'TP 2 (Target)' : 'TP 3 (Runner)'}
-                                                </div>
-                                                <div className="text-[8px] text-gray-500 font-mono">EXIT {level.percentage * 100}%</div>
-                                            </div>
-                                        </div>
-                                        <span className={`font-mono text-xs ${level.hit ? 'text-green-400 font-bold line-through' : 'text-white/30'}`}>
-                                            {level.price.toFixed(2)}
-                                        </span>
-                                    </div>
-                                )) : (
-                                    <div className="text-gray-600 text-[10px] italic py-2">No TP levels defined for this trade.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Raw JSON View */}
-                        <div className="space-y-2">
-                            <div className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Full Synapse Payload</div>
-                            <div className="bg-black/60 p-4 sm:p-5 rounded-xl border border-gray-800/80 max-h-48 overflow-y-auto custom-scrollbar">
-                                <pre className={`${currentTheme.accent} text-[11px] leading-relaxed opacity-80 whitespace-pre-wrap break-all`}>
-                                    {JSON.stringify(data, null, 2)}
-                                </pre>
-                            </div>
+                    {/* PnL Hero */}
+                    <div className="text-center">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-ios-gray block mb-1">
+                            Realized Net Result
+                        </span>
+                        <span className={`text-4xl font-bold tabular-nums tracking-tight ${isProfit ? 'text-ios-green' : 'text-ios-red'}`}>
+                            {isProfit ? '+' : ''}{formatNumber(trade.pnl, 2)}
+                        </span>
+                        <div className="text-[10px] text-ios-gray mt-1 uppercase tracking-tighter">
+                            Closed on {formatDate(trade.closeTime || trade.openTime, 'en-GB', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </div>
                     </div>
+
+                    {/* Analysis Text */}
+                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
+                        <p className="text-sm text-ios-gray leading-relaxed text-center italic">
+                            {getResultAnalysis()}
+                        </p>
+                    </div>
+
+                    {/* 3-Level Profit Ladder */}
+                    <div className="space-y-3">
+                        <h4 className="text-[10px] uppercase font-bold text-ios-gray ml-1">Profit Ladder</h4>
+                        {trade.tpLevels && trade.tpLevels.length > 0 ? trade.tpLevels.map((level, idx) => (
+                            <div key={level.id} className={`flex items-center justify-between p-3 rounded-xl border ${level.hit ? 'bg-ios-green/10 border-ios-green/30' : 'bg-black/40 border-white/5'}`}>
+                                <div className="flex items-center gap-3">
+                                    {level.hit ? <CheckCircle2 size={18} className="text-ios-green" /> : <Circle size={18} className="text-white/20" />}
+                                    <div>
+                                        <div className="text-xs font-bold text-white">
+                                            {idx === 0 ? 'TP 1 (Bank)' : idx === 1 ? 'TP 2 (Target)' : 'TP 3 (Runner)'}
+                                        </div>
+                                        <div className="text-[10px] text-ios-gray">Close {level.percentage * 100}%</div>
+                                    </div>
+                                </div>
+                                <span className={`font-mono text-xs ${level.hit ? 'text-ios-green font-bold line-through' : 'text-white/40'}`}>
+                                    {formatNumber(level.price, 2)}
+                                </span>
+                            </div>
+                        )) : (
+                            <div className="text-center py-4 text-ios-gray text-xs italic border border-dashed border-white/10 rounded-xl">
+                                No TP levels captured.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Thinking Process */}
+                    <div className="space-y-2">
+                        <h4 className="text-[10px] uppercase font-bold text-ios-gray ml-1">Thinking Process</h4>
+                        <div className="bg-white/5 rounded-2xl p-5 border border-white/5 shadow-inner">
+                            <p className="text-sm text-gray-300 leading-relaxed italic">
+                                "{trade.entryReason || 'No reasoning captured for this node event.'}"
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Entry/Stop Data (Reduced) */}
+                    <div className="grid grid-cols-2 gap-3 opacity-60">
+                        <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                            <div className="flex items-center gap-1.5 text-ios-gray text-[9px] uppercase font-bold mb-1">
+                                <Target size={10} /> Entry
+                            </div>
+                            <span className="text-white font-mono text-xs">{formatNumber(trade.entryPrice, 2)}</span>
+                        </div>
+                        <div className="bg-black/40 rounded-xl p-3 border border-white/5">
+                            <div className="flex items-center gap-1.5 text-ios-gray text-[9px] uppercase font-bold mb-1">
+                                <AlertTriangle size={10} /> Stop Boss
+                            </div>
+                            <span className="text-white font-mono text-xs">{formatNumber(trade.stopLoss, 2)}</span>
+                        </div>
+                    </div>
+
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-800 bg-gray-900/50 text-[9px] text-gray-500 font-mono flex justify-between items-center">
-                    <div className="flex gap-4">
-                        <span>ID: {trade.id}</span>
-                        <span>NODE: BRAIN_01</span>
+                <div className="px-6 py-4 border-t border-white/5 bg-white/[0.02] flex justify-between items-center shrink-0">
+                    <div className="text-[9px] text-ios-gray font-mono uppercase tracking-tighter">
+                        ID: {trade.id.substring(0, 12)}...
                     </div>
-                    <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                        <span className="tracking-tighter uppercase">Verifying_Signature_Success</span>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-ios-green animate-pulse" />
+                        <span className="text-[9px] text-ios-green font-bold uppercase tracking-tighter">Verified</span>
                     </div>
                 </div>
             </div>
