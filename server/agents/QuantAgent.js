@@ -94,18 +94,27 @@ Output a JSON object ONLY:
             this.lastAction = decision.action;
 
             if (decision.action !== 'HOLD' && decision.confidence > 70) {
-                // Calculate Profit Ladder (3-tier)
+                // Calculate Profit Ladder (Fixed % Strategy)
                 const isBuy = decision.action === 'BUY';
-                const dist = Math.abs(decision.takeProfit - currentPrice);
 
-                // TP1: Original (40%), TP2: 1.5x dist (40%), TP3: 3x dist (20%)
-                const tp2 = isBuy ? currentPrice + (dist * 1.5) : currentPrice - (dist * 1.5);
-                const tp3 = isBuy ? currentPrice + (dist * 3.0) : currentPrice - (dist * 3.0);
+                // TP1: The Safety Net (0.25%) - 40% of position
+                const dist1 = currentPrice * 0.0025;
+                const tp1 = isBuy ? currentPrice + dist1 : currentPrice - dist1;
+
+                // TP2: The Target (0.6%) - 40% of position
+                const dist2 = currentPrice * 0.0060;
+                const tp2 = isBuy ? currentPrice + dist2 : currentPrice - dist2;
+
+                // TP3: The Moonshot (Trailing / Open) - 20% of position
+                // We set a distant target so it acts as "Open", but let Trailing Stop manage it.
+                // Trailing Stop activates after TP2 is hit (logic in bot.js).
+                const dist3 = currentPrice * 0.05; // 5% Moonshot target (placeholder)
+                const tp3 = isBuy ? currentPrice + dist3 : currentPrice - dist3;
 
                 const tpLevels = [
-                    { id: 1, price: decision.takeProfit, percentage: 0.4, hit: false },
-                    { id: 2, price: tp2, percentage: 0.4, hit: false },
-                    { id: 3, price: tp3, percentage: 0.2, hit: false }
+                    { id: 1, price: Number(tp1.toFixed(2)), percentage: 0.4, hit: false },
+                    { id: 2, price: Number(tp2.toFixed(2)), percentage: 0.4, hit: false },
+                    { id: 3, price: Number(tp3.toFixed(2)), percentage: 0.2, hit: false }
                 ];
 
                 this.executeTrade(
