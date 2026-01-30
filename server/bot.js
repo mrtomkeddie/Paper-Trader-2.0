@@ -444,17 +444,17 @@ function loadState() {
   }
 }
 
-function saveState() {
+function saveState(excludeIds = []) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 
     // Persist Asset Configuration
     const assetsConfig = {};
     if (typeof assets !== 'undefined') {
-      for (const [sym, data] of Object.entries(assets)) {
+      for (const [sym, data] of Object.entries(assets) || []) {
         assetsConfig[sym] = {
-          activeStrategies: data.activeStrategies,
-          botActive: data.botActive
+          activeStrategies: data?.activeStrategies,
+          botActive: data?.botActive
         };
       }
     }
@@ -478,15 +478,15 @@ function saveState() {
   }
   // Safe cloud save
   try {
-    cloudSaveState();
+    cloudSaveState(excludeIds);
   } catch (e) {
     console.warn('[CLOUD] Failed to trigger cloud save:', e.message);
   }
 }
 
 // --- CLOUD SYNC HELPER ---
-function cloudSaveState() {
-  saveStateToCloud({ account, accounts: manager.getState().accounts, trades, pushSubscriptions })
+function cloudSaveState(excludeIds = []) {
+  saveStateToCloud({ account, accounts: manager.getState().accounts, trades, pushSubscriptions }, excludeIds)
     .catch(err => console.error('[CLOUD] Async Save Error:', err.message));
 }
 
@@ -2325,7 +2325,10 @@ app.post('/admin/delete-trade', (req, res) => {
     const initialCount = trades.length;
     trades = trades.filter(t => t.id !== id);
     if (trades.length < initialCount) {
+      const mgrState = manager.getState();
+      manager.hydrate({ accounts: mgrState.accounts, trades });
       recalculateAccountState();
+      saveState([id]);
       res.json({ success: true, message: `Trade ${id} deleted and state recalculated.` });
     } else {
       res.status(404).json({ error: 'Trade not found' });

@@ -70,7 +70,7 @@ export async function loadStateFromCloud() {
     return null;
 }
 
-export async function saveStateToCloud(state) {
+export async function saveStateToCloud(state, excludeIds = []) {
     if (!db) return;
     try {
         const ref = db.collection(COLLECTION).doc(DOC_ID);
@@ -87,10 +87,20 @@ export async function saveStateToCloud(state) {
         };
 
         const mergedByKey = new Map();
-        for (const t of prevTrades) mergedByKey.set(keyForTrade(t), t);
+        // Skip explicitly excluded IDs
+        const toExclude = new Set(excludeIds);
+
+        for (const t of prevTrades) {
+            const k = keyForTrade(t);
+            if (k && !toExclude.has(t.id) && !toExclude.has(k)) {
+                mergedByKey.set(k, t);
+            }
+        }
+
         for (const t of newTrades) {
             const k = keyForTrade(t);
-            if (!k) continue;
+            if (!k || toExclude.has(t.id) || toExclude.has(k)) continue;
+
             const existingT = mergedByKey.get(k);
             if (!existingT) mergedByKey.set(k, t);
             else {
