@@ -2342,8 +2342,13 @@ app.post('/admin/delete-trade', (req, res) => {
   }
 });
 
+const instanceId = Math.random().toString(36).substring(7);
+const startTime = new Date().toISOString();
+
 app.get('/admin/debug-trades', (req, res) => {
   res.json({
+    instanceId,
+    startTime,
     deletedTradeIds: Array.from(deletedTradeIds),
     trades: trades.map(t => ({ id: t.id, symbol: t.symbol, status: t.status }))
   });
