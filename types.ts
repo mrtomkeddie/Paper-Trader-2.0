@@ -141,6 +141,7 @@ export interface AgentAccount {
   lastAction: string;
   lastThought: string;
   isHalted?: boolean;
+  dayPnL: number;
 }
 
 export interface MarketContextType {

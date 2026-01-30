@@ -14,6 +14,11 @@ export class Manager {
         this.decisionLog = []; // Log of last 50 decisions
     }
 
+    getStartOfDayUtcMs(ts = Date.now()) {
+        const d = new Date(ts);
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0)).getTime();
+    }
+
     /**
      * Initialize agents (load state from DB)
      * @param {Object} persistedState - The JSON state from Firebase/Local
@@ -83,8 +88,14 @@ export class Manager {
                 .filter(t => t.status === 'OPEN')
                 .reduce((acc, t) => acc + (t.floatingPnl || 0), 0);
 
+            const startOfDay = this.getStartOfDayUtcMs();
+            const settledToday = agentTrades
+                .filter(t => t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay)
+                .reduce((acc, t) => acc + (t.pnl || 0), 0);
+
             agent.balance = 1000 + closedPnL;
             agent.equity = agent.balance + floatingPnL;
+            agent.dayPnL = settledToday;
         });
     }
 
@@ -110,6 +121,7 @@ export class Manager {
                 isThinking: agent.isThinking,
                 lastAction: agent.lastAction,
                 lastThought: agent.lastThought,
+                dayPnL: agent.dayPnL || 0,
                 latestDecision: agent.latestDecision // Include full decision object
             };
             allTrades = allTrades.concat(agent.trades);

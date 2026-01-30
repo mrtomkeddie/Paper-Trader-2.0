@@ -13,7 +13,7 @@ interface AgentCardProps {
         isThinking: boolean;
         isHalted?: boolean; // Kept for Margin Call indicator if needed, but UI usage removed
         lastThought?: string;
-        todayPnL?: number;
+        dayPnL?: number;
     };
     isActive?: boolean;
 }
@@ -22,9 +22,9 @@ export const AgentCard: React.FC<AgentCardProps> = ({
     agent,
     isActive
 }) => {
-    const { id, name, role, balance, equity, isThinking, lastAction, lastThought, todayPnL } = agent;
+    const { id, name, role, balance, equity, isThinking, lastAction, lastThought, dayPnL } = agent;
     const isProfitable = equity >= 1000;
-    const pnl = equity - 1000;
+    const pnl = agent?.dayPnL ?? 0;
     const pnlPercent = (pnl / 1000) * 100;
 
     // Agent Color Themes mapped to Premium Colors
