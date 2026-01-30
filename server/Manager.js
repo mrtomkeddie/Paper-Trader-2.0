@@ -90,7 +90,7 @@ export class Manager {
 
             const startOfDay = this.getStartOfDayUtcMs();
             const settledToday = agentTrades
-                .filter(t => t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay)
+                .filter(t => t.status === 'OPEN' || (t.status === 'CLOSED' && (t.closeTime || 0) >= startOfDay))
                 .reduce((acc, t) => acc + (t.pnl || 0), 0);
 
             agent.balance = 1000 + closedPnL;
