@@ -2322,6 +2322,10 @@ app.post('/admin/delete-trade', (req, res) => {
   try {
     const id = (req.body?.id || req.query?.id || '').toString();
     if (!id) return res.status(400).json({ error: 'Trade ID required' });
+
+    // Mark as deleted for this instance
+    deletedTradeIds.add(id);
+
     const initialCount = trades.length;
     trades = trades.filter(t => t.id !== id);
     if (trades.length < initialCount) {
@@ -2542,6 +2546,7 @@ let webpushClient = null;
 })();
 // --- FIREBASE CLOUD PERSISTENCE ---
 // initFirebase() called at startup
+let deletedTradeIds = new Set();
 
 ((async () => {
   if (process.env.AUTOCLEAR_ON_BOOT === 'true') {
@@ -2575,6 +2580,10 @@ async function cloudLoadState() {
       for (const t of cloudTrades) {
         const k = keyForTrade(t);
         if (!k) continue;
+
+        // Skip explicitly deleted trades
+        if (deletedTradeIds.has(t.id) || deletedTradeIds.has(k)) continue;
+
         const existing = mergedByKey.get(k);
         if (!existing) {
           mergedByKey.set(k, t);
