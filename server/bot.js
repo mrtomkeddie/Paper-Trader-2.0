@@ -2318,6 +2318,23 @@ app.post('/admin/close', (req, res) => {
   }
 });
 
+app.post('/admin/delete-trade', (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ error: 'Trade ID required' });
+    const initialCount = trades.length;
+    trades = trades.filter(t => t.id !== id);
+    if (trades.length < initialCount) {
+      recalculateAccountState();
+      res.json({ success: true, message: `Trade ${id} deleted and state recalculated.` });
+    } else {
+      res.status(404).json({ error: 'Trade not found' });
+    }
+  } catch (e) {
+    res.status(500).json({ error: e?.message || 'error' });
+  }
+});
+
 app.post('/restart', (req, res) => {
   try {
     saveState();
