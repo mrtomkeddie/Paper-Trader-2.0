@@ -118,6 +118,7 @@ export class Manager {
 
         this.agents.forEach(agent => {
             accounts[agent.id] = {
+                id: agent.id,
                 name: agent.name,
                 role: agent.role,
                 balance: agent.balance,
