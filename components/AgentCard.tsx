@@ -1,5 +1,4 @@
-import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Activity, PauseCircle, PlayCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, PauseCircle, PlayCircle, Shield } from 'lucide-react';
 import { GlassCard } from './ui/GlassCard';
 
 interface AgentCardProps {
@@ -26,7 +25,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({
     const { id, name, role, balance, equity, isThinking, lastAction, lastThought, dayPnL, winRate } = agent;
     const isProfitable = equity >= 1000;
     const pnl = agent?.dayPnL ?? 0;
-    // pnlPercent removed
 
     // Helper to get agent color for dynamic styling (used in the new structure)
     const getAgentColor = (agentId: string) => {
@@ -38,14 +36,23 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         }
     };
 
-    // Placeholder for Icon component (assuming it's a dynamic icon based on agent type)
-    const Icon = Activity;
+    // Dynamic Icon Selection
+    const getIcon = (agentId: string) => {
+        switch (agentId) {
+            case 'quant': return Activity;
+            case 'macro': return TrendingUp;
+            case 'risk': return Shield;
+            default: return Activity;
+        }
+    };
+
+    const Icon = getIcon(id);
 
     const getBorderColor = (agentId: string, thinking: boolean) => {
         const colors = {
-            quant: thinking ? 'border-premium-cyan shadow-[0_0_30px_rgba(0,240,255,0.15)] bg-premium-cyan/5' : 'border-premium-cyan/30 hover:border-premium-cyan/50 bg-premium-cyan/5',
-            macro: thinking ? 'border-premium-gold shadow-[0_0_30px_rgba(255,215,0,0.15)] bg-premium-gold/5' : 'border-premium-gold/30 hover:border-premium-gold/50 bg-premium-gold/5',
-            risk: thinking ? 'border-premium-red shadow-[0_0_30px_rgba(255,0,0,0.15)] bg-premium-red/5' : 'border-premium-red/30 hover:border-premium-red/50 bg-premium-red/5'
+            quant: thinking ? 'border-premium-cyan shadow-[0_0_30px_rgba(0,240,255,0.15)] bg-premium-cyan/5' : 'border-premium-cyan shadow-[0_0_15px_rgba(0,240,255,0.05)] bg-premium-cyan/5',
+            macro: thinking ? 'border-premium-gold shadow-[0_0_30px_rgba(255,215,0,0.15)] bg-premium-gold/5' : 'border-premium-gold shadow-[0_0_15px_rgba(255,215,0,0.05)] bg-premium-gold/5',
+            risk: thinking ? 'border-premium-red shadow-[0_0_30px_rgba(255,0,0,0.15)] bg-premium-red/5' : 'border-premium-red shadow-[0_0_15px_rgba(255,0,0,0.05)] bg-premium-red/5'
         }[agentId] || 'border-white/10 bg-white/5';
 
         return colors;
