@@ -3,7 +3,7 @@
   "name": "Paper Trader",
   "icons": [
     {
-      "src": "/pt2appicon.svg",
+      "src": "/bullfavicon.svg",
       "type": "image/svg+xml",
       "sizes": "any"
     }
