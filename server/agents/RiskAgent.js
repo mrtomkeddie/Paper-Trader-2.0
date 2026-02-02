@@ -77,6 +77,7 @@ Output a JSON object ONLY:
             const decision = JSON.parse(jsonMatch[0]);
             this.lastThought = decision.reason;
             this.lastAction = decision.action;
+            this.latestDecision = decision;
 
             // Risk agent ONLY trades if high confidence "Contrarian" signal
             if (decision.action !== 'HOLD' && decision.confidence > 85) {
