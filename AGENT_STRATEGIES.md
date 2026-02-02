@@ -19,14 +19,16 @@ The system features three distinct agents coordinated by a Central Manager.
 
 ### 🔢 The Quant (Quant Agent)
 *   **Model:** `DeepSeek R1`
-*   **Role:** Technical Scalper focusing on pure mathematical probability.
-*   **Strategy:** Mathematical Price Action. It ignores news and sentiment entirely.
+*   **Role:** Technical Scalper & Trend Follower.
+*   **Strategy:** Trend-Aligned Mean Reversion.
 *   **Execution Logic:**
-    *   **Technical Input:** Analyzes the last 50 candles (M5), RSI, 200 EMA, and Bollinger Band width.
-    *   **Pattern Recognition:** Looks for technical signatures like divergence, momentum exhaustion, and breakouts.
+    *   **Guardrails (Critical):**
+        *   **Trend Consensus:** STRICTLY respects the **200 EMA**. It never buys below the 200 EMA (Bear Market) and never sells above it (Bull Market).
+        *   **Squeeze Filter:** Avoids trading during low-volatility "squeezes" (tight Bollinger Bands), waiting for expansion instead.
+    *   **Technical Input:** Analyzes M5 Price Action, RSI, 200 EMA, and Bollinger Bands.
     *   **Trigger:** Operates on a 60-second cycle.
     *   **Confidence Threshold:** Requires **>70%** confidence.
-*   **Why it trades:** When the mathematical metrics align (e.g., price bouncing off a major EMA level while RSI shows oversold conditions), suggesting a high-probability technical move.
+*   **Why it trades:** when a mathematical setup (like an RSI oversold bounce) occurs **in the direction of the dominant trend** (e.g., buying a dip in an uptrend), filtering out high-risk counter-trend scalp attempts.
 
 ### 🤨 The Skeptic (Risk Agent)
 *   **Model:** `Gemini 2.0 Flash`
