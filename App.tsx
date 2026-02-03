@@ -73,7 +73,7 @@ const AppContent: React.FC = () => {
   const activeAssetData = assets ? assets[activeSymbol] : null; // activeSymbol likely redundant for now but keeping it
 
   return (
-    <div className="min-h-screen bg-premium-bg text-white font-sans selection:bg-premium-cyan/30 flex md:flex-row flex-col bg-[url('/grid.svg')] bg-fixed">
+    <div className="h-screen overflow-hidden bg-premium-bg text-white font-sans selection:bg-premium-cyan/30 flex md:flex-row flex-col bg-[url('/grid.svg')] bg-fixed">
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -91,7 +91,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* --- Mobile Header --- */}
-      <div className="md:hidden">
+      <div className="md:hidden flex-none">
         <MobileHeader
           title={activeMobileTab === 'history' ? 'TRADE HISTORY' : 'TERMINAL'}
           account={account}
@@ -101,7 +101,7 @@ const AppContent: React.FC = () => {
         />
       </div>
 
-      <main className="flex-1 relative flex flex-col h-screen overflow-y-auto custom-scrollbar">
+      <main className="flex-1 relative flex flex-col overflow-y-auto custom-scrollbar">
 
         {/* --- Desktop Status Header (Moved inside main content area) --- */}
         <div className="hidden md:block sticky top-0 z-40 px-6 py-4 bg-premium-bg/80 backdrop-blur-md border-b border-premium-border/50">
@@ -164,7 +164,7 @@ const AppContent: React.FC = () => {
         />
 
         {/* --- MOBILE LAYOUT (STACKED / TABBED) --- */}
-        <div className="md:hidden h-full overflow-y-auto pb-24 p-4 space-y-4">
+        <div className="md:hidden pb-24 p-4 space-y-4">
           {activeMobileTab === 'dashboard' && (
             <div className="space-y-4">
               {['quant', 'macro', 'risk'].map(id => {
