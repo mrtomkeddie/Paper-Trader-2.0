@@ -261,6 +261,19 @@ function checkRiskLimits(symbol, newTradeRiskPct) {
     return { allowed: false, reason: `Daily Loss Limit Hit (PnL £${account.dayPnL.toFixed(2)} <= -£${maxDailyLoss.toFixed(2)})` };
   }
 
+  // 1a. ROLLOVER CURFEW (XAUUSD)
+  // Prevent trades between 21:00 UTC and 23:05 UTC to avoid getting trapped in the gap.
+  if (symbol === 'XAUUSD') {
+    const now = new Date();
+    const h = now.getUTCHours();
+    const m = now.getUTCMinutes();
+    const isCurfew = (h === 21) || (h === 22) || (h === 23 && m <= 5);
+
+    if (isCurfew) {
+      return { allowed: false, reason: `Rollover Curfew Active (21:00-23:05 UTC). Market gaps risk.` };
+    }
+  }
+
   // 2. Consecutive Losses (DISABLED)
   /*
   let consecutiveLosses = 0;
@@ -2457,10 +2470,21 @@ setInterval(() => {
 setInterval(() => {
   try {
     const now = new Date();
-    const isFriday = now.getUTCDay() === 5;
-    const isTime = now.getUTCHours() === 21 && now.getUTCMinutes() === 55;
-    if (isFriday && isTime) {
-      console.log('[SYSTEM] Weekend Close - Closing all positions');
+    const day = now.getUTCDay();
+    const hour = now.getUTCHours();
+    const min = now.getUTCMinutes();
+
+    // 1. WEEKEND CLOSE (FRIDAY 21:55)
+    const isWeekendClose = (day === 5 && hour === 21 && min === 55);
+
+    // 2. DAILY ROLLOVER CLOSE (XAUUSD ONLY - EVERY DAY 21:50)
+    // Close 10 minutes before the 22:00 UTC rollover gap check.
+    // We check every minute, so 21:50 is the trigger.
+    const isDailyRollover = (hour === 21 && min === 50);
+
+    if (isWeekendClose || isDailyRollover) {
+      const reason = isWeekendClose ? 'WEEKEND_CLOSE' : 'ROLLOVER_SAFETY';
+      console.log(`[SYSTEM] ${reason} - Closing positions...`);
       let closedPnL = 0;
       let closed = 0;
 
@@ -2472,7 +2496,9 @@ setInterval(() => {
         else usdToGbp = 0.8;
       }
 
-      for (const symbol of ['XAUUSD']) {
+      const targetSymbols = isWeekendClose ? ['XAUUSD', 'NAS100', 'GBPUSD'] : ['XAUUSD'];
+
+      for (const symbol of targetSymbols) {
         const mkt = market[symbol];
         if (!mkt) continue;
         const { bid, ask, mid } = mkt;
@@ -2481,7 +2507,7 @@ setInterval(() => {
           const isBuy = t.type === 'BUY';
           const exit = isBuy ? bid : ask;
           t.status = 'CLOSED';
-          t.closeReason = 'MANUAL';
+          t.closeReason = reason;
           t.closeTime = Date.now();
           t.closePrice = exit;
 
@@ -2493,7 +2519,7 @@ setInterval(() => {
           closedPnL += pnlGBP;
           closed++;
           t.floatingPnl = 0;
-          notifyAll('Trade Closed', `${symbol} ${t.type} @ ${exit.toFixed(2)} (WEEKEND_CLOSE) PnL £${pnlGBP.toFixed(2)}`);
+          notifyAll('Trade Closed', `${symbol} ${t.type} @ ${exit.toFixed(2)} (${reason}) PnL £${pnlGBP.toFixed(2)}`);
         }
       }
 
