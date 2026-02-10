@@ -122,7 +122,7 @@ const AppContent: React.FC = () => {
             <>
               {/* ROW 1: AGENT CARDS */}
               <div className="grid grid-cols-3 gap-6">
-                {['quant', 'macro', 'risk'].map(id => {
+                {['quant', 'sniper', 'risk'].map(id => {
                   const agent = accounts?.[id];
                   return agent ? <AgentCard key={id} agent={agent} /> : (
                     <GlassCard key={id} className="h-32 flex items-center justify-center animate-pulse">
@@ -167,7 +167,7 @@ const AppContent: React.FC = () => {
         <div className="md:hidden pb-24 p-4 space-y-4">
           {activeMobileTab === 'dashboard' && (
             <div className="space-y-4">
-              {['quant', 'macro', 'risk'].map(id => {
+              {['quant', 'sniper', 'risk'].map(id => {
                 const agent = accounts?.[id];
                 return (
                   <div key={id} className="w-full">

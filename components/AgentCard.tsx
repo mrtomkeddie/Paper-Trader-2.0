@@ -30,7 +30,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({
     const getAgentColor = (agentId: string) => {
         switch (agentId) {
             case 'quant': return 'text-premium-cyan';
-            case 'macro': return 'text-premium-gold';
+            case 'macro':
+            case 'sniper': return 'text-premium-gold';
             case 'risk': return 'text-premium-red';
             default: return 'text-gray-400';
         }
@@ -40,7 +41,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({
     const getIcon = (agentId: string) => {
         switch (agentId) {
             case 'quant': return Activity;
-            case 'macro': return TrendingUp;
+            case 'macro':
+            case 'sniper': return TrendingUp;
             case 'risk': return Shield;
             default: return Activity;
         }
@@ -52,6 +54,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         const colors = {
             quant: thinking ? 'border-premium-cyan shadow-[0_0_30px_rgba(0,240,255,0.15)] bg-premium-cyan/5' : 'border-premium-cyan shadow-[0_0_15px_rgba(0,240,255,0.05)] bg-premium-cyan/5',
             macro: thinking ? 'border-premium-gold shadow-[0_0_30px_rgba(255,215,0,0.15)] bg-premium-gold/5' : 'border-premium-gold shadow-[0_0_15px_rgba(255,215,0,0.05)] bg-premium-gold/5',
+            sniper: thinking ? 'border-premium-gold shadow-[0_0_30px_rgba(255,215,0,0.15)] bg-premium-gold/5' : 'border-premium-gold shadow-[0_0_15px_rgba(255,215,0,0.05)] bg-premium-gold/5',
             risk: thinking ? 'border-premium-red shadow-[0_0_30px_rgba(255,0,0,0.15)] bg-premium-red/5' : 'border-premium-red shadow-[0_0_15px_rgba(255,0,0,0.05)] bg-premium-red/5'
         }[agentId] || 'border-white/10 bg-white/5';
 
@@ -72,8 +75,8 @@ export const AgentCard: React.FC<AgentCardProps> = ({
                             {name}
                             {isThinking && (
                                 <span className="relative flex h-2 w-2">
-                                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${id === 'quant' ? 'bg-premium-cyan' : id === 'macro' ? 'bg-premium-gold' : 'bg-premium-red'}`}></span>
-                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${id === 'quant' ? 'bg-premium-cyan' : id === 'macro' ? 'bg-premium-gold' : 'bg-premium-red'}`}></span>
+                                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${id === 'quant' ? 'bg-premium-cyan' : (id === 'macro' || id === 'sniper') ? 'bg-premium-gold' : 'bg-premium-red'}`}></span>
+                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${id === 'quant' ? 'bg-premium-cyan' : (id === 'macro' || id === 'sniper') ? 'bg-premium-gold' : 'bg-premium-red'}`}></span>
                                 </span>
                             )}
                         </h3>
