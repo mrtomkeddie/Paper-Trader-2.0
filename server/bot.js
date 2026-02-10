@@ -274,6 +274,17 @@ function checkRiskLimits(symbol, newTradeRiskPct) {
     }
   }
 
+  // 1b. DANGER ZONE CURFEW (10:30-12:00 UTC)
+  // Low performance window identified in recent trade analysis.
+  const now = new Date();
+  const h = now.getUTCHours();
+  const m = now.getUTCMinutes();
+  const isDangerZone = (h === 10 && m >= 30) || (h === 11);
+
+  if (isDangerZone) {
+    return { allowed: false, reason: `Danger Zone Curfew Active (10:30-12:00 UTC). Historically high-loss window.` };
+  }
+
   // 2. Consecutive Losses (DISABLED)
   /*
   let consecutiveLosses = 0;
@@ -1491,10 +1502,12 @@ function processTicks(symbol) {
           trade.outcomeReason = `Take Profit: Level ${level.id} hit. Locked in profit.`;
 
           // MANAGEMENT RULES
-          if (level.id === 1) {
-            // TP1 Hit -> Move SL to Break Even
+          // [OPTIMIZATION] Move SL to Break Even at +0.3% to protect capital.
+          const profitPct = isBuy ? (currentPrice / trade.entryPrice - 1) : (trade.entryPrice / currentPrice - 1);
+          if (level.id === 1 || profitPct >= 0.003) {
+            // TP1 Hit OR +0.3% reached -> Move SL to Break Even
             trade.stopLoss = trade.entryPrice;
-            console.log(`[MGMT] ${symbol} TP1 Hit. SL moved to BE: ${trade.stopLoss}`);
+            console.log(`[MGMT] ${symbol} Breakeven Triggered. SL moved to entry: ${trade.stopLoss}`);
           } else if (level.id === 2) {
             // TP2 Hit -> Start Trailing
             // We flag this trade as 'trailing'

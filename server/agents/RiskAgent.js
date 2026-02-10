@@ -44,6 +44,9 @@ Risk Logic:
 2. "Panic Check": If RSI < 20 AND global_macro_sentiment_score < -8, the crowd is panicking. LONG.
 3. "Trend Confirmation": If RSI is neutral but Sentiment is Extreme, simple profit taking?
 
+## THE DANGER ZONE (10:30-12:00 UTC)
+- **Warning:** Avoid contrarian plays during the 11:00 UTC window as volatility often overwhelms psychological levels.
+
 Output a JSON object ONLY:
 {
   "action": "BUY" | "SELL" | "HOLD",

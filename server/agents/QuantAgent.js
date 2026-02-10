@@ -62,8 +62,14 @@ Because you are trading *with* the trend, you do not need to wait for extreme "c
 - **Confirmation:** Price touching or piercing the Lower Bollinger Band + A bullish candle pattern (Pin bar, Engulfing).
 
 ### Bear Mode Scenarios (Price < 200 EMA)
-- **Trigger:** Look for "Rally Sells" where RSI rises above **60** (instead of the usual 70).
+- **Trigger:** Look for "Rally Sells" where RSI rises above **70** (tightened from 60 to reduce bias).
 - **Confirmation:** Price touching or piercing the Upper Bollinger Band + A bearish candle pattern.
+
+---
+
+## 2.5 THE DANGER ZONE (10:30-12:00 UTC)
+- **Warning:** Historically, the window between 10:30 and 12:00 UTC has high volatility and significant losses.
+- **Guidance:** Avoid opening new positions during this window unless the setup is extremely clear and has additional confirmation from the Macro trend.
 
 ---
 

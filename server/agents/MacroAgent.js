@@ -43,6 +43,9 @@ BEFORE making any trading decision, you must perform a Google Search for these s
 3. "Latest geopolitical tensions Middle East Russia Ukraine" (Fear drives Gold).
 4. "Gold price XAUUSD news analysis today".
 
+## THE DANGER ZONE (10:30-12:00 UTC)
+- **Important:** This window is historically high-risk. Demand higher confidence (>90%) for any trade starting near or during these hours.
+
 Process:
 1. List 3 reasons why Gold might CRASH (Bear Case).
 2. List 3 reasons why Gold might RALLY (Bull Case).

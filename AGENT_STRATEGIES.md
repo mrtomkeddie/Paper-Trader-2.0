@@ -30,7 +30,7 @@ The system features three distinct agents coordinated by a Central Manager.
     *   **Confidence Threshold:** Requires **>70%** confidence.
 *   **Why it trades:** when a mathematical setup occurs **in the direction of the dominant trend**.
     *   **Bull Mode (>200 EMA):** Buys dips when RSI < **40**.
-    *   **Bear Mode (<200 EMA):** Sells rallies when RSI > **60**.
+    *   **Bear Mode (<200 EMA):** Sells rallies when RSI > **70** (tightened from 60 to reduce sell-side bias).
 
 ### 🤨 The Skeptic (Risk Agent)
 *   **Model:** `Gemini 2.0 Flash`
@@ -58,8 +58,9 @@ Regardless of which agent triggers a trade, all execution is governed by a stric
 | **Trade Cooldown** | 5 minutes between trades (hard limit). |
 | **Max Positions** | 2 open trades per agent. |
 | **Profit Ladder** | 3-tier scaling (40% at TP1, 40% at TP2, 20% "runner" at TP3). |
-| **Auto-Breakeven** | SL is moved to entry price as soon as **TP1 (0.6%)** is hit. |
+| **Auto-Breakeven** | SL is moved to entry price at **+0.3% profit** (to protect capital). |
 | **Trailing Stop** | Activated after **TP2 (1.0%)** to lock in gains on the runner. |
+| **Curfew** | **No new trades** between **10:30 and 12:00 UTC** (Danger Zone). |
 
 ---
 
