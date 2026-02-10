@@ -6,16 +6,18 @@ Paper Trader utilizes a multi-agent artificial intelligence architecture. Each a
 
 The system features three distinct agents coordinated by a Central Manager.
 
-### 🧠 The Strategist (Macro Agent)
-*   **Model:** `Gemini 2.0 Flash` (with Real-Time Google Search)
-*   **Role:** Global Macro Investor specializing in fundamental analysis.
-*   **Strategy:** "Why" Analysis. It focuses on the underlying drivers of price movement.
+### 🎯 The Sniper (SMC Agent)
+*   **Model:** `Gemini 2.0 Flash`
+*   **Role:** Price Action Specialist & Market Structure Hunter.
+*   **Strategy:** "Institutional Flow" Analysis. It ignores news and looks for patterns created by big money.
 *   **Execution Logic:**
-    *   **Search Input:** Performs real-time searches for the US Dollar Index (DXY), FOMC meeting probabilities, geopolitical tensions (Middle East, Russia, Ukraine), and Gold news.
-    *   **Decision Process:** Weighs Bull vs. Bear cases neutrally before assessing the price chart.
-    *   **Trigger:** Operates on a 15-minute cycle.
-    *   **Confidence Threshold:** Requires **>80%** confidence to execute a trade.
-*   **Why it trades:** When global sentiment and fundamental data (e.g., a weakening Dollar or rising geopolitical risk) strongly support a move that aligns with the price trend.
+    *   **Market Context:** Uses `analyzeMarketStructure` to identify Premium vs. Discount zones.
+    *   **Pattern 1 (Liquidity Sweeps):** Trades reversals when price pierces the Previous Day High/Low (PDH/PDL) and rejects.
+    *   **Pattern 2 (Order Blocks):** Enters at institutional supply/demand zones (Bullish/Bearish OB).
+    *   **Pattern 3 (Fair Value Gaps):** Targets rebalances when price logic dictates a gap fill.
+    *   **Trigger:** Operates on a 5-minute cycle (high-sensitivity).
+    *   **Confidence Threshold:** Requires **>80%** confidence to execute.
+*   **Why it trades:** When a high-conviction geometric setup (Sweep or OB) aligns with a Discount (for BUY) or Premium (for SELL) zone.
 
 ### 🔢 The Quant (Quant Agent)
 *   **Model:** `DeepSeek R1`
