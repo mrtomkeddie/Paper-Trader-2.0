@@ -1525,9 +1525,10 @@ function processTicks(symbol) {
           // [OPTIMIZATION] Move SL to Break Even at +0.1% to protect capital early.
           const profitPct = isBuy ? (currentPrice / trade.entryPrice - 1) : (trade.entryPrice / currentPrice - 1);
 
-          // CRITICAL FIX: Trigger BE at 0.1% (approx $2.60 on Gold) to align with Quant's scalping
-          if (profitPct >= 0.001) {
-            // +0.1% reached -> Move SL to Break Even + BUFFER
+          // CRITICAL FIX: Trigger BE at 0.3% (per user rule) 
+          // Note: TP1 (0.25%) triggers Trailing, so this BE is a secondary safety net.
+          if (profitPct >= 0.003) {
+            // +0.3% reached -> Move SL to Break Even + BUFFER
             // Add $0.20 secured buffer to prevent slippage loss
             const buffer = symbol === 'XAUUSD' ? 0.20 : 0;
 
@@ -1535,13 +1536,13 @@ function processTicks(symbol) {
               const newSL = trade.entryPrice + buffer;
               if (newSL > trade.stopLoss) {
                 trade.stopLoss = newSL;
-                console.log(`[MGMT] ${symbol} Breakeven Triggered (+0.1%). SL moved to entry + $${buffer}: ${trade.stopLoss}`);
+                console.log(`[MGMT] ${symbol} Breakeven Triggered (+0.3%). SL moved to entry + $${buffer}: ${trade.stopLoss}`);
               }
             } else {
               const newSL = trade.entryPrice - buffer;
               if (newSL < trade.stopLoss) {
                 trade.stopLoss = newSL;
-                console.log(`[MGMT] ${symbol} Breakeven Triggered (+0.1%). SL moved to entry - $${buffer}: ${trade.stopLoss}`);
+                console.log(`[MGMT] ${symbol} Breakeven Triggered (+0.3%). SL moved to entry - $${buffer}: ${trade.stopLoss}`);
               }
             }
           }

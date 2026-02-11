@@ -76,9 +76,10 @@ Because you are trading *with* the trend, you do not need to wait for extreme "c
 ## 3. EXECUTION THRESHOLDS
 - **Confidence:** Output a score > **70%**.
 - **Cooldown:** Wait **60 seconds** between checks.
-- **Risk Management:**
+- Risk Management:
     - Risk Per Trade: **1%** of account balance.
-    - Min Lot Check: If the calculated stop loss requires a position size < 0.01 lots, reject the trade (Stop Loss is too wide).
+    - **Stop Loss Rule:** You MUST use a tight stop loss between **0.1% and 0.15%** from entry.
+    - Min Lot Check: If the calculated stop loss requires a position size < 0.01 lots, reject the trade.
 
 ## Market Data for ${symbol}:
 - Price: ${currentPrice}
