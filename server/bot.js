@@ -1367,11 +1367,31 @@ function processTicks(symbol) {
       for (const t of newAgentTrades) {
         // Ensure unique ID
         t.id = t.id || uuidv4();
+
+        // --- NEW: DYNAMIC LOT SIZING ENFORCEMENT ---
+        // 1. Find the agent who signaled this trade
+        const agent = manager.agents.find(a => a.id === t.agentId);
+        if (agent) {
+          // 2. Calculate safe size based on 1% risk
+          // default to 1% if not specified
+          const safeSize = agent.calculateSafeLotSize(t.entryPrice, t.stopLoss, 1);
+
+          if (safeSize > 0) {
+            console.log(`[RISK MANAGER] Overriding ${t.agentId} size. Calc: ${safeSize} lots (Risk 1%)`);
+            t.initialSize = safeSize;
+            t.currentSize = safeSize;
+          } else {
+            console.warn(`[RISK MANAGER] Trade Rejected: Safe size is 0 (Risk > 1% or invalid SL).`);
+            continue; // Skip adding this trade
+          }
+        }
+        // -------------------------------------------
+
         // Ensure in global trades list
         if (!trades.find(ex => ex.id === t.id)) {
           trades.unshift(t);
-          console.log(`[MANAGER] Added new trade from ${t.agentId}: ${t.type} ${t.symbol}`);
-          notifyAll('Trade Opened', `[${t.agentId.toUpperCase()}] ${t.symbol} ${t.type} @ ${t.entryPrice}`);
+          console.log(`[MANAGER] Added new trade from ${t.agentId}: ${t.type} ${t.symbol} Size:${t.initialSize}`);
+          notifyAll('Trade Opened', `[${t.agentId.toUpperCase()}] ${t.symbol} ${t.type} @ ${t.entryPrice} (${t.initialSize} lots)`);
           saveState();
         }
       }
@@ -1584,6 +1604,7 @@ function processTicks(symbol) {
       const pnlGBP = pnlUSD * usdToGbp;
 
       trade.pnl += pnlGBP; account.balance += pnlGBP; closedPnL += pnlGBP;
+      trade.currentSize = 0; // Ensure size is reset
       trade.floatingPnl = 0;
       closedAnyTrade = true;
       sendSms(`CLOSE ${symbol} ${trade.type} @ ${currentPrice.toFixed(2)} (STOP_LOSS) PnL £${pnlGBP.toFixed(2)}`);
