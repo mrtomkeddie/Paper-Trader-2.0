@@ -6,18 +6,6 @@ Paper Trader utilizes a multi-agent artificial intelligence architecture. Each a
 
 The system features three distinct agents coordinated by a Central Manager.
 
-### 🎯 The Sniper (SMC Agent)
-*   **Model:** `Gemini 2.0 Flash`
-*   **Role:** Price Action Specialist & Market Structure Hunter.
-*   **Strategy:** "Institutional Flow" Analysis. It ignores news and looks for patterns created by big money.
-*   **Execution Logic:**
-    *   **Market Context:** Uses `analyzeMarketStructure` to identify Premium vs. Discount zones.
-    *   **Pattern 1 (Liquidity Sweeps):** Trades reversals when price pierces the Previous Day High/Low (PDH/PDL) and rejects.
-    *   **Pattern 2 (Order Blocks):** Enters at institutional supply/demand zones (Bullish/Bearish OB).
-    *   **Pattern 3 (Fair Value Gaps):** Targets rebalances when price logic dictates a gap fill.
-    *   **Trigger:** Operates on a 5-minute cycle (high-sensitivity).
-    *   **Confidence Threshold:** Requires **>80%** confidence to execute.
-*   **Why it trades:** When a high-conviction geometric setup (Sweep or OB) aligns with a Discount (for BUY) or Premium (for SELL) zone.
 
 ### 🔢 The Quant (Quant Agent)
 *   **Model:** `DeepSeek R1`

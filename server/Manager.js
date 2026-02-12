@@ -1,12 +1,10 @@
 import { QuantAgent } from './agents/QuantAgent.js';
-import { SniperAgent } from './agents/SniperAgent.js';
 import { RiskAgent } from './agents/RiskAgent.js';
 
 export class Manager {
     constructor() {
         this.agents = [
             new QuantAgent(),
-            new SniperAgent(),
             new RiskAgent()
         ];
         this.marketData = {}; // Symbol -> Data
@@ -50,8 +48,8 @@ export class Manager {
         this.marketData[symbol] = data;
 
         // Specific: Get Global Sentiment from Sniper Agent if available (Market Bias)
-        const sniperAgent = this.agents.find(a => a.id === 'sniper');
-        const globalSentiment = sniperAgent && sniperAgent.latestDecision ? (sniperAgent.latestDecision.action === 'BUY' ? 5 : sniperAgent.latestDecision.action === 'SELL' ? -5 : 0) : null;
+        // REMOVED SNIPER AGENT
+        const globalSentiment = null;
 
         // Enrich data with global sentiment for Risk Agent
         data.globalSentiment = globalSentiment;

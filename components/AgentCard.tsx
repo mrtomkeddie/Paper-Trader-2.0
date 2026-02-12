@@ -54,7 +54,6 @@ export const AgentCard: React.FC<AgentCardProps> = ({
         const colors = {
             quant: thinking ? 'border-premium-cyan shadow-[0_0_30px_rgba(0,240,255,0.15)] bg-premium-cyan/5' : 'border-premium-cyan shadow-[0_0_15px_rgba(0,240,255,0.05)] bg-premium-cyan/5',
             macro: thinking ? 'border-premium-gold shadow-[0_0_30px_rgba(255,215,0,0.15)] bg-premium-gold/5' : 'border-premium-gold shadow-[0_0_15px_rgba(255,215,0,0.05)] bg-premium-gold/5',
-            sniper: thinking ? 'border-premium-gold shadow-[0_0_30px_rgba(255,215,0,0.15)] bg-premium-gold/5' : 'border-premium-gold shadow-[0_0_15px_rgba(255,215,0,0.05)] bg-premium-gold/5',
             risk: thinking ? 'border-premium-red shadow-[0_0_30px_rgba(255,0,0,0.15)] bg-premium-red/5' : 'border-premium-red shadow-[0_0_15px_rgba(255,0,0,0.05)] bg-premium-red/5'
         }[agentId] || 'border-white/10 bg-white/5';
 
