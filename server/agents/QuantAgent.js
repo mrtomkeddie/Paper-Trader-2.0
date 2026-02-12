@@ -18,6 +18,30 @@ export class QuantAgent extends Agent {
         this.lastTickTime = 0;
     }
 
+    calculateATR(candles, period = 14) {
+        if (!candles || candles.length < period + 1) return 0;
+
+        const trs = [];
+        for (let i = 1; i < candles.length; i++) {
+            const current = candles[i];
+            const prev = candles[i - 1];
+            const tr = Math.max(
+                current.high - current.low,
+                Math.abs(current.high - prev.close),
+                Math.abs(current.low - prev.close)
+            );
+            trs.push(tr);
+        }
+
+        if (trs.length < period) return 0;
+
+        // Simple Moving Average of TR for simplicity and speed
+        // (Wilder's Smoothing is ideal but SMA is sufficient for this scope)
+        const relevantTRs = trs.slice(-period);
+        const sum = relevantTRs.reduce((a, b) => a + b, 0);
+        return sum / period;
+    }
+
     async onTick(marketData) {
         if (!this.client) return;
         if (this.isThinking) return;
@@ -31,6 +55,11 @@ export class QuantAgent extends Agent {
 
         try {
             const { symbol, currentPrice, rsi, trend, ema200, bollinger, candles } = marketData;
+
+            // Calculate ATR (14-period on 5m candles)
+            const atr = this.calculateATR(candles, 14);
+            const atrValue = atr || (currentPrice * 0.0015); // Fallback to 0.15% if no ATR
+
 
             // Format last 50 candles for DeepSeek
             const ohlcvHistory = (candles || []).slice(-50).map(c =>
@@ -76,16 +105,18 @@ Because you are trading *with* the trend, you do not need to wait for extreme "c
 ## 3. EXECUTION THRESHOLDS
 - **Confidence:** Output a score > **70%**.
 - **Cooldown:** Wait **60 seconds** between checks.
-- Risk Management:
-    - Risk Per Trade: **1%** of account balance.
-    - **Stop Loss Rule:** You MUST use a tight stop loss between **0.1% and 0.15%** from entry.
-    - Min Lot Check: If the calculated stop loss requires a position size < 0.01 lots, reject the trade.
+- Risk Per Trade: **1%** of account balance.
+- **Stop Loss Rule:** You MUST use a dynamic stop loss based on ATR.
+- **ATR Value:** ${atrValue.toFixed(4)}
+- **Stop Loss Distance:** 1.5 * ATR (${(atrValue * 1.5).toFixed(4)})
+- We will calculate the exact price levels in the engine, but you must factor this volatility into your logic.
 
 ## Market Data for ${symbol}:
 - Price: ${currentPrice}
 - Trend (200 EMA): ${trend}
 - RSI (14): ${rsi.toFixed(2)}
 - Volatility (BB Width): ${(bollinger.upper - bollinger.lower).toFixed(2)}
+- ATR (14): ${atrValue.toFixed(4)}
 - 200 EMA Level: ${ema200.toFixed(2)}
 
 ## Recent Price Action (Last 50 Candles - M5):
@@ -109,7 +140,8 @@ Output a JSON object ONLY:
 
             const response = completion.choices[0].message.content;
             console.log(`[QUANT] Raw Response: ${response.substring(0, 50)}...`); // Debug log
-            this.processDecision(response, symbol, currentPrice, { rsi, trend, ema200, bollinger });
+            this.processDecision(response, symbol, currentPrice, { rsi, trend, ema200, bollinger, atr: atrValue });
+
 
         } catch (error) {
             console.error('[QUANT] Error thinking:', error.message);
@@ -146,21 +178,28 @@ Output a JSON object ONLY:
             this.lastAction = decision.action;
 
             if (decision.action !== 'HOLD' && decision.confidence > 70) {
-                // Calculate Profit Ladder (Fixed % Strategy)
+                // Calculate Profit Ladder (ATR-Based Strategy)
                 const isBuy = decision.action === 'BUY';
+                const atr = snapshot.atr || (currentPrice * 0.0015);
 
-                // TP1: The Safety Net (0.25%) - 40% of position
-                const dist1 = currentPrice * 0.0025;
+                // ATR Multipliers
+                const riskDist = atr * 1.5; // 1.5x ATR Stop Loss
+
+                // Calculate Dynamic Stop Loss
+                const stopLossPrice = isBuy ? currentPrice - riskDist : currentPrice + riskDist;
+                decision.stopLoss = Number(stopLossPrice.toFixed(2));
+
+                // TP1: The Safety Net (1.0x Risk) - 40% of position
+                const dist1 = riskDist * 1.0;
                 const tp1 = isBuy ? currentPrice + dist1 : currentPrice - dist1;
 
-                // TP2: The Target (0.6%) - 40% of position
-                const dist2 = currentPrice * 0.0060;
+                // TP2: The Target (2.0x Risk) - 40% of position
+                const dist2 = riskDist * 2.0;
                 const tp2 = isBuy ? currentPrice + dist2 : currentPrice - dist2;
 
-                // TP3: The Moonshot (Trailing / Open) - 20% of position
-                // We set a distant target so it acts as "Open", but let Trailing Stop manage it.
+                // TP3: The Moonshot (4.0x Risk) - 20% of position
                 // Trailing Stop activates after TP2 is hit (logic in bot.js).
-                const dist3 = currentPrice * 0.05; // 5% Moonshot target (placeholder)
+                const dist3 = riskDist * 4.0;
                 const tp3 = isBuy ? currentPrice + dist3 : currentPrice - dist3;
 
                 const tpLevels = [
