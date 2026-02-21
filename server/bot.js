@@ -1071,7 +1071,9 @@ connectLiveFeed();
   try {
     if (!USE_OANDA) return;
     const host = OANDA_ENV === 'live' ? 'api-fxtrade.oanda.com' : 'api-fxpractice.oanda.com';
-    const map = {}; // NAS100 Removed
+    const map = {
+      'XAUUSD': 'XAU_USD'
+    };
     for (const symbol of Object.keys(assets)) {
       const inst = map[symbol];
       if (!inst) continue;
@@ -1116,7 +1118,66 @@ connectLiveFeed();
       });
     }
     console.log('[SYSTEM] Initialized M15 history and EMA200 for Indices/Gold');
-  } catch { }
+  } catch (e) {
+    console.error('[SYSTEM] Failed to initialize M15 history:', e.message);
+  }
+})();
+
+// --- M5 HISTORY INITIALIZATION ---
+(async () => {
+  try {
+    if (!USE_OANDA) return;
+    const host = OANDA_ENV === 'live' ? 'api-fxtrade.oanda.com' : 'api-fxpractice.oanda.com';
+    const map = {
+      'XAUUSD': 'XAU_USD'
+    };
+    for (const symbol of Object.keys(assets)) {
+      const inst = map[symbol];
+      if (!inst) continue;
+      const options = {
+        hostname: host,
+        path: `/v3/instruments/${encodeURIComponent(inst)}/candles?granularity=M5&price=M&count=200`,
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${OANDA_TOKEN}` }
+      };
+      await new Promise((resolve) => {
+        const req = https.request(options, (res) => {
+          let buf = '';
+          res.on('data', (chunk) => { buf += chunk.toString(); });
+          res.on('end', () => {
+            try {
+              const j = JSON.parse(buf);
+              const arr = Array.isArray(j.candles) ? j.candles : [];
+              const list = [];
+              for (const c of arr) {
+                if (!c || c.complete === false) continue;
+                const o = parseFloat(c.mid?.o || c.open || c.close || '0');
+                const h = parseFloat(c.mid?.h || c.high || '0');
+                const l = parseFloat(c.mid?.l || c.low || '0');
+                const cl = parseFloat(c.mid?.c || c.close || '0');
+                const t = new Date(c.time).getTime();
+                if (isFinite(cl) && cl > 0) {
+                  list.push({ open: o || cl, high: h || cl, low: l || cl, close: cl, time: t, isClosed: true });
+                }
+              }
+              candlesM5[symbol] = list.slice(-200);
+              console.log(`[SYSTEM] Initialized M5 history for ${symbol}: ${candlesM5[symbol].length} candles`);
+            } catch (e) {
+              console.error(`[SYSTEM] Error parsing M5 candles for ${symbol}:`, e.message);
+            }
+            resolve(null);
+          });
+        });
+        req.on('error', (e) => {
+          console.error(`[SYSTEM] OANDA Request Error (M5):`, e.message);
+          resolve(null);
+        });
+        req.end();
+      });
+    }
+  } catch (e) {
+    console.error('[SYSTEM] Failed to initialize M5 history:', e.message);
+  }
 })();
 
 function notifyAll(title, body) {

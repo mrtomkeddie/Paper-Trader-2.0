@@ -9,7 +9,7 @@
     "quant": {
       "id": "quant",
       "name": "The Quant",
-      "role": "Technical Scalper (DeepSeek R1)",
+      "role": "Technical Scalper (Claude 3.5 Haiku)",
       "balance": 972.419198367513,
       "equity": 972.419198367513,
       "isThinking": false,
@@ -25,7 +25,7 @@
       "role": "Risk Manager (Gemini)",
       "balance": 1063.8781343297806,
       "equity": 1063.8781343297806,
-      "isThinking": false,
+      "isThinking": true,
       "lastAction": "WAITING",
       "lastThought": "",
       "dayPnL": 0,
