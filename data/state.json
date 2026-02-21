@@ -25,7 +25,7 @@
       "role": "Risk Manager (Gemini)",
       "balance": 1063.8781343297806,
       "equity": 1063.8781343297806,
-      "isThinking": true,
+      "isThinking": false,
       "lastAction": "WAITING",
       "lastThought": "",
       "dayPnL": 0,
