@@ -16,7 +16,7 @@ export class RiskAgent extends Agent {
     }
 
     async onTick(marketData) {
-        if (!this.client) return;
+        // if (!this.client) return; // AI BYPASS: No client needed
         if (this.isThinking) return;
 
         // Risk Cooldown: Check every 60 seconds
@@ -88,11 +88,20 @@ export class RiskAgent extends Agent {
             { "decision": "CONFIRM" or "CANCEL", "confidence": number, "reason": "string", "stopLoss": number, "takeProfit": number }
             `;
 
-            const response = await this.client.models.generateContent({
-                model: 'gemini-2.0-flash',
-                contents: prompt
-            });
-            const text = response.text;
+            // --- AI BYPASS ACTIVE ---
+            // const response = await this.client.models.generateContent({
+            //     model: 'gemini-2.0-flash',
+            //     contents: prompt
+            // });
+            // const text = response.text;
+            const aiResponse = {
+                decision: 'CONFIRM',
+                confidence: 100,
+                reason: "Pure Algo Execution: Math conditions met. AI bypassed."
+            };
+            const text = JSON.stringify(aiResponse);
+            console.log(`[RISK] AI BYPASS: Auto-confirming ${mathSignal} signal.`);
+            // ------------------------
 
             this.processDecision(text, symbol, currentPrice, mathSignal);
 

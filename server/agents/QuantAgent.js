@@ -19,7 +19,7 @@ export class QuantAgent extends Agent {
     }
 
     async onTick(marketData) {
-        if (!this.client) return;
+        // if (!this.client) return; // AI BYPASS: No client needed
         if (this.isThinking) return;
 
         // Scalper Cooldown: Check every 60 seconds max
@@ -91,22 +91,30 @@ export class QuantAgent extends Agent {
             { "decision": "CONFIRM" or "CANCEL", "confidence": number (0-100), "reason": "string" }
             `;
 
-            const message = await this.client.messages.create({
-                model: "claude-3-haiku-20240307",
-                max_tokens: 1024,
-                messages: [{ role: "user", content: prompt }],
-            });
-
-            const responseText = message.content[0].text;
-            console.log(`[QUANT] AI Response: ${responseText}`);
-
-            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                console.error('[QUANT] No JSON found in response');
-                return;
-            }
-
-            const aiResponse = JSON.parse(jsonMatch[0]);
+            // --- AI BYPASS ACTIVE ---
+            // const message = await this.client.messages.create({
+            //     model: "claude-3-haiku-20240307",
+            //     max_tokens: 1024,
+            //     messages: [{ role: "user", content: prompt }],
+            // });
+            //
+            // const responseText = message.content[0].text;
+            // console.log(`[QUANT] AI Response: ${responseText}`);
+            //
+            // const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            // if (!jsonMatch) {
+            //     console.error('[QUANT] No JSON found in response');
+            //     return;
+            // }
+            //
+            // const aiResponse = JSON.parse(jsonMatch[0]);
+            const aiResponse = {
+                decision: 'CONFIRM',
+                confidence: 100,
+                reason: "Pure Algo Execution: Math conditions met. AI bypassed."
+            };
+            console.log(`[QUANT] AI BYPASS: Auto-confirming ${mathSignal} signal.`);
+            // ------------------------
 
             if (aiResponse.decision === 'CONFIRM' && aiResponse.confidence > 70) {
                 this.lastThought = aiResponse.reason;
